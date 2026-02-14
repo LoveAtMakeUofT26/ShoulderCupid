@@ -1,13 +1,18 @@
 import { Server, Socket } from 'socket.io'
+import { Session } from '../models/Session.js'
 
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
   targetEmotion: string
   distance: number
   heartRate: number
+  personDetected: boolean
 }
 
-// In-memory session states (would be in DB/Redis in production)
+// Distance threshold (in cm) - switch to CONVERSATION when closer than this
+const CONVERSATION_THRESHOLD = 150
+
+// In-memory session states for real-time updates
 const sessionStates = new Map<string, SessionState>()
 
 export function setupClientHandler(socket: Socket, _io: Server) {
@@ -26,11 +31,18 @@ export function setupClientHandler(socket: Socket, _io: Server) {
         targetEmotion: 'neutral',
         distance: -1,
         heartRate: -1,
+        personDetected: false,
       })
     }
 
     // Send initial state
-    socket.emit('session-started')
+    const state = sessionStates.get(sessionId)!
+    socket.emit('session-state', {
+      mode: state.mode,
+      targetEmotion: state.targetEmotion,
+      distance: state.distance,
+      heartRate: state.heartRate,
+    })
   })
 
   // End session
@@ -76,43 +88,138 @@ export function sendCoachingUpdate(io: Server, sessionId: string, message: strin
   broadcastToSession(io, sessionId, 'coaching-update', { message })
 }
 
-// Add transcript entry
-export function addTranscriptEntry(
+// Add transcript entry and persist to DB
+export async function addTranscriptEntry(
   io: Server,
   sessionId: string,
   speaker: 'user' | 'target' | 'coach',
   text: string,
   emotion?: string
 ) {
-  broadcastToSession(io, sessionId, 'transcript-update', {
+  const entry = {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     speaker,
     text,
     timestamp: Date.now(),
     emotion,
+  }
+
+  broadcastToSession(io, sessionId, 'transcript-update', entry)
+
+  // Persist to DB
+  try {
+    const updateData: Record<string, unknown> = {
+      $push: {
+        transcript: {
+          timestamp: new Date(),
+          speaker,
+          text,
+          emotion,
+        }
+      }
+    }
+
+    // Increment tip count if coach message
+    if (speaker === 'coach') {
+      updateData.$inc = { 'analytics.total_tips': 1 }
+    }
+
+    await Session.findByIdAndUpdate(sessionId, updateData)
+  } catch (err) {
+    console.error('Failed to persist transcript:', err)
+  }
+}
+
+// Update sensors and handle mode transitions
+export async function updateSensors(
+  io: Server,
+  sessionId: string,
+  data: { distance?: number; heartRate?: number; personDetected?: boolean }
+) {
+  const state = sessionStates.get(sessionId)
+  if (!state) return
+
+  const prevMode = state.mode
+
+  // Update state
+  if (data.distance !== undefined) state.distance = data.distance
+  if (data.heartRate !== undefined) state.heartRate = data.heartRate
+  if (data.personDetected !== undefined) state.personDetected = data.personDetected
+
+  // Mode transition logic
+  let newMode = state.mode
+
+  if (!state.personDetected) {
+    // No person detected -> IDLE
+    newMode = 'IDLE'
+  } else if (state.distance > 0 && state.distance <= CONVERSATION_THRESHOLD) {
+    // Close enough for conversation
+    newMode = 'CONVERSATION'
+  } else if (state.personDetected && state.distance > CONVERSATION_THRESHOLD) {
+    // Person detected but not close -> APPROACH
+    newMode = 'APPROACH'
+  }
+
+  // If mode changed, update DB and broadcast
+  if (newMode !== prevMode) {
+    state.mode = newMode
+    broadcastToSession(io, sessionId, 'mode-change', { mode: newMode, prevMode })
+
+    // Persist to DB
+    try {
+      await Session.findByIdAndUpdate(sessionId, {
+        mode: newMode,
+        $inc: {
+          'analytics.approach_count': newMode === 'APPROACH' ? 1 : 0,
+          'analytics.conversation_count': newMode === 'CONVERSATION' ? 1 : 0,
+        }
+      })
+    } catch (err) {
+      console.error('Failed to update session mode in DB:', err)
+    }
+  }
+
+  broadcastToSession(io, sessionId, 'sensors-update', {
+    distance: state.distance,
+    heartRate: state.heartRate,
+    personDetected: state.personDetected,
   })
 }
 
-// Update sensors
-export function updateSensors(io: Server, sessionId: string, data: { distance?: number; heartRate?: number }) {
-  const state = sessionStates.get(sessionId)
-  if (state) {
-    if (data.distance !== undefined) state.distance = data.distance
-    if (data.heartRate !== undefined) state.heartRate = data.heartRate
-    broadcastToSession(io, sessionId, 'sensors-update', data)
-  }
-}
-
-// Update emotion
-export function updateEmotion(io: Server, sessionId: string, emotion: string) {
+// Update emotion and persist to DB
+export async function updateEmotion(io: Server, sessionId: string, emotion: string, confidence?: number) {
   const state = sessionStates.get(sessionId)
   if (state) {
     state.targetEmotion = emotion
-    broadcastToSession(io, sessionId, 'emotion-update', { emotion })
+    broadcastToSession(io, sessionId, 'emotion-update', { emotion, confidence })
+
+    // Persist to DB
+    try {
+      await Session.findByIdAndUpdate(sessionId, {
+        $push: {
+          emotions: {
+            timestamp: new Date(),
+            emotion,
+            confidence,
+          }
+        }
+      })
+    } catch (err) {
+      console.error('Failed to persist emotion:', err)
+    }
   }
 }
 
-// Trigger warning
-export function triggerWarning(io: Server, sessionId: string, level: 1 | 2 | 3, message: string) {
+// Trigger warning and persist to DB
+export async function triggerWarning(io: Server, sessionId: string, level: 1 | 2 | 3, message: string) {
   broadcastToSession(io, sessionId, 'warning-triggered', { level, message })
+
+  // Persist warning count to DB
+  try {
+    await Session.findByIdAndUpdate(sessionId, {
+      $inc: { 'analytics.warnings_triggered': 1 }
+    })
+  } catch (err) {
+    console.error('Failed to persist warning:', err)
+  }
 }
