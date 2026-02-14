@@ -1,0 +1,34 @@
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: shoulder-cupid-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_DATABASE=shoulder-cupid
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - shoulder-cupid-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: shoulder-cupid-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - shoulder-cupid-network
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  shoulder-cupid-network:
+    driver: bridge
