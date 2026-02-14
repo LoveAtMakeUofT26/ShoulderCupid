@@ -15,7 +15,8 @@
     "test": "turbo run test",
     "clean": "turbo run clean && rm -rf node_modules",
     "frontend": "cd apps/frontend && npm run dev",
-    "backend": "cd apps/backend && npm run dev"
+    "backend": "cd apps/backend && npm run dev",
+    "marketing": "cd apps/marketing && npm run dev"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
