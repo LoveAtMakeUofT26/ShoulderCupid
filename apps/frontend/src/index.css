@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Base colors */
+  --color-primary: theme('colors.cupid.500');
+  --color-primary-dark: theme('colors.cupid.600');
+  --color-bg: theme('colors.marble.50');
+
+  /* Safe areas for mobile */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-marble-50 text-gray-900;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  /* Primary button */
+  .btn-primary {
+    @apply bg-cupid-500 text-white font-semibold rounded-2xl px-6 py-3.5
+           hover:bg-cupid-600 active:scale-[0.98] transition-all duration-200
+           shadow-sm hover:shadow-md;
+  }
+
+  /* Secondary button */
+  .btn-secondary {
+    @apply bg-transparent border-2 border-cupid-500 text-cupid-500
+           font-semibold rounded-2xl px-6 py-3
+           hover:bg-cupid-50 active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    @apply bg-cupid-50 text-cupid-500 font-semibold rounded-2xl px-6 py-3.5
+           hover:bg-cupid-100 active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* Card styles */
+  .card {
+    @apply bg-white rounded-2xl shadow-card p-4;
+  }
+
+  .card-elevated {
+    @apply bg-white rounded-2xl shadow-card-hover p-4;
+  }
+
+  /* Mobile-first container */
+  .container-mobile {
+    @apply max-w-[428px] mx-auto px-4;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding */
+  .pb-safe {
+    padding-bottom: max(var(--safe-area-bottom), 16px);
+  }
+
+  .pt-safe {
+    padding-top: max(var(--safe-area-top), 16px);
+  }
+
+  /* Animations */
+  .animate-slide-up {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  .animate-pulse-subtle {
+    animation: pulseSoft 2s infinite;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes pulseSoft {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.85;
+    }
+  }
+}
