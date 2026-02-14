@@ -9,6 +9,7 @@ import { authRouter } from './routes/auth.js'
 import { coachesRouter } from './routes/coaches.js'
 import { sessionsRouter } from './routes/sessions.js'
 import { userRouter } from './routes/user.js'
+import { hardwareRouter, setIoInstance } from './routes/hardware.js'
 import { setupSocketHandlers } from './sockets/index.js'
 
 dotenv.config()
@@ -27,7 +28,7 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
   credentials: true,
 }))
-app.use(express.json())
+app.use(express.json({ limit: '5mb' })) // Allow larger payloads for JPEG frames
 
 // Connect to MongoDB
 await connectDB()
@@ -44,9 +45,13 @@ app.use('/api/auth', authRouter)
 app.use('/api/coaches', coachesRouter)
 app.use('/api/sessions', sessionsRouter)
 app.use('/api/user', userRouter)
+app.use('/api', hardwareRouter) // /api/frame, /api/sensors, /api/commands
 
 // Socket.io handlers
 setupSocketHandlers(io)
+
+// Pass io instance to hardware routes for broadcasting
+setIoInstance(io)
 
 const PORT = process.env.PORT || 4000
 
