@@ -5,6 +5,7 @@ import { CoachesPage } from './pages/CoachesPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LiveSessionPage } from './pages/LiveSessionPage'
+import SessionStartPage from './pages/SessionStartPage'
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
 
         {/* Full-screen routes (no bottom nav) */}
         <Route path="/session/:sessionId" element={<LiveSessionPage />} />
+        <Route path="/session/start" element={<SessionStartPage />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
