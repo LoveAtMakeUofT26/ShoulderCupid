@@ -84,21 +84,23 @@ export async function generateImageBuffer(prompt: string): Promise<Buffer> {
       const response = await axios.post(url, data, {
         headers,
         timeout: 30000,
-        // Cloudflare REST API returns JSON: { result: { image: "<base64>" }, success: true }
       })
 
-      const base64Image = response.data?.result?.image
+      // Cloudflare REST API may return:
+      //   { result: { image: "<base64>" }, success: true }  (v4 envelope)
+      //   { image: "<base64>" }                              (direct model output)
+      const body = response.data
+      const base64Image = body?.result?.image ?? body?.image
       if (!base64Image || typeof base64Image !== 'string') {
-        throw new Error(
-          `Unexpected response from ${model.id}: success=${response.data?.success}, ` +
-          `keys=${JSON.stringify(Object.keys(response.data?.result ?? {}))}`
-        )
+        console.error(`[image-gen] ${model.id} unexpected response:`, JSON.stringify(body).slice(0, 300))
+        throw new Error(`Unexpected response from ${model.id}`)
       }
 
       const buffer = Buffer.from(base64Image, 'base64')
       if (buffer.length < 8) {
         throw new Error(`Model ${model.id} returned empty image (${buffer.length} bytes)`)
       }
+      console.log(`[image-gen] ${model.id} success: ${buffer.length} bytes`)
 
       if (model !== CF_IMAGE_MODELS[0]) {
         console.warn(`Image generation fell back to ${model.id}`)
@@ -108,8 +110,9 @@ export async function generateImageBuffer(prompt: string): Promise<Buffer> {
       lastError = error instanceof Error ? error : new Error(String(error))
       const axiosErr = error as { response?: { status?: number; data?: unknown } }
       const status = axiosErr.response?.status
-      const detail = status ? ` [HTTP ${status}]` : ''
-      console.warn(`Model ${model.id} failed: ${lastError.message}${detail}, trying next...`)
+      const body = axiosErr.response?.data
+      const bodySnippet = body ? JSON.stringify(body).slice(0, 200) : ''
+      console.warn(`[image-gen] ${model.id} failed: ${lastError.message} [HTTP ${status ?? '?'}] ${bodySnippet}`)
     }
   }
 
