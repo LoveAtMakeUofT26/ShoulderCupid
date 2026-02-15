@@ -62,10 +62,16 @@ export function CoachingPanel({
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-md animate-pulse-subtle"
               style={{
-                background: `linear-gradient(135deg, ${coach.color_from}, ${coach.color_to})`,
+                background: coach.avatar_url
+                  ? undefined
+                  : `linear-gradient(135deg, ${coach.color_from || '#E8566C'}, ${coach.color_to || '#F5A3B1'})`,
               }}
             >
-              {coach.avatar_emoji}
+              {coach.avatar_url ? (
+                <img src={coach.avatar_url} alt={coach.name} className="w-full h-full rounded-full object-cover" />
+              ) : (
+                coach.avatar_emoji || '💘'
+              )}
             </div>
             <div className="flex-1">
               <p className="font-semibold text-[var(--color-text)]">{coach.name}</p>

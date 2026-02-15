@@ -1,17 +1,35 @@
 const API_BASE_URL = '/api';
 
+export interface CoachPricing {
+  quick_5min: number
+  standard_15min: number
+  deep_30min: number
+}
+
 export interface Coach {
   _id: string
   name: string
   tagline: string
-  description: string
-  personality: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
+  description?: string
+  specialty: string
+  personality: { tone: string; style: string }
+  personality_tags: string[]
   sample_phrases: string[]
+  voice_id?: string
+  avatar_url?: string
+  avatar_emoji?: string
+  color_from?: string
+  color_to?: string
+  pricing: CoachPricing
   rating: number
   session_count: number
+  is_generated: boolean
+}
+
+export interface RosterEntry {
+  coach_id: Coach
+  added_at: string
+  is_default: boolean
 }
 
 export interface User {
@@ -22,6 +40,9 @@ export interface User {
   age?: number
   pronouns?: string
   coach: Coach | null
+  roster: RosterEntry[]
+  rosterLimit: number
+  tier: 'free' | 'premium'
   preferences: {
     target_gender: string
     comfort_sensitivity: string
