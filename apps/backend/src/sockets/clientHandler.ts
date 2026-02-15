@@ -9,6 +9,28 @@ function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
 }
 
+function getSocketUserId(socket: Socket): string | null {
+  const directUser = (socket.request as any).user
+  const sessionUser = (socket.request as any).session?.passport?.user
+  if (sessionUser && typeof sessionUser === 'string') return sessionUser
+  if (directUser?._id) return directUser._id.toString()
+  if (directUser?.toString) return directUser.toString()
+  return null
+}
+
+async function assertSessionOwner(socket: Socket, sessionId: string): Promise<string | null> {
+  if (!isValidObjectId(sessionId)) return null
+  const userId = getSocketUserId(socket)
+  if (!userId) return null
+
+  const sessionRecord = await Session.findById(sessionId).select('user_id').lean()
+  if (!sessionRecord || sessionRecord.user_id?.toString() !== userId) {
+    return null
+  }
+
+  return userId
+}
+
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
   targetEmotion: string
@@ -29,11 +51,14 @@ const coachingGuards = new Map<string, ConcurrencyGuard>()
 
 export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
+  const unauthorized = () => socket.emit('coaching-error', { error: 'Not authenticated' })
 
   // Join a session room
-  socket.on('join-session', (data: { sessionId: string }) => {
+  socket.on('join-session', async (data: { sessionId: string }) => {
     const { sessionId } = data
     console.log(`Client ${socket.id} joining session ${sessionId}`)
+    if (!(await assertSessionOwner(socket, sessionId))) return unauthorized()
+
     socket.join(`session-${sessionId}`)
 
     // Initialize session state if not exists
@@ -60,13 +85,15 @@ export function setupClientHandler(socket: Socket, io: Server) {
   // Initialize coaching with the user's selected coach
   socket.on('start-coaching', async (data: { sessionId: string }) => {
     const { sessionId } = data
+    const userId = await assertSessionOwner(socket, sessionId)
+    if (!userId) return unauthorized()
     if (!isValidObjectId(sessionId)) {
       socket.emit('coaching-error', { error: 'Invalid session ID' })
       return
     }
     try {
       const session = await Session.findById(sessionId).populate('coach_id')
-      if (!session) {
+      if (!session || session.user_id.toString() !== userId) {
         socket.emit('coaching-error', { error: 'Session not found' })
         return
       }
@@ -108,6 +135,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
     isFinal: boolean
   }) => {
     const { sessionId, text, speaker, isFinal } = data
+    if (!(await assertSessionOwner(socket, sessionId))) return
 
     // Only process final transcripts with actual text
     if (!isFinal || !text.trim()) return
@@ -169,21 +197,33 @@ export function setupClientHandler(socket: Socket, io: Server) {
   // End session
   socket.on('end-session', (data: { sessionId: string }) => {
     const { sessionId } = data
-    console.log(`Client ${socket.id} ending session ${sessionId}`)
-    socket.leave(`session-${sessionId}`)
-    sessionStates.delete(sessionId)
-    coachingGuards.delete(sessionId)
-    endCoachingSession(sessionId)
+    assertSessionOwner(socket, sessionId).then((userId) => {
+      if (!userId) return
+
+      console.log(`Client ${socket.id} ending session ${sessionId}`)
+      socket.leave(`session-${sessionId}`)
+      sessionStates.delete(sessionId)
+      coachingGuards.delete(sessionId)
+      endCoachingSession(sessionId)
+    })
   })
 
-  // Client requests to watch a specific ESP32 device
   socket.on('watch-device', (deviceId: string) => {
+    if (!getSocketUserId(socket)) {
+      unauthorized()
+      return
+    }
+
     console.log(`Client ${socket.id} watching device ${deviceId}`)
     socket.join(`device-${deviceId}`)
   })
 
-  // Client stops watching
   socket.on('stop-watching', (deviceId: string) => {
+    if (!getSocketUserId(socket)) {
+      unauthorized()
+      return
+    }
+
     socket.leave(`device-${deviceId}`)
   })
 

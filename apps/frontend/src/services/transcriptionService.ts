@@ -42,11 +42,9 @@ export function useTranscriptionService() {
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     onPartialTranscript: (data) => {
-      console.log("Partial:", data.text);
       setPartialTranscript(data.text);
     },
     onCommittedTranscript: (data) => {
-      console.log("Committed:", data.text);
       const newEntry: TranscriptEntry = {
         id: `elevenlabs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         timestamp: Date.now(),
@@ -60,9 +58,8 @@ export function useTranscriptionService() {
       });
       setPartialTranscript(""); // Clear partial when committed
     },
-    onCommittedTranscriptWithTimestamps: (data) => {
-      console.log("Committed with timestamps:", data.text);
-      console.log("Timestamps:", data.words);
+    onCommittedTranscriptWithTimestamps: () => {
+      // Timestamp data available if needed
     },
   });
 
@@ -79,9 +76,7 @@ export function useTranscriptionService() {
     if (!scribe.isConnected) {
       try {
         const token = await fetchTokenFromServer();
-        console.log("🎤 ElevenLabs token:", token);
 
-        // Start ElevenLabs transcription
         await scribe.connect({
           token,
           microphone: {
@@ -89,8 +84,7 @@ export function useTranscriptionService() {
             noiseSuppression: true,
           },
         });
-        console.log("🎤 Transcription started");
-        
+
         return token;
       } catch (error) {
         console.error('Failed to start transcription:', error);
@@ -101,7 +95,6 @@ export function useTranscriptionService() {
   const stopTranscription = useCallback(() => {
     if (scribe.isConnected) {
       scribe.disconnect();
-      console.log("🎤 Transcription stopped");
     }
   }, [scribe.isConnected]);
 

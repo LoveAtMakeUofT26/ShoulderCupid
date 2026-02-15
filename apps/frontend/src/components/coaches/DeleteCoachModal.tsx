@@ -34,9 +34,12 @@ export function DeleteCoachModal({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
             className="fixed inset-0 z-50 flex items-center justify-center px-6"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-coach-title"
           >
             <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-lg">
-              <h3 className="font-display text-lg font-bold text-gray-900 mb-2">
+              <h3 id="delete-coach-title" className="font-display text-lg font-bold text-gray-900 mb-2">
                 Remove {coachName}?
               </h3>
               <p className="text-sm text-gray-500 mb-6">
