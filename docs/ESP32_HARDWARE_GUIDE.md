@@ -377,21 +377,20 @@ The backend uses the **Presage SmartSpectra SDK** via a C++ processor binary for
 ### Architecture
 
 ```
-Browser/ESP32 ──► POST /api/frame ──► frameBuffer.ts
+Browser/ESP32 ──► POST /api/frame ──► presageService.ts
                                           │
-                                    Writes JPEG to disk:
-                                    /opt/cupid/data/frames/{sessionId}/
-                                    frame{timestamp_us}.jpg
+                                    Pipes JPEG (base64) via stdin:
+                                    {"type":"frame","jpeg":"...","ts":123}
                                           │
                                           ▼
                                     presage-processor (C++)
-                                    (one process per session)
+                                    (one process per session, auto-started)
                                           │
-                                    Reads frames, outputs JSON to stdout:
+                                    Decodes frames, outputs JSON to stdout:
                                     { hr, br, hrv, blinking, talking, timestamp }
                                           │
                                           ▼
-                                    presageMetrics.ts
+                                    presageService.ts
                                     ──► Stores latest metrics
                                     ──► Derives emotion from vitals
                                     ──► Broadcasts via WebSocket
