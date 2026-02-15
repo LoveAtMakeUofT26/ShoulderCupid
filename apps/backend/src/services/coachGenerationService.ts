@@ -254,7 +254,7 @@ export async function createGeneratedCoach(preferences?: TraitMap) {
     name: profile.name,
     tagline: profile.tagline,
     description: `AI-generated ${profile.personality_tone} coach with ${profile.personality_style} style.`,
-    specialty: profile.specialty,
+    specialty: 'dating',
     personality: {
       tone: profile.personality_tone,
       style: profile.personality_style,
