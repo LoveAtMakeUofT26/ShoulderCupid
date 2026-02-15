@@ -90,7 +90,7 @@ export function useSessionSocket(sessionId: string | null) {
     logger.log('Connecting to socket:', SOCKET_URL)
 
     const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       autoConnect: true,
       withCredentials: true,
       reconnectionAttempts: 5,
