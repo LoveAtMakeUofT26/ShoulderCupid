@@ -12,8 +12,12 @@ let loaded = false
  * with `cwd=apps/backend` (e.g. `npm run backend`).
  *
  * Load order:
- * 1) repo root `.env` (if present)
- * 2) `apps/backend/.env` (if present) to allow package-local overrides
+ * 1) `apps/backend/.env` (if present)
+ * 2) repo root `.env` (if present)
+ *
+ * Why this order: dotenv does not override existing `process.env` by default.
+ * Loading the backend `.env` first lets it take precedence over a repo-root
+ * `.env` when both exist (common on servers/monorepos).
  *
  * Note: dotenv does not override existing `process.env` by default, which is
  * what we want for production environments where vars are injected externally.
@@ -28,11 +32,10 @@ export function loadEnv(): void {
   const repoRootEnv = path.resolve(__dirname, '../../../..', '.env')
   const backendEnv = path.resolve(__dirname, '../..', '.env') // apps/backend/.env
 
-  if (fs.existsSync(repoRootEnv)) {
-    dotenv.config({ path: repoRootEnv })
-  }
   if (fs.existsSync(backendEnv)) {
     dotenv.config({ path: backendEnv })
   }
+  if (fs.existsSync(repoRootEnv)) {
+    dotenv.config({ path: repoRootEnv })
+  }
 }
-
