@@ -32,12 +32,14 @@ export function CTASection() {
 
           <GoldDivider className="mb-8 mt-14" />
 
-          <div className="flex items-center justify-center gap-6 text-gray-400 text-sm">
+          <div className="flex items-center justify-center gap-4 md:gap-6 text-gray-400 text-sm flex-wrap">
             <span>Free to try</span>
             <span className="w-1 h-1 rounded-full bg-gold-400" />
-            <span>Unlimited AI coaches</span>
+            <span>1M+ unique coaches</span>
             <span className="w-1 h-1 rounded-full bg-gold-400" />
-            <span>Real-time coaching</span>
+            <span>Sub-2s latency</span>
+            <span className="w-1 h-1 rounded-full bg-gold-400" />
+            <span>Session analytics</span>
           </div>
         </FadeInView>
       </div>

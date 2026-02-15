@@ -38,8 +38,8 @@ export function CoachShowcaseSection() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">
-        <SectionHeading subtitle="Swipe through AI-generated coaches with unique personalities, voices, and styles. Build your roster.">
-          Discover AI Coaches
+        <SectionHeading subtitle="Every coach is procedurally generated with a unique personality, voice, and appearance. Swipe Tinder-style, preview their voice, then add to your roster.">
+          1M+ Unique AI Coaches
         </SectionHeading>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -80,7 +80,7 @@ export function CoachShowcaseSection() {
         <FadeInView delay={0.5}>
           <div className="mt-12 text-center">
             <p className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
-              Powered by AI. Unlimited unique coaches. Preview their voice before you choose.
+              20 personality archetypes &times; 30 names &times; 30 ElevenLabs voices &times; unique appearances = 1M+ combinations.
             </p>
             <p className="text-xs mt-1" style={{ color: 'var(--color-text-faint)' }}>
               Free: 3 coaches in your roster &middot; Premium: up to 9

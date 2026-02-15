@@ -37,15 +37,19 @@ export function HeroSection() {
               <span className="gold-foil-text">In Your Ear.</span>
             </motion.h1>
 
-            <motion.p
-              className="text-lg md:text-xl mb-10 max-w-lg"
-              style={{ color: 'var(--color-text-secondary)' }}
+            <motion.div
+              className="mb-10 max-w-xl space-y-3"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
             >
-              Real-time coaching through smart glasses. Discover AI coaches that match your style. Never approach alone again.
-            </motion.p>
+              <p className="text-lg md:text-xl font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                Your AI coach hears the conversation, reads emotions, and whispers exactly what to say — live through your earpiece.
+              </p>
+              <p className="text-base md:text-lg" style={{ color: 'var(--color-text-tertiary)' }}>
+                Smart glasses track biometrics, distance, and facial expressions. Choose from 1M+ unique AI coaches, each with their own voice and personality.
+              </p>
+            </motion.div>
 
             <motion.div
               className="flex flex-col sm:flex-row gap-4"
