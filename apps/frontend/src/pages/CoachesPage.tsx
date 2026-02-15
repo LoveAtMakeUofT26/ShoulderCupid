@@ -12,7 +12,6 @@ export function CoachesPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        // Fetch coaches and user in parallel
         const [coachesRes, user] = await Promise.all([
           fetch('/api/coaches').then(r => r.json()),
           getCurrentUser(),
@@ -62,10 +61,10 @@ export function CoachesPage() {
   return (
     <AppShell>
       <div className="pt-6 md:pt-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] mb-2">
           Choose Your Coach
         </h1>
-        <p className="text-gray-500 mb-6">
+        <p className="text-[var(--color-text-tertiary)] mb-6">
           Each coach has a unique style to match your vibe
         </p>
 
@@ -79,7 +78,6 @@ export function CoachesPage() {
               }`}
             >
               <div className="flex items-start gap-4">
-                {/* Avatar */}
                 <div
                   className="w-16 h-16 rounded-full flex items-center justify-center text-2xl flex-shrink-0 shadow-md"
                   style={{
@@ -89,23 +87,21 @@ export function CoachesPage() {
                   {coach.avatar_emoji}
                 </div>
 
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-semibold text-gray-900">{coach.name}</h3>
+                    <h3 className="font-semibold text-[var(--color-text)]">{coach.name}</h3>
                     {selectedCoachId === coach._id && (
-                      <span className="text-xs bg-cupid-100 text-cupid-600 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-[var(--color-primary-surface)] text-[var(--color-primary-text)] px-2 py-0.5 rounded-full">
                         Active
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 mb-1">{coach.tagline}</p>
+                  <p className="text-sm text-[var(--color-text-tertiary)] mb-1">{coach.tagline}</p>
                   {coach.description && (
-                    <p className="text-xs text-gray-400 mb-2 line-clamp-2">{coach.description}</p>
+                    <p className="text-xs text-[var(--color-text-faint)] mb-2 line-clamp-2">{coach.description}</p>
                   )}
 
-                  {/* Stats */}
-                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="flex items-center gap-3 text-xs text-[var(--color-text-faint)]">
                     <span className="flex items-center gap-1">
                       <span className="text-yellow-500">★</span>
                       {coach.rating.toFixed(1)}
@@ -115,13 +111,12 @@ export function CoachesPage() {
                   </div>
                 </div>
 
-                {/* Select button */}
                 <button
                   onClick={() => handleSelectCoach(coach._id)}
                   disabled={selecting || selectedCoachId === coach._id}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
                     selectedCoachId === coach._id
-                      ? 'bg-cupid-100 text-cupid-600'
+                      ? 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)]'
                       : 'bg-cupid-500 text-white hover:bg-cupid-600 active:scale-95'
                   }`}
                 >
@@ -129,10 +124,9 @@ export function CoachesPage() {
                 </button>
               </div>
 
-              {/* Sample phrase */}
               {coach.sample_phrases?.[0] && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-sm text-gray-600 italic">
+                <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+                  <p className="text-sm text-[var(--color-text-secondary)] italic">
                     "{coach.sample_phrases[0]}"
                   </p>
                 </div>
@@ -141,12 +135,11 @@ export function CoachesPage() {
           ))}
         </div>
 
-        {/* Empty state */}
         {coaches.length === 0 && (
           <div className="card text-center py-12">
             <div className="text-5xl mb-4">🤔</div>
-            <h3 className="font-semibold text-gray-900 mb-2">No coaches available</h3>
-            <p className="text-gray-500 text-sm">
+            <h3 className="font-semibold text-[var(--color-text)] mb-2">No coaches available</h3>
+            <p className="text-[var(--color-text-tertiary)] text-sm">
               Check back soon for new coaches!
             </p>
           </div>

@@ -3,7 +3,7 @@ import { navItems } from './navItems'
 
 export function BottomNav() {
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 pb-safe z-50">
+    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 border-t pb-safe z-50" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
       <div className="max-w-[428px] mx-auto flex justify-around items-center h-16">
         {navItems.map((item) => (
           <NavLink
@@ -11,7 +11,7 @@ export function BottomNav() {
             to={item.to}
             className={({ isActive }) =>
               `flex flex-col items-center justify-center min-w-[64px] py-2 transition-colors ${
-                isActive ? 'text-cupid-500' : 'text-gray-400'
+                isActive ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-faint)]'
               }`
             }
           >

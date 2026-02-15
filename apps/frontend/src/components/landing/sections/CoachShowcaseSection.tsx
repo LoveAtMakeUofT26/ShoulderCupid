@@ -32,9 +32,8 @@ const COACHES = [
 export function CoachShowcaseSection() {
   return (
     <section id="coaches" className="py-24 md:py-32 relative">
-      {/* Background accent */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 dark:bg-cupid-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">
@@ -49,25 +48,21 @@ export function CoachShowcaseSection() {
                 className={`marble-card p-8 text-center h-full cursor-default ${coach.borderColor}`}
                 whileHover={{ y: -8, transition: { duration: 0.25 } }}
               >
-                {/* Avatar */}
                 <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br ${coach.gradient} mb-6 shadow-lg`}>
                   <span className="text-3xl">{coach.emoji}</span>
                 </div>
 
-                {/* Name */}
-                <h3 className="font-display text-xl font-bold text-gray-900 mb-1">
+                <h3 className="font-display text-xl font-bold text-[var(--color-text)] mb-1">
                   {coach.name}
                 </h3>
 
-                {/* Tagline */}
                 <p className="gold-foil-text text-sm font-semibold mb-5">
                   {coach.tagline}
                 </p>
 
-                {/* Quote */}
                 <div className="relative">
                   <div className="absolute -top-2 left-2 text-3xl text-gold-200/60 font-display">&ldquo;</div>
-                  <blockquote className="text-gray-500 text-sm italic leading-relaxed pl-4">
+                  <blockquote className="text-[var(--color-text-tertiary)] text-sm italic leading-relaxed pl-4">
                     {coach.quote}
                   </blockquote>
                 </div>

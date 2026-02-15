@@ -11,42 +11,42 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
         💘
       </div>
 
-      <h1 className="font-display text-3xl font-bold text-gray-900 mb-3">
+      <h1 className="font-display text-3xl font-bold text-[var(--color-text)] mb-3">
         Welcome to Cupid
       </h1>
-      <p className="text-gray-500 text-lg mb-10 max-w-xs">
+      <p className="text-[var(--color-text-tertiary)] text-lg mb-10 max-w-xs">
         Your AI wingman, right in your ear.
       </p>
 
       {/* Value props */}
       <div className="space-y-4 mb-12 w-full max-w-sm">
         <div className="flex items-center gap-4 text-left">
-          <div className="w-10 h-10 rounded-xl bg-cupid-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-surface)] flex items-center justify-center flex-shrink-0">
             <span className="text-lg">🎯</span>
           </div>
           <div>
-            <p className="font-medium text-gray-900 text-sm">Real-time coaching</p>
-            <p className="text-xs text-gray-500">Get advice whispered in your ear as you talk</p>
+            <p className="font-medium text-[var(--color-text)] text-sm">Real-time coaching</p>
+            <p className="text-xs text-[var(--color-text-tertiary)]">Get advice whispered in your ear as you talk</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4 text-left">
-          <div className="w-10 h-10 rounded-xl bg-gold-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-surface)] flex items-center justify-center flex-shrink-0">
             <span className="text-lg">🧠</span>
           </div>
           <div>
-            <p className="font-medium text-gray-900 text-sm">Emotion-aware AI</p>
-            <p className="text-xs text-gray-500">Reads body language and adjusts advice accordingly</p>
+            <p className="font-medium text-[var(--color-text)] text-sm">Emotion-aware AI</p>
+            <p className="text-xs text-[var(--color-text-tertiary)]">Reads body language and adjusts advice accordingly</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4 text-left">
-          <div className="w-10 h-10 rounded-xl bg-cupid-100 flex items-center justify-center flex-shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-surface)] flex items-center justify-center flex-shrink-0">
             <span className="text-lg">📊</span>
           </div>
           <div>
-            <p className="font-medium text-gray-900 text-sm">Post-session reports</p>
-            <p className="text-xs text-gray-500">Review what worked and improve over time</p>
+            <p className="font-medium text-[var(--color-text)] text-sm">Post-session reports</p>
+            <p className="text-xs text-[var(--color-text-tertiary)]">Review what worked and improve over time</p>
           </div>
         </div>
       </div>
@@ -61,7 +61,7 @@ export function WelcomeStep({ onNext, onSkip }: WelcomeStepProps) {
         </button>
         <button
           onClick={onSkip}
-          className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-sm text-[var(--color-text-faint)] hover:text-[var(--color-text-secondary)] transition-colors"
         >
           Skip for now
         </button>

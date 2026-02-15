@@ -66,10 +66,10 @@ export function SessionsPage() {
   return (
     <AppShell>
       <div className="pt-6 md:pt-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] mb-2">
           Your Sessions
         </h1>
-        <p className="text-gray-500 mb-6">
+        <p className="text-[var(--color-text-tertiary)] mb-6">
           Review past coaching sessions
         </p>
 
@@ -88,8 +88,8 @@ export function SessionsPage() {
         {!loading && !error && sessions.length === 0 && (
           <div className="card text-center py-12">
             <div className="text-5xl mb-4">💝</div>
-            <h3 className="font-semibold text-gray-900 mb-2">No sessions yet</h3>
-            <p className="text-gray-500 text-sm mb-6">
+            <h3 className="font-semibold text-[var(--color-text)] mb-2">No sessions yet</h3>
+            <p className="text-[var(--color-text-tertiary)] text-sm mb-6">
               Start your first coaching session to see your history here
             </p>
             <Link to="/session/new" className="btn-primary mx-auto">
@@ -106,14 +106,14 @@ export function SessionsPage() {
                 to={`/sessions/${session._id}`}
                 className="card flex items-center gap-3 hover:shadow-card-hover transition-shadow"
               >
-                <div className="w-10 h-10 rounded-full bg-cupid-100 flex items-center justify-center text-lg">
+                <div className="w-10 h-10 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center text-lg">
                   {session.coach_id?.avatar_emoji || '💘'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">
+                  <p className="font-medium text-[var(--color-text)] truncate">
                     {session.coach_id?.name || 'Coaching Session'}
                   </p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-[var(--color-text-tertiary)]">
                     {formatTimeAgo(session.started_at)}
                     {session.duration_seconds != null && ` · ${formatDuration(session.duration_seconds)}`}
                   </p>
@@ -121,10 +121,10 @@ export function SessionsPage() {
                 <div className="text-right">
                   <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                     session.status === 'ended'
-                      ? 'bg-green-100 text-green-700'
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
                       : session.status === 'active'
-                        ? 'bg-cupid-100 text-cupid-700'
-                        : 'bg-gray-100 text-gray-500'
+                        ? 'bg-cupid-100 text-cupid-700 dark:bg-cupid-900/20 dark:text-cupid-400'
+                        : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]'
                   }`}>
                     {session.status === 'ended' ? 'Completed' : session.status === 'active' ? 'Active' : 'Cancelled'}
                   </span>
