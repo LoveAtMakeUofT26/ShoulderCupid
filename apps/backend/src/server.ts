@@ -60,7 +60,10 @@ const applyAuthMiddlewareToSockets = (appSocket: Server, authMiddlewares: Return
 
     let index = 0
     const run = (err?: any) => {
-      if (err) return next(err)
+      if (err) {
+        console.error(`Socket auth middleware failed for ${socket.id}:`, err.message || err)
+        return next(err)
+      }
       const middleware = middlewareChain[index++]
       if (!middleware) return next()
       middleware(req as any, res, run)

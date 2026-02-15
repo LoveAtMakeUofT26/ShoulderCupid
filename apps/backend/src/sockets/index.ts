@@ -4,6 +4,10 @@ import { setupClientHandler } from './clientHandler.js'
 
 export function setupSocketHandlers(io: Server) {
   io.on('connection', (socket) => {
+    const user = (socket.request as any).user
+    const sessionUser = (socket.request as any).session?.passport?.user
+    console.log(`Socket connected: ${socket.id}, authenticated: ${!!(user || sessionUser)}`)
+
     // Detect client type based on first event
     socket.on('identify', (data: { type: 'esp32' | 'web-client' }) => {
       if (data.type === 'esp32') {
