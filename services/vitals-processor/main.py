@@ -47,6 +47,7 @@ def output_metrics(
     metric_type: str,
     hr: float,
     br: float,
+    hrv: float,
     blinking: bool,
     talking: bool,
     hr_conf: float,
@@ -58,7 +59,7 @@ def output_metrics(
             "type": metric_type,
             "hr": float(round(hr, 1)),
             "br": float(round(br, 1)),
-            "hrv": 0,
+            "hrv": float(round(hrv, 1)),
             "blinking": bool(blinking),
             "talking": bool(talking),
             "hr_confidence": float(round(hr_conf, 2)),
@@ -100,7 +101,11 @@ def main():
     print("[vitals] Ready, reading frames from stdin", file=sys.stderr)
 
     frames_fed = 0
+    faces_detected = 0
     last_edge_output_time = 0
+    fps_window_start = time.time()
+    fps_frame_count = 0
+    last_fps_log_time = 0
 
     try:
         for line in sys.stdin:
@@ -141,15 +146,35 @@ def main():
                 continue
 
             ts_ms = ts_us // 1000
+            frames_fed += 1
+            fps_frame_count += 1
+
+            # Log effective FPS every 10 seconds
+            now = time.time()
+            if now - last_fps_log_time >= 10:
+                elapsed = now - fps_window_start
+                effective_fps = fps_frame_count / elapsed if elapsed > 0 else 0
+                rppg_samples = len(rppg_estimator._samples)
+                print(
+                    f"[vitals] Stats: effective_fps={effective_fps:.1f}, "
+                    f"frames={frames_fed}, faces={faces_detected} "
+                    f"({100*faces_detected/max(1,frames_fed):.0f}%), "
+                    f"rppg_buffer={rppg_samples}",
+                    file=sys.stderr,
+                )
+                last_fps_log_time = now
+                fps_window_start = now
+                fps_frame_count = 0
 
             # Process face
             face_result = face_detector.process_frame(frame_rgb)
 
             if face_result is None:
-                frames_fed += 1
                 if frames_fed % STATUS_INTERVAL_FRAMES == 0:
                     output_status(session_id, "processing", frames_fed)
                 continue
+
+            faces_detected += 1
 
             # Feed ROI data to estimators
             if face_result.forehead_roi_mean is not None and face_result.cheek_roi_mean is not None:
@@ -159,15 +184,13 @@ def main():
             if face_result.chin_y is not None:
                 breathing_estimator.add_landmark_sample(ts_ms, face_result.chin_y)
 
-            frames_fed += 1
-
             # Throttle metric output
             now_ms = int(time.time() * 1000)
             if now_ms - last_edge_output_time >= EDGE_OUTPUT_INTERVAL_MS:
                 last_edge_output_time = now_ms
 
-                # Heart rate
-                hr, hr_conf = rppg_estimator.estimate()
+                # Heart rate + HRV
+                hr, hr_conf, hrv = rppg_estimator.estimate()
 
                 # Breathing rate (try rPPG-based first, fall back to landmarks)
                 pulse_data = rppg_estimator.get_pulse_signal()
@@ -182,6 +205,7 @@ def main():
                     "core" if hr > 0 else "edge",
                     hr,
                     br,
+                    hrv,
                     face_result.blinking,
                     face_result.talking,
                     hr_conf,
