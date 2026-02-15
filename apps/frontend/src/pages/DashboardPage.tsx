@@ -10,9 +10,39 @@ interface DashboardStats {
   avgScore: number | null
 }
 
+interface SessionItem {
+  _id: string
+  status: 'active' | 'ended' | 'cancelled'
+  started_at: string
+  duration_seconds?: number
+  coach_id?: {
+    name: string
+    avatar_emoji: string
+  }
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
 export function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
   const [stats, setStats] = useState<DashboardStats>({ sessionsThisWeek: 0, avgScore: null })
+  const [sessions, setSessions] = useState<SessionItem[]>([])
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
@@ -46,6 +76,10 @@ export function DashboardPage() {
     fetch('/api/sessions/stats', { credentials: 'include' })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setStats(data) })
+      .catch(() => {})
+    fetch('/api/sessions', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSessions(data.slice(0, 3)))
       .catch(() => {})
   }, [user])
 
@@ -119,9 +153,23 @@ export function DashboardPage() {
             isDesktop ? (
               /* Desktop: featured coach banner */
               <div className="card-featured flex items-center gap-6 p-8">
+                {user.coach.avatar_url ? (
+                  <img
+                    src={user.coach.avatar_url}
+                    alt={user.coach.name}
+                    className="w-20 h-20 rounded-2xl object-cover shadow-md flex-shrink-0"
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback) fallback.style.display = 'flex'
+                      target.style.display = 'none'
+                    }}
+                  />
+                ) : null}
                 <div
                   className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl shadow-md flex-shrink-0"
                   style={{
+                    display: user.coach.avatar_url ? 'none' : 'flex',
                     background: `linear-gradient(135deg, ${user.coach.color_from}, ${user.coach.color_to})`,
                   }}
                 >
@@ -141,9 +189,23 @@ export function DashboardPage() {
               /* Mobile: compact coach card */
               <div className="card-elevated p-5" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
                 <div className="flex items-center gap-4">
+                  {user.coach.avatar_url ? (
+                    <img
+                      src={user.coach.avatar_url}
+                      alt={user.coach.name}
+                      className="w-14 h-14 rounded-full object-cover shadow-md"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        const fallback = target.nextElementSibling as HTMLElement
+                        if (fallback) fallback.style.display = 'flex'
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : null}
                   <div
                     className="w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-md"
                     style={{
+                      display: user.coach.avatar_url ? 'none' : 'flex',
                       background: `linear-gradient(135deg, ${user.coach.color_from}, ${user.coach.color_to})`,
                     }}
                   >
@@ -245,7 +307,37 @@ export function DashboardPage() {
               View All
             </Link>
           </div>
-          {isDesktop ? (
+          {sessions.length > 0 ? (
+            <div className="space-y-3">
+              {sessions.map((session) => (
+                <Link
+                  key={session._id}
+                  to={`/sessions/${session._id}`}
+                  className={`flex items-center gap-3 ${
+                    isDesktop
+                      ? 'card-desktop group p-4 hover:shadow-card-lg'
+                      : 'card hover:shadow-card-hover transition-shadow'
+                  }`}
+                >
+                  <div className={`${isDesktop ? 'w-10 h-10 rounded-xl' : 'w-10 h-10 rounded-full'} bg-[var(--color-primary-surface)] flex items-center justify-center text-lg flex-shrink-0`}>
+                    {session.coach_id?.avatar_emoji || '💘'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-[var(--color-text)] truncate">
+                      {session.coach_id?.name || 'Coaching Session'}
+                    </p>
+                    <p className="text-sm text-[var(--color-text-tertiary)]">
+                      {formatTimeAgo(session.started_at)}
+                      {session.duration_seconds != null && ` · ${formatDuration(session.duration_seconds)}`}
+                    </p>
+                  </div>
+                  <svg className={`w-4 h-4 text-[var(--color-text-tertiary)] flex-shrink-0 ${isDesktop ? 'group-hover:text-[var(--color-text)] group-hover:translate-x-0.5 transition-all' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              ))}
+            </div>
+          ) : isDesktop ? (
             <div className="card-featured text-center py-16">
               <div className="text-6xl mb-4">🎯</div>
               <h3 className="font-display text-xl font-semibold text-[var(--color-text)] mb-2">No sessions yet</h3>
