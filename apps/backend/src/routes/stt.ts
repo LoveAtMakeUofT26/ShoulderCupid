@@ -9,7 +9,7 @@ const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
 });
 
-sttRouter.get("/scribe-token", async (req, res) => {
+sttRouter.get("/scribe-token", async (_req, res) => {
   try {
     const token = await elevenlabs.tokens.singleUse.create("realtime_scribe");
     console.log("🎤 Created scribe token:", token);
