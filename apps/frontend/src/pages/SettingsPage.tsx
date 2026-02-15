@@ -8,6 +8,13 @@ import { Spinner } from '../components/ui/Spinner'
 
 const sections = ['Profile', 'Preferences', 'Device', 'Account'] as const
 
+const sectionBorderColors: Record<string, string> = {
+  profile: 'md:border-l-4 md:border-l-cupid-400',
+  preferences: 'md:border-l-4 md:border-l-gold-400',
+  device: 'md:border-l-4 md:border-l-blue-400',
+  account: 'md:border-l-4 md:border-l-gray-300',
+}
+
 const THEME_OPTIONS = [
   { value: 'light' as const, label: 'Light' },
   { value: 'dark' as const, label: 'Dark' },
@@ -18,7 +25,7 @@ function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-function ProfileSection({ user }: { user: User }) {
+function ProfileSection({ user, isDesktop }: { user: User; isDesktop: boolean }) {
   const displayName = user.name || user.email?.split('@')[0] || 'Friend'
 
   return (
@@ -26,21 +33,21 @@ function ProfileSection({ user }: { user: User }) {
       <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
         Profile
       </h2>
-      <div className="card">
-        <div className="flex items-center gap-4 mb-4">
+      <div className={`${isDesktop ? 'card-desktop' : 'card'} ${sectionBorderColors.profile}`}>
+        <div className={`flex items-center gap-4 mb-4 ${isDesktop ? 'bg-gradient-to-br from-cupid-50/50 to-marble-50 -m-6 mb-4 p-6 rounded-t-2xl' : ''}`}>
           {user.picture ? (
             <img
               src={user.picture}
               alt={displayName}
-              className="w-14 h-14 rounded-full object-cover"
+              className={`rounded-full object-cover ${isDesktop ? 'w-20 h-20 ring-2 ring-marble-200' : 'w-14 h-14'}`}
             />
           ) : (
-            <div className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center text-2xl">
+            <div className={`rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center ${isDesktop ? 'w-20 h-20 text-3xl' : 'w-14 h-14 text-2xl'}`}>
               {displayName.charAt(0).toUpperCase()}
             </div>
           )}
           <div>
-            <p className="font-semibold text-[var(--color-text)]">{displayName}</p>
+            <p className={`font-semibold text-[var(--color-text)] ${isDesktop ? 'text-lg' : ''}`}>{displayName}</p>
             <p className="text-sm text-[var(--color-text-tertiary)]">{user.email}</p>
           </div>
         </div>
@@ -53,7 +60,7 @@ function ProfileSection({ user }: { user: User }) {
   )
 }
 
-function PreferencesSection({ user }: { user: User }) {
+function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolean }) {
   const { theme, setTheme } = useThemeStore()
 
   return (
@@ -61,8 +68,8 @@ function PreferencesSection({ user }: { user: User }) {
       <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
         Preferences
       </h2>
-      <div className="card space-y-4">
-        <div className="flex items-center justify-between">
+      <div className={`${isDesktop ? 'card-desktop' : 'card'} space-y-0 ${sectionBorderColors.preferences}`}>
+        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors rounded-t-2xl' : 'py-2'}`}>
           <div>
             <p className="font-medium text-[var(--color-text)]">Coaching Style</p>
             <p className="text-sm text-[var(--color-text-tertiary)]">How direct your coach is</p>
@@ -71,8 +78,8 @@ function PreferencesSection({ user }: { user: User }) {
             {capitalize(user.preferences.coaching_style || 'balanced')}
           </span>
         </div>
-        <div className="border-t border-[var(--color-border)]" />
-        <div className="flex items-center justify-between">
+        <div className={`border-t border-[var(--color-border)] ${isDesktop ? '-mx-6 mx-0' : ''}`} />
+        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors' : 'py-2'}`}>
           <div>
             <p className="font-medium text-[var(--color-text)]">Comfort Sensitivity</p>
             <p className="text-sm text-[var(--color-text-tertiary)]">When to trigger warnings</p>
@@ -81,8 +88,8 @@ function PreferencesSection({ user }: { user: User }) {
             {capitalize(user.preferences.comfort_sensitivity || 'medium')}
           </span>
         </div>
-        <div className="border-t border-[var(--color-border)]" />
-        <div className="flex items-center justify-between">
+        <div className={`border-t border-[var(--color-border)] ${isDesktop ? '-mx-6 mx-0' : ''}`} />
+        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors rounded-b-2xl' : 'py-2'}`}>
           <div>
             <p className="font-medium text-[var(--color-text)]">Theme</p>
             <p className="text-sm text-[var(--color-text-tertiary)]">App appearance</p>
@@ -108,21 +115,24 @@ function PreferencesSection({ user }: { user: User }) {
   )
 }
 
-function DeviceSection() {
+function DeviceSection({ isDesktop }: { isDesktop: boolean }) {
   return (
     <section id="device">
       <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
         Device
       </h2>
-      <div className="card">
+      <div className={`${isDesktop ? 'card-desktop' : 'card'} ${sectionBorderColors.device}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-secondary)] flex items-center justify-center">
-              👓
+              {'\uD83D\uDC53'}
             </div>
             <div>
               <p className="font-medium text-[var(--color-text)]">Cupid Glasses</p>
-              <p className="text-sm text-[var(--color-text-tertiary)]">Not connected</p>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-[var(--color-text-faint)]" />
+                <p className="text-sm text-[var(--color-text-tertiary)]">Not connected</p>
+              </div>
             </div>
           </div>
           <button className="btn-ghost text-sm px-3 py-1.5 opacity-50 cursor-not-allowed" disabled>
@@ -134,13 +144,13 @@ function DeviceSection() {
   )
 }
 
-function AccountSection({ onLogout }: { onLogout: () => void }) {
+function AccountSection({ onLogout, isDesktop }: { onLogout: () => void; isDesktop: boolean }) {
   return (
     <section id="account">
       <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
         Account
       </h2>
-      <div className="card space-y-4">
+      <div className={`${isDesktop ? 'card-desktop' : 'card'} space-y-4 ${sectionBorderColors.account}`}>
         <button className="text-left w-full text-[var(--color-text-faint)] font-medium cursor-not-allowed" disabled>
           Subscription
           <span className="ml-2 text-xs text-[var(--color-text-faint)]">Coming soon</span>
@@ -218,17 +228,17 @@ export function SettingsPage() {
 
   const content = (
     <>
-      <ProfileSection user={user} />
-      <PreferencesSection user={user} />
-      <DeviceSection />
-      <AccountSection onLogout={handleLogout} />
+      <ProfileSection user={user} isDesktop={isDesktop} />
+      <PreferencesSection user={user} isDesktop={isDesktop} />
+      <DeviceSection isDesktop={isDesktop} />
+      <AccountSection onLogout={handleLogout} isDesktop={isDesktop} />
     </>
   )
 
   return (
     <AppShell>
-      <div className="pt-6 md:pt-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] mb-6 md:mb-8">
+      <div className="pt-6 md:pt-0">
+        <h1 className="text-2xl md:text-4xl font-bold font-display text-[var(--color-text)] mb-6 md:mb-8 tracking-tight">
           Settings
         </h1>
 
@@ -236,14 +246,14 @@ export function SettingsPage() {
           <div className="grid grid-cols-12 gap-8">
             {/* Section Nav */}
             <div className="col-span-3">
-              <nav className="sticky top-8 space-y-1">
+              <nav className="sticky top-8 bg-[var(--color-surface)] rounded-2xl shadow-card p-3 space-y-0.5">
                 {sections.map((section) => (
                   <button
                     key={section}
                     onClick={() => handleSectionClick(section)}
-                    className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                    className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                       activeSection === section.toLowerCase()
-                        ? 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)]'
+                        ? 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)] shadow-nav-active'
                         : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]'
                     }`}
                   >

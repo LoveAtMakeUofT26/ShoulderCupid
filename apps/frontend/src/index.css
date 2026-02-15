@@ -166,6 +166,41 @@
     background-clip: text;
   }
 
+  /* Desktop-enhanced card with hover lift */
+  .card-desktop {
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-card);
+    @apply rounded-2xl p-4
+           md:p-6 md:transition-all md:duration-200
+           md:hover:-translate-y-0.5;
+  }
+  .card-desktop:hover {
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  /* Featured/hero card with marble treatment */
+  .card-featured {
+    background-color: var(--color-surface);
+    @apply backdrop-blur-sm rounded-3xl p-6;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-marble);
+  }
+
+  /* Stats card with inner glow */
+  .card-stat {
+    background-color: var(--color-surface);
+    @apply rounded-2xl p-5
+           md:transition-all md:duration-200;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+  }
+
+  /* Subtle section label */
+  .section-label {
+    color: var(--color-text-faint);
+    @apply text-xs font-semibold uppercase tracking-widest;
+  }
+
   .btn-glow {
     background-color: var(--color-primary);
     @apply relative text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
