@@ -48,7 +48,7 @@ export function LiveSessionPage() {
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
-  const [isTestSession, setIsTestSession] = useState(false)
+  const [, setIsTestSession] = useState(false)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
