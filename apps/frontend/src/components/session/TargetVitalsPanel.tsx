@@ -49,10 +49,10 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
             Analyzing camera feed...
           </div>
           <p className="text-xs text-[var(--color-text-faint)] mt-1">
-            Presage needs ~10s of a visible face to start
+            Needs ~10s of a visible face to start
           </p>
           <p className="text-xs text-[var(--color-text-faint)] mt-1">
-            Not seeing data? Ensure the Presage processor is running on the server.
+            Not seeing data? Ensure the vitals processor is running on the server.
           </p>
         </div>
       </div>
@@ -79,7 +79,7 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
             {vitals.heart_rate > 0 ? Math.round(vitals.heart_rate) : '--'}
           </div>
           <div className="text-xs text-[var(--color-text-faint)]">
-            {vitals.heart_rate > 0 ? 'BPM' : 'BPM (needs API key)'}
+            {vitals.heart_rate > 0 ? 'BPM' : 'BPM (needs 15+ FPS)'}
           </div>
         </div>
 

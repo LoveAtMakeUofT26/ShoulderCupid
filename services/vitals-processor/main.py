@@ -56,13 +56,13 @@ def output_metrics(
         {
             "session_id": session_id,
             "type": metric_type,
-            "hr": round(hr, 1),
-            "br": round(br, 1),
+            "hr": float(round(hr, 1)),
+            "br": float(round(br, 1)),
             "hrv": 0,
-            "blinking": blinking,
-            "talking": talking,
-            "hr_confidence": round(hr_conf, 2),
-            "br_confidence": round(br_conf, 2),
+            "blinking": bool(blinking),
+            "talking": bool(talking),
+            "hr_confidence": float(round(hr_conf, 2)),
+            "br_confidence": float(round(br_conf, 2)),
             "timestamp": int(time.time() * 1000),
         }
     )
