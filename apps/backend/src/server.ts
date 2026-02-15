@@ -11,6 +11,7 @@ import { sessionsRouter } from './routes/sessions.js'
 import { userRouter } from './routes/user.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
+import { ttsRouter } from './routes/tts.js'
 import { setupSocketHandlers } from './sockets/index.js'
 
 dotenv.config()
@@ -48,6 +49,7 @@ app.use('/api/sessions', sessionsRouter)
 app.use('/api/user', userRouter)
 app.use('/api/stt', sttRouter)
 app.use('/api/gemini', geminiRouter)
+app.use('/api/tts', ttsRouter)
 
 // Socket.io handlers
 setupSocketHandlers(io)
