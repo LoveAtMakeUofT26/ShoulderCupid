@@ -16,7 +16,7 @@ export function CameraSourceSelector({ value, onChange, esp32Connected = false }
         className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
           value === 'webcam'
             ? 'bg-cupid-500 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
         }`}
       >
         <span>💻</span>
@@ -27,7 +27,7 @@ export function CameraSourceSelector({ value, onChange, esp32Connected = false }
         className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
           value === 'esp32'
             ? 'bg-cupid-500 text-white'
-            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+            : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
         }`}
       >
         <span>📷</span>
@@ -61,7 +61,7 @@ export function CameraFeed({ source, videoRef, esp32StreamUrl, isActive, frameCo
           style={{ transform: 'scaleX(-1)' }} // Mirror for selfie view
         />
         {isActive && (
-          <div className="absolute top-3 right-3 flex items-center gap-2 bg-black/60 rounded-lg px-3 py-1">
+          <div className="absolute top-3 right-3 flex items-center gap-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
             <span className="text-white text-xs font-medium">
               LIVE {frameCount !== undefined && `(${frameCount} frames)`}
@@ -82,10 +82,10 @@ export function CameraFeed({ source, videoRef, esp32StreamUrl, isActive, frameCo
           className="w-full h-full object-cover rounded-2xl"
         />
       ) : (
-        <div className="text-center text-gray-500">
+        <div className="text-center text-[var(--color-text-faint)]">
           <p className="text-4xl mb-2">📷</p>
           <p className="text-sm">ESP32-CAM not connected</p>
-          <p className="text-xs mt-1 text-gray-600">Switch to Webcam for testing</p>
+          <p className="text-xs mt-1 text-[var(--color-text-tertiary)]">Switch to Webcam for testing</p>
         </div>
       )}
     </div>

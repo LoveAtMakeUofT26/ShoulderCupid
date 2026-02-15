@@ -19,42 +19,82 @@ interface StartSessionModalProps {
 interface CheckStatus {
   checked: boolean
   passed: boolean
+  detail?: string
 }
 
 export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSessionModalProps) {
   const [checks, setChecks] = useState<Record<string, CheckStatus>>({
-    device: { checked: false, passed: false },
     camera: { checked: false, passed: false },
     microphone: { checked: false, passed: false },
-    speaker: { checked: false, passed: false },
+    presage: { checked: false, passed: false },
   })
   const [isRunningChecks, setIsRunningChecks] = useState(false)
 
   if (!isOpen) return null
 
-  const allChecksPassed = Object.values(checks).every(c => c.passed)
   const anyCheckRunning = isRunningChecks
 
   const runAllChecks = async () => {
     setIsRunningChecks(true)
 
-    // Simulate hardware checks (in real app, would check actual hardware)
-    const checkOrder = ['device', 'camera', 'microphone', 'speaker']
-
-    for (const check of checkOrder) {
+    // Camera check
+    setChecks(prev => ({ ...prev, camera: { checked: false, passed: false } }))
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
+      stream.getTracks().forEach(t => t.stop())
+      setChecks(prev => ({ ...prev, camera: { checked: true, passed: true } }))
+    } catch {
       setChecks(prev => ({
         ...prev,
-        [check]: { checked: true, passed: false },
+        camera: { checked: true, passed: false, detail: 'Camera access denied' },
       }))
+    }
 
-      // Simulate check time
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      // Randomly pass (90% success for demo)
-      const passed = Math.random() > 0.1
+    // Microphone check
+    setChecks(prev => ({ ...prev, microphone: { checked: false, passed: false } }))
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream.getTracks().forEach(t => t.stop())
+      setChecks(prev => ({ ...prev, microphone: { checked: true, passed: true } }))
+    } catch {
       setChecks(prev => ({
         ...prev,
-        [check]: { checked: true, passed },
+        microphone: { checked: true, passed: false, detail: 'Mic access denied' },
+      }))
+    }
+
+    // Presage vitals check
+    setChecks(prev => ({ ...prev, presage: { checked: false, passed: false } }))
+    try {
+      const res = await fetch('/api/presage/status')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const status = await res.json()
+
+      if (!status.binaryInstalled) {
+        setChecks(prev => ({
+          ...prev,
+          presage: { checked: true, passed: false, detail: 'Presage binary not found on server' },
+        }))
+      } else if (!status.apiKeyConfigured) {
+        setChecks(prev => ({
+          ...prev,
+          presage: {
+            checked: true,
+            passed: false,
+            detail: 'PRESAGE_API_KEY not set in server .env',
+          },
+        }))
+      } else {
+        setChecks(prev => ({ ...prev, presage: { checked: true, passed: true } }))
+      }
+    } catch {
+      setChecks(prev => ({
+        ...prev,
+        presage: {
+          checked: true,
+          passed: false,
+          detail: 'Cannot reach backend /api/presage/status',
+        },
       }))
     }
 
@@ -62,11 +102,14 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
   }
 
   const CHECK_LABELS: Record<string, { label: string; icon: string }> = {
-    device: { label: 'ESP32 Device', icon: '📡' },
     camera: { label: 'Camera', icon: '📷' },
     microphone: { label: 'Microphone', icon: '🎤' },
-    speaker: { label: 'Earpiece', icon: '🔊' },
+    presage: { label: 'Presage Vitals', icon: '💓' },
   }
+
+  // Allow starting even if presage fails (it's not blocking)
+  const canStart = checks.camera.passed && checks.microphone.passed
+  const hasWarnings = checks.presage.checked && !checks.presage.passed
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
@@ -121,16 +164,27 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
                   className={`flex items-center gap-3 p-3 rounded-xl border ${
                     status.passed
                       ? 'border-green-200 bg-green-50'
+                      : status.checked && key === 'presage'
+                      ? 'border-yellow-200 bg-yellow-50'
                       : status.checked
                       ? 'border-red-200 bg-red-50'
                       : 'border-gray-200 bg-gray-50'
                   }`}
                 >
                   <span className="text-xl">{icon}</span>
-                  <span className="flex-1 text-sm font-medium text-gray-700">{label}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-gray-700">{label}</span>
+                    {status.detail && (
+                      <p className={`text-xs mt-0.5 ${key === 'presage' ? 'text-yellow-600' : 'text-red-500'}`}>
+                        {status.detail}
+                      </p>
+                    )}
+                  </div>
                   {status.checked ? (
                     status.passed ? (
                       <span className="text-green-500 text-lg">✓</span>
+                    ) : key === 'presage' ? (
+                      <span className="text-yellow-500 text-lg">⚠</span>
                     ) : (
                       <span className="text-red-500 text-lg">✗</span>
                     )
@@ -143,9 +197,18 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
           </div>
         </div>
 
+        {/* Warning about presage */}
+        {hasWarnings && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <p className="text-xs text-yellow-700">
+              Vitals analysis won't work without Presage setup. Session will still work for coaching + transcription.
+            </p>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="space-y-3">
-          {!allChecksPassed && (
+          {!canStart && (
             <button
               onClick={runAllChecks}
               disabled={anyCheckRunning}
@@ -157,10 +220,14 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
           <button
             onClick={onStart}
-            disabled={!allChecksPassed}
+            disabled={!canStart}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {allChecksPassed ? 'Start Session' : 'Complete Checks First'}
+            {canStart
+              ? hasWarnings
+                ? 'Start Session (without vitals)'
+                : 'Start Session'
+              : 'Complete Checks First'}
           </button>
         </div>
       </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
@@ -9,12 +9,16 @@ import {
   TranscriptStream,
   WarningAlert,
   StatsBar,
-  StartSessionModal,
   EndSessionModal,
   TargetVitalsPanel,
+  PreflightPage,
+  CameraViewport,
+  TranscriptionStatus,
 } from '../components/session'
-import { CameraSourceSelector, CameraFeed, type CameraSource } from '../components/session/CameraSourceSelector'
-import { AudioSettings } from '../components/session/AudioSettings'
+import { CameraSourceSelector, type CameraSource } from '../components/session/CameraSourceSelector'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import { Spinner } from '../components/ui/Spinner'
+import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -30,6 +34,7 @@ export function LiveSessionPage() {
   const [isEnding, setIsEnding] = useState(false)
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
 
+  const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
   const activeSessionId = createdSessionId || (isNewSession ? null : sessionId || null)
@@ -45,12 +50,12 @@ export function LiveSessionPage() {
     warningLevel,
     warningMessage,
     targetVitals,
+    presageError,
     endSession,
     startCoaching,
     sendTranscript,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
-  // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
     partialTranscript,
@@ -59,25 +64,24 @@ export function LiveSessionPage() {
     stopTranscription,
   } = useTranscriptionService()
 
-  // Webcam service for browser camera capture
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
     fps: 2,
     quality: 0.7,
   })
 
-  // Track which transcripts we've already sent to avoid duplicates
   const lastSentIndexRef = useRef(0)
 
   // Combine socket and transcription transcripts
-  const allTranscripts = [...transcript, ...transcriptionTranscripts]
+  // Use socket transcripts only (backend broadcasts both user + coach entries).
+  // transcriptionTranscripts is only used for sending to backend, not for display.
+  const allTranscripts = transcript
 
-  // Start ElevenLabs transcription + coaching when session becomes active
+  // Start ElevenLabs transcription when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
       startTranscription()
     }
-
     return () => {
       if (transcriptionConnected && phase !== 'active') {
         stopTranscription()
@@ -85,19 +89,16 @@ export function LiveSessionPage() {
     }
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
 
-  // Initialize coaching once socket is connected and session is active
   useEffect(() => {
     if (phase === 'active' && isConnected && activeSessionId) {
       startCoaching()
     }
   }, [phase, isConnected, activeSessionId, startCoaching])
 
-  // Start/stop webcam when session becomes active and source is webcam
   useEffect(() => {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
       webcam.start()
     }
-
     return () => {
       if (webcam.isActive && phase !== 'active') {
         webcam.stop()
@@ -105,7 +106,6 @@ export function LiveSessionPage() {
     }
   }, [phase, cameraSource])
 
-  // Send committed transcripts to backend pipeline (not directly to Gemini)
   useEffect(() => {
     if (transcriptionTranscripts.length > lastSentIndexRef.current) {
       for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
@@ -118,7 +118,6 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
-  // Fetch user on mount
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -138,29 +137,26 @@ export function LiveSessionPage() {
     fetchUser()
   }, [navigate])
 
-  // Duration timer
   useEffect(() => {
     if (phase !== 'active') return
-
     const interval = setInterval(() => {
       setDuration(prev => prev + 1)
     }, 1000)
-
     return () => clearInterval(interval)
   }, [phase])
 
   const handleCameraSourceChange = useCallback((source: CameraSource) => {
-    // Stop current camera before switching
     if (webcam.isActive) webcam.stop()
     setCameraSource(source)
-
-    // Start new source if session is active
     if (phase === 'active' && source === 'webcam') {
       webcam.start()
     }
   }, [phase, webcam])
 
   const handleStartSession = useCallback(async () => {
+    // Unlock browser audio during user gesture so coach TTS can play later
+    unlockAudio()
+
     try {
       const response = await fetch('/api/sessions/start', {
         method: 'POST',
@@ -185,6 +181,7 @@ export function LiveSessionPage() {
     endSession()
     webcam.stop()
     stopTranscription()
+    clearAudioQueue()
 
     if (activeSessionId) {
       try {
@@ -197,176 +194,140 @@ export function LiveSessionPage() {
       }
     }
 
-    // Navigate to session report (or list if no ID)
     navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
   }, [endSession, navigate, activeSessionId, webcam, stopTranscription])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-marble-50 flex items-center justify-center">
-        <div className="text-cupid-500">
-          <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        </div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
+        <Spinner size="lg" />
       </div>
     )
   }
 
   if (!user) return null
 
-  // Pre-flight phase - show modal with I/O configuration
+  // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
-      <div className="min-h-screen bg-marble-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-          <Link to="/dashboard" className="text-gray-500">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="flex-1 text-center font-semibold text-gray-900">New Session</h1>
-          <div className="w-6" />
-        </div>
-
-        {/* I/O Configuration */}
-        <div className="p-4 space-y-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Camera Source</h3>
-            <CameraSourceSelector
-              value={cameraSource}
-              onChange={setCameraSource}
-            />
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Audio Devices</h3>
-            <AudioSettings />
-          </div>
-        </div>
-
-        <StartSessionModal
-          isOpen={true}
-          coach={user.coach || null}
-          onClose={() => navigate('/dashboard')}
-          onStart={handleStartSession}
-        />
-      </div>
+      <PreflightPage
+        coach={user.coach || null}
+        cameraSource={cameraSource}
+        onCameraSourceChange={setCameraSource}
+        onStart={handleStartSession}
+        onBack={() => navigate('/dashboard')}
+      />
     )
   }
 
-  // Active session layout
+  // Active session layout — intentionally dark bg for video context
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Stats Bar */}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <StatsBar
         mode={mode}
         duration={duration}
         isConnected={isConnected}
       />
 
-      {/* Warning Alert (overlays at top) */}
       {warningLevel > 0 && (
-        <div className="absolute top-14 left-4 right-4 z-40">
+        <div className="absolute top-14 left-4 right-4 z-40 md:left-auto md:right-8 md:max-w-md">
           <WarningAlert level={warningLevel} message={warningMessage} />
         </div>
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
-        {/* Camera Source Toggle */}
-        <CameraSourceSelector
-          value={cameraSource}
-          onChange={handleCameraSourceChange}
-          esp32Connected={isConnected}
-        />
-
-        {/* Video Feed Area */}
-        <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 relative overflow-hidden">
-          <CameraFeed
-            source={cameraSource}
-            videoRef={webcam.videoRef}
-            esp32StreamUrl={isConnected ? '/api/stream' : undefined}
-            isActive={webcam.isActive}
-            frameCount={webcam.frameCount}
-          />
-
-          {/* Hidden canvas for webcam frame capture */}
-          <canvas ref={webcam.canvasRef} className="hidden" />
-
-          {/* Mode Badge Overlay */}
-          <div className="absolute top-3 left-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-              mode === 'CONVERSATION' ? 'bg-cupid-500' :
-              mode === 'APPROACH' ? 'bg-gold-500' : 'bg-gray-600'
-            }`}>
-              {mode === 'IDLE' ? 'Scanning...' : mode}
-            </span>
+      {isDesktop ? (
+        /* Desktop: side-by-side layout */
+        <div className="flex-1 flex p-4 gap-4 overflow-hidden">
+          {/* Left panel: Camera + Vitals */}
+          <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
+            <CameraSourceSelector
+              value={cameraSource}
+              onChange={handleCameraSourceChange}
+              esp32Connected={isConnected}
+            />
+            <CameraViewport
+              cameraSource={cameraSource}
+              videoRef={webcam.videoRef}
+              canvasRef={webcam.canvasRef}
+              isConnected={isConnected}
+              isActive={webcam.isActive}
+              frameCount={webcam.frameCount}
+              mode={mode}
+              distance={distance}
+              webcamError={webcam.error}
+              minHeight="300px"
+            />
+            <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           </div>
 
-          {/* Distance Overlay */}
-          {distance > 0 && (
-            <div className="absolute bottom-3 left-3 bg-black/60 rounded-lg px-3 py-1">
-              <span className="text-white text-sm font-medium">
-                {Math.round(distance)}cm away
-              </span>
+          {/* Right panel: Coaching + Transcript */}
+          <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
+            <CoachingPanel
+              coach={user.coach || null}
+              mode={mode}
+              message={coachingMessage}
+              targetEmotion={targetEmotion}
+              distance={distance}
+              heartRate={heartRate}
+            />
+            <div className="flex-1 min-h-[200px]">
+              <TranscriptStream entries={allTranscripts} />
             </div>
-          )}
-
-          {/* Webcam Error */}
-          {webcam.error && (
-            <div className="absolute bottom-3 right-3 bg-red-500/80 rounded-lg px-3 py-1">
-              <span className="text-white text-xs">{webcam.error}</span>
-            </div>
-          )}
+            <TranscriptionStatus
+              isConnected={transcriptionConnected}
+              partialTranscript={partialTranscript}
+            />
+          </div>
         </div>
-
-        {/* Target Vitals */}
-        <TargetVitalsPanel vitals={targetVitals} />
-
-        {/* Coaching Panel */}
-        <CoachingPanel
-          coach={user.coach || null}
-          mode={mode}
-          message={coachingMessage}
-          targetEmotion={targetEmotion}
-          distance={distance}
-          heartRate={heartRate}
-        />
-
-        {/* Transcript */}
-        <div className="h-[180px] min-h-[180px]">
-          <TranscriptStream entries={allTranscripts} />
+      ) : (
+        /* Mobile: vertical stack */
+        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+          <CameraSourceSelector
+            value={cameraSource}
+            onChange={handleCameraSourceChange}
+            esp32Connected={isConnected}
+          />
+          <CameraViewport
+            cameraSource={cameraSource}
+            videoRef={webcam.videoRef}
+            canvasRef={webcam.canvasRef}
+            isConnected={isConnected}
+            isActive={webcam.isActive}
+            frameCount={webcam.frameCount}
+            mode={mode}
+            distance={distance}
+            webcamError={webcam.error}
+          />
+          <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
+          <CoachingPanel
+            coach={user.coach || null}
+            mode={mode}
+            message={coachingMessage}
+            targetEmotion={targetEmotion}
+            distance={distance}
+            heartRate={heartRate}
+          />
+          <div className="flex-1 min-h-[200px]">
+            <TranscriptStream entries={allTranscripts} />
+          </div>
+          <TranscriptionStatus
+            isConnected={transcriptionConnected}
+            partialTranscript={partialTranscript}
+          />
         </div>
-
-        {/* Interim transcript + mic status */}
-        <div className="flex items-center gap-2 px-1">
-          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-            transcriptionConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
-          }`} />
-          {partialTranscript ? (
-            <p className="text-xs text-gray-400 italic truncate">"{partialTranscript}"</p>
-          ) : (
-            <p className="text-xs text-gray-500">
-              {transcriptionConnected ? 'Listening...' : 'Mic off'}
-            </p>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-white border-t border-gray-100 pb-safe">
+      <div className="p-4 border-t pb-safe md:flex md:justify-center" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <button
           onClick={() => setShowEndModal(true)}
-          className="w-full py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-2xl transition-colors"
+          className="w-full md:w-auto md:min-w-[200px] md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
         >
           End Session
         </button>
       </div>
 
-      {/* End Session Modal */}
       <EndSessionModal
         isOpen={showEndModal}
         duration={duration}

@@ -8,13 +8,13 @@ interface TranscriptStreamProps {
 const SPEAKER_STYLES: Record<TranscriptEntry['speaker'], { align: string; bg: string; text: string }> = {
   user: {
     align: 'justify-end',
-    bg: 'bg-gray-200',
-    text: 'text-gray-800',
+    bg: 'bg-[var(--color-surface-secondary)]',
+    text: 'text-[var(--color-text)]',
   },
   target: {
     align: 'justify-start',
-    bg: 'bg-gray-100',
-    text: 'text-gray-700',
+    bg: 'bg-[var(--color-surface-hover)]',
+    text: 'text-[var(--color-text-secondary)]',
   },
   coach: {
     align: 'justify-end',
@@ -37,7 +37,6 @@ function formatTime(timestamp: number): string {
 export function TranscriptStream({ entries }: TranscriptStreamProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Auto-scroll to bottom on new entries
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
@@ -47,7 +46,7 @@ export function TranscriptStream({ entries }: TranscriptStreamProps) {
   if (entries.length === 0) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-center text-gray-400">
+        <div className="text-center text-[var(--color-text-faint)]">
           <p className="text-3xl mb-2">💬</p>
           <p className="text-sm">Conversation will appear here</p>
         </div>
@@ -66,10 +65,10 @@ export function TranscriptStream({ entries }: TranscriptStreamProps) {
           <div key={entry.id} className={`flex ${style.align}`}>
             <div className={`max-w-[85%] ${style.bg} rounded-2xl px-4 py-2`}>
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-xs font-medium ${entry.speaker === 'coach' ? 'text-white/80' : 'text-gray-500'}`}>
+                <span className={`text-xs font-medium ${entry.speaker === 'coach' ? 'text-white/80' : 'text-[var(--color-text-tertiary)]'}`}>
                   {SPEAKER_LABELS[entry.speaker]}
                 </span>
-                <span className={`text-xs ${entry.speaker === 'coach' ? 'text-white/60' : 'text-gray-400'}`}>
+                <span className={`text-xs ${entry.speaker === 'coach' ? 'text-white/60' : 'text-[var(--color-text-faint)]'}`}>
                   {formatTime(entry.timestamp)}
                 </span>
                 {entry.emotion && (

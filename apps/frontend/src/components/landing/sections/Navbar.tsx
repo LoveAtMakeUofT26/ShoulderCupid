@@ -20,15 +20,16 @@ export function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/80 backdrop-blur-lg shadow-marble'
+          ? 'backdrop-blur-lg shadow-marble'
           : 'bg-transparent'
       }`}
+      style={scrolled ? { backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)' } : undefined}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <a href="#" className="flex items-center gap-2">
           <span className="text-2xl">💘</span>
-          <span className="font-display font-bold text-xl text-gray-900">
+          <span className="font-display font-bold text-xl text-[var(--color-text)]">
             ShoulderCupid
           </span>
         </a>
@@ -39,7 +40,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 hover:text-cupid-500 transition-colors"
+              className="text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary-text)] transition-colors"
             >
               {link.label}
             </a>
@@ -54,7 +55,7 @@ export function Navbar() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden p-2 text-gray-600"
+          className="md:hidden p-2 text-[var(--color-text-secondary)]"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
@@ -70,12 +71,12 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-marble-200 px-6 py-4 space-y-3">
+        <div className="md:hidden backdrop-blur-lg border-t px-6 py-4 space-y-3" style={{ backgroundColor: 'color-mix(in srgb, var(--color-surface) 95%, transparent)', borderColor: 'var(--color-border)' }}>
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="block text-sm font-medium text-gray-600 hover:text-cupid-500 py-2"
+              className="block text-sm font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-primary-text)] py-2"
               onClick={() => setMenuOpen(false)}
             >
               {link.label}

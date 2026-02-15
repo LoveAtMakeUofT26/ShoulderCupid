@@ -3,7 +3,12 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+// Must match the env var used elsewhere (gemini.ts uses GOOGLE_AI_API_KEY)
+const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || ''
+if (!apiKey) {
+  console.warn('WARNING: No Gemini API key found. Set GOOGLE_AI_API_KEY in your environment.')
+}
+const genAI = new GoogleGenerativeAI(apiKey)
 
 interface CoachingContext {
   chat: ChatSession

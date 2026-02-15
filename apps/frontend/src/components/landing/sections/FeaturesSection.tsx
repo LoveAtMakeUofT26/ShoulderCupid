@@ -46,16 +46,15 @@ export function FeaturesSection() {
           {FEATURES.map((feature, i) => (
             <FadeInView key={feature.title} delay={i * 0.1}>
               <div className="marble-card p-7 h-full">
-                {/* Icon with glow */}
-                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cupid-50 mb-5">
+                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--color-primary-surface)] mb-5">
                   <div className="absolute inset-0 rounded-2xl bg-pink-glow opacity-0 hover:opacity-100 transition-opacity" />
                   <span className="text-2xl relative">{feature.icon}</span>
                 </div>
 
-                <h4 className="font-display text-lg font-bold text-gray-900 mb-2">
+                <h4 className="font-display text-lg font-bold text-[var(--color-text)] mb-2">
                   {feature.title}
                 </h4>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-[var(--color-text-tertiary)] text-sm leading-relaxed">
                   {feature.description}
                 </p>
               </div>

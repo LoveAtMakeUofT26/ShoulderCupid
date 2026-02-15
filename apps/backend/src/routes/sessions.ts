@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
+import { stopSessionProcessor } from '../services/presageMetrics.js'
 
 export const sessionsRouter = Router()
 
@@ -119,6 +120,9 @@ sessionsRouter.post('/:id/end', async (req, res) => {
     session.ended_at = endedAt
     session.duration_seconds = durationSeconds
     await session.save()
+
+    // Stop Presage processor for this session
+    await stopSessionProcessor(req.params.id)
 
     // Remove from active sessions
     activeSessions.delete(userId.toString())
