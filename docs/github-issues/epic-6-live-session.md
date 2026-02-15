@@ -1,6 +1,6 @@
 # Epic 6: Live Session UI
 
-**Status**: In Progress (6/8 tasks)
+**Status**: In Progress (7/8 tasks)
 **Goal**: Real-time coaching interface during active sessions
 
 **Labels**: `phase-3`, `frontend`, `real-time`
@@ -10,18 +10,18 @@
 ## Tasks
 
 ### Task 6.1: Session Start Flow ✅
-- [x] Create `StartSessionModal` component
-- [x] Coach selection (if not already set)
-- [x] Hardware checklist:
-  - [x] Device connected?
-  - [x] Camera working?
-  - [x] Microphone working?
-  - [x] Speaker/earpiece ready?
-- [x] "Run test" for each component
-- [ ] Call `POST /api/sessions/start` (needs API)
+- [x] Create `PreflightPage` component (replaced `StartSessionModal`)
+- [x] Real device validation (camera, mic, speaker via getUserMedia/enumerateDevices)
+- [x] Real service validation (backend, STT, AI coach via fetch)
+- [x] Camera source selector (webcam vs ESP32-CAM)
+- [x] Audio device configuration (mic + speaker dropdowns)
+- [x] Live camera preview during preflight
+- [x] Mic volume meter (AnalyserNode + requestAnimationFrame)
+- [x] Per-check retry on failure
+- [x] Call `POST /api/sessions/start`
 - [x] Redirect to live session page
 
-**Acceptance Criteria**: Users complete pre-flight check before session
+**Acceptance Criteria**: Users complete real pre-flight checks + configure I/O before session
 
 ---
 
@@ -135,12 +135,16 @@
 | Component | File | Description |
 |-----------|------|-------------|
 | `useSessionSocket` | `hooks/useSessionSocket.ts` | WebSocket hook for real-time session events |
+| `usePreflightChecks` | `hooks/usePreflightChecks.ts` | Real device/service validation hook (6 checks) |
+| `PreflightPage` | `components/session/PreflightPage.tsx` | Full-page preflight setup with I/O config |
 | `CoachingPanel` | `components/session/CoachingPanel.tsx` | Shows coach, message, and context stats |
 | `TranscriptStream` | `components/session/TranscriptStream.tsx` | Real-time conversation display |
 | `StatsBar` | `components/session/StatsBar.tsx` | Connection, timer, mode status |
 | `WarningAlert` | `components/session/WarningAlert.tsx` | Comfort warning overlays |
-| `StartSessionModal` | `components/session/StartSessionModal.tsx` | Pre-flight checks modal |
 | `EndSessionModal` | `components/session/EndSessionModal.tsx` | End session confirmation |
+| `CameraSourceSelector` | `components/session/CameraSourceSelector.tsx` | Webcam vs ESP32-CAM toggle + feed |
+| `AudioSettings` | `components/session/AudioSettings.tsx` | Mic/speaker device picker |
+| `TargetVitalsPanel` | `components/session/TargetVitalsPanel.tsx` | Real-time HR, breathing, HRV display |
 | `LiveSessionPage` | `pages/LiveSessionPage.tsx` | Main live session view |
 
 ---
