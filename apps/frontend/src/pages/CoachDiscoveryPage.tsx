@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SwipeCard } from '../components/coaches/SwipeCard'
@@ -16,10 +16,18 @@ export function CoachDiscoveryPage() {
   const [rosterLimit, setRosterLimit] = useState(3)
   const [error, setError] = useState<string | null>(null)
   const [cardKey, setCardKey] = useState(0)
+  const lastGenerateRef = useRef(0)
 
-  // Preload next coach in background
+  // Preload next coach in background (throttled: min 3s between calls)
   const preloadNext = useCallback(async () => {
+    const now = Date.now()
+    const elapsed = now - lastGenerateRef.current
+    const MIN_GAP = 3000
+    if (elapsed < MIN_GAP) {
+      await new Promise(r => setTimeout(r, MIN_GAP - elapsed))
+    }
     try {
+      lastGenerateRef.current = Date.now()
       const coach = await generateCoach()
       setNextCoach(coach)
     } catch (err) {
@@ -46,9 +54,14 @@ export function CoachDiscoveryPage() {
 
       // Start preloading next
       preloadNext()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to start swiping:', err)
-      setError('Failed to generate coach. Please try again.')
+      if (err.message?.includes('Too many') || err.message?.includes('429')) {
+        setError('Generating too fast! Wait a few seconds and tap again.')
+      } else {
+        setError('Failed to generate coach. Please try again.')
+      }
+      setMode('entry')
     } finally {
       setLoading(false)
     }
@@ -145,11 +158,17 @@ export function CoachDiscoveryPage() {
           <p className="text-gray-500 mb-8 leading-relaxed">
             Swipe through AI-generated coaches to build your team. Each one is unique with their own personality and voice.
           </p>
+          {error && (
+            <div className="mb-4 p-3 bg-cupid-50 text-cupid-700 rounded-xl text-sm">
+              {error}
+            </div>
+          )}
           <button
             onClick={startSwiping}
-            className="btn-primary w-full py-4 text-lg"
+            disabled={loading}
+            className="btn-primary w-full py-4 text-lg disabled:opacity-50"
           >
-            Start Swiping
+            {loading ? 'Generating...' : 'Start Swiping'}
           </button>
         </motion.div>
       </div>

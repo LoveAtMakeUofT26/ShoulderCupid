@@ -36,12 +36,18 @@ const PRICING_TIERS = {
 // Directory to store downloaded coach images
 const IMAGES_DIR = path.resolve('public/coaches')
 
+const MAX_RETRIES = 3
+
+async function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 /**
- * Generate a complete coach profile using Gemini.
+ * Generate a complete coach profile using Gemini, with retry on rate limit.
  */
 async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-lite',
     generationConfig: {
       temperature: 1.0,
       maxOutputTokens: 1024,
@@ -91,11 +97,26 @@ Return JSON with this exact schema:
 
 Personality tags should be simple descriptive words like: hype, chill, direct, witty, tough-love, gentle, bold, empathetic, sarcastic, motivational, analytical, warm, fierce, playful, nerdy, sophisticated.`
 
-  const result = await model.generateContent(prompt)
-  const text = result.response.text()
-  const profile = JSON.parse(text) as CoachProfile
-  profile.appearance.gender = profile.gender
-  return profile
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    try {
+      const result = await model.generateContent(prompt)
+      const text = result.response.text()
+      const profile = JSON.parse(text) as CoachProfile
+      profile.appearance.gender = profile.gender
+      return profile
+    } catch (err: any) {
+      const isRateLimit = err?.status === 429 || err?.message?.includes('429')
+      if (isRateLimit && attempt < MAX_RETRIES - 1) {
+        const delay = (attempt + 1) * 10_000 // 10s, 20s, 30s
+        console.log(`Gemini rate limited, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES})`)
+        await sleep(delay)
+        continue
+      }
+      throw err
+    }
+  }
+
+  throw new Error('Failed to generate coach profile after retries')
 }
 
 /**
