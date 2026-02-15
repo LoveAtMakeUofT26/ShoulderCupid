@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { SwipeCard } from '../coaches/SwipeCard'
 import { SwipeCardSkeleton } from '../coaches/SwipeCardSkeleton'
@@ -23,12 +23,21 @@ export function CoachSelectStep({
 }: CoachSelectStepProps) {
   const [currentCoach, setCurrentCoach] = useState<Coach | null>(null)
   const [nextCoach, setNextCoach] = useState<Coach | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [started, setStarted] = useState(false)
   const [savedCount, setSavedCount] = useState(0)
   const [cardKey, setCardKey] = useState(0)
+  const lastGenerateRef = useRef(0)
 
   const preloadNext = useCallback(async () => {
+    const now = Date.now()
+    const elapsed = now - lastGenerateRef.current
+    const MIN_GAP = 3000
+    if (elapsed < MIN_GAP) {
+      await new Promise(r => setTimeout(r, MIN_GAP - elapsed))
+    }
     try {
+      lastGenerateRef.current = Date.now()
       const coach = await generateCoach()
       setNextCoach(coach)
     } catch (err) {
@@ -36,21 +45,21 @@ export function CoachSelectStep({
     }
   }, [])
 
-  // Load first coach on mount
-  useEffect(() => {
-    async function loadFirst() {
-      try {
-        const coach = await generateCoach()
-        setCurrentCoach(coach)
-        preloadNext()
-      } catch (err) {
-        console.error('Failed to generate initial coach:', err)
-      } finally {
-        setLoading(false)
-      }
+  // Generate first coach on user tap (not on mount)
+  async function startGenerating() {
+    setStarted(true)
+    setLoading(true)
+    try {
+      lastGenerateRef.current = Date.now()
+      const coach = await generateCoach()
+      setCurrentCoach(coach)
+      preloadNext()
+    } catch (err) {
+      console.error('Failed to generate initial coach:', err)
+    } finally {
+      setLoading(false)
     }
-    loadFirst()
-  }, [preloadNext])
+  }
 
   function advanceToNext() {
     if (nextCoach) {
@@ -107,6 +116,31 @@ export function CoachSelectStep({
     advanceToNext()
   }
 
+  if (!started) {
+    return (
+      <div className="pt-8 animate-slide-up text-center">
+        <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+          Find Your Coach
+        </h2>
+        <p className="text-gray-500 mb-6">
+          We'll generate unique AI coaches for you to pick from
+        </p>
+        <button
+          onClick={startGenerating}
+          className="btn-primary px-8 py-3 text-lg"
+        >
+          Generate Coaches
+        </button>
+        <button
+          onClick={onBack}
+          className="btn-ghost w-full mt-4 py-3"
+        >
+          Back
+        </button>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="pt-8 animate-slide-up">
@@ -114,7 +148,7 @@ export function CoachSelectStep({
           Find Your Coach
         </h2>
         <p className="text-gray-500 mb-6">
-          Swipe right to save, left to skip
+          Generating your first coach...
         </p>
         <SwipeCardSkeleton />
       </div>

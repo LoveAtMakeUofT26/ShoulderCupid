@@ -38,11 +38,11 @@ const PRICING_TIERS = {
 const IMAGES_DIR = path.resolve('public/coaches')
 
 /**
- * Generate a complete coach profile using Gemini.
+ * Generate a complete coach profile using Gemini, with retry on rate limit.
  */
 async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-lite',
     generationConfig: {
       temperature: 1.0,
       maxOutputTokens: 1024,
