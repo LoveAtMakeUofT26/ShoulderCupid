@@ -34,9 +34,9 @@ export interface SessionState {
   targetVitals: TargetVitals | null
 }
 
-// In dev, Vite proxies /socket.io to the backend (see vite.config.ts)
-// In prod, set VITE_SOCKET_URL to the backend URL
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string | undefined
+// Socket connects directly to the backend (not through Vite proxy).
+// Vite proxy works for REST but is unreliable for socket.io WebSocket upgrades.
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)
@@ -61,12 +61,11 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
-    const socketOpts = {
-      transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],
+    console.log(`Socket connecting to: ${SOCKET_URL}`)
+    const socket = io(SOCKET_URL, {
+      transports: ['websocket', 'polling'],
       autoConnect: true,
-    }
-    // If no explicit URL, connect to same origin (goes through Vite proxy in dev)
-    const socket = SOCKET_URL ? io(SOCKET_URL, socketOpts) : io(socketOpts)
+    })
     socketRef.current = socket
 
     socket.on('connect', () => {
@@ -78,8 +77,13 @@ export function useSessionSocket(sessionId: string | null) {
       socket.emit('join-session', { sessionId })
     })
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected')
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message)
+      updateState({ coachingMessage: `Connection failed: ${err.message}` })
+    })
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason)
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
     })
 
