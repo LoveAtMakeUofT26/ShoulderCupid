@@ -7,6 +7,11 @@ import { User } from '../models/User.js'
 
 export function setupAuth(app: Express) {
   const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`
+  const isProduction = process.env.NODE_ENV === 'production'
+
+  if (isProduction) {
+    app.set('trust proxy', 1)
+  }
 
   // Session middleware
   app.use(
@@ -20,6 +25,7 @@ export function setupAuth(app: Express) {
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
         sameSite: 'lax',
+        secure: isProduction,
       },
     })
   )
