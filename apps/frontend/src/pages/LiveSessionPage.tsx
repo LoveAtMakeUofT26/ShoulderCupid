@@ -221,7 +221,7 @@ export function LiveSessionPage() {
 
   // Active session layout — intentionally dark bg for video context
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <StatsBar
         mode={mode}
         duration={duration}
@@ -318,7 +318,7 @@ export function LiveSessionPage() {
       )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-gray-800 border-t border-gray-700 pb-safe">
+      <div className="p-4 border-t pb-safe" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <button
           onClick={() => setShowEndModal(true)}
           className="w-full md:w-auto md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
