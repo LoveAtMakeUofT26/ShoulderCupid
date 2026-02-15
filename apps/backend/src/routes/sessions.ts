@@ -3,7 +3,7 @@ import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
 
-import { stopSessionProcessor } from '../services/presageMetrics.js'
+import { stopSession as stopSessionProcessor } from '../services/presageService.js'
 import { clearCommandQueue } from './hardware.js'
 import mongoose from 'mongoose'
 

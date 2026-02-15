@@ -16,7 +16,7 @@ import { paymentsRouter } from './routes/payments.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
-import { startPresageProcessor, stopAllProcessors } from './services/presageMetrics.js'
+import { startPresageProcessor, stopAllProcessors } from './services/presageService.js'
 
 const app = express()
 const httpServer = createServer(app)
