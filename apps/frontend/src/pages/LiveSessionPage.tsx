@@ -13,7 +13,6 @@ import {
   TargetVitalsPanel,
   PreflightPage,
   CameraViewport,
-  TranscriptionStatus,
 } from '../components/session'
 import { type CameraSource } from '../components/session/CameraSourceSelector'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -362,13 +361,13 @@ export function LiveSessionPage() {
               heartRate={heartRate}
             />
             <div className="flex-1 min-h-[200px]">
-              <TranscriptStream entries={allTranscripts} />
+              <TranscriptStream
+                entries={allTranscripts}
+                partialTranscript={partialTranscript}
+                isListening={transcriptionConnected}
+                error={transcriptionError}
+              />
             </div>
-            <TranscriptionStatus
-              isConnected={transcriptionConnected}
-              partialTranscript={partialTranscript}
-              error={transcriptionError}
-            />
           </div>
         </div>
       ) : (
@@ -395,13 +394,13 @@ export function LiveSessionPage() {
             heartRate={heartRate}
           />
           <div className="flex-1 min-h-[200px]">
-            <TranscriptStream entries={allTranscripts} />
+            <TranscriptStream
+              entries={allTranscripts}
+              partialTranscript={partialTranscript}
+              isListening={transcriptionConnected}
+              error={transcriptionError}
+            />
           </div>
-          <TranscriptionStatus
-            isConnected={transcriptionConnected}
-            partialTranscript={partialTranscript}
-            error={transcriptionError}
-          />
         </div>
       )}
 
