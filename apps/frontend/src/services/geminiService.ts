@@ -1,28 +1,45 @@
 import { GoogleGenAI, Modality } from '@google/genai';
 import { useCallback, useState } from 'react';
 
+let inFlightTokenRequest: Promise<string> | null = null;
+
+async function fetchGeminiToken() {
+  if (!inFlightTokenRequest) {
+    inFlightTokenRequest = (async () => {
+      try {
+        const response = await fetch('/api/gemini/token');
+        if (!response.ok) {
+          throw new Error('Failed to fetch Gemini token');
+        }
+        const data = await response.json();
+        return data.token.name;
+      } catch (error) {
+        inFlightTokenRequest = null;
+        throw error;
+      }
+    })();
+  }
+
+  try {
+    return await inFlightTokenRequest;
+  } finally {
+    inFlightTokenRequest = null;
+  }
+}
+
 export function useGeminiService() {
   const [session, setSession] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [responses, setResponses] = useState<string[]>([]);
 
-  const fetchGeminiToken = async () => {
-    const response = await fetch('/api/gemini/token');
-    if (!response.ok) {
-      throw new Error('Failed to fetch Gemini token');
-    }
-    const data = await response.json();
-    console.log("🤖 Gemini token fetched:", data.token);
-    return data.token;
-  };
-
   const connectToGemini = useCallback(async () => {
     try {
       const token = await fetchGeminiToken();
+      console.log("🤖 Gemini token fetched:", token);
       
       // Use the token generated in the "Create an ephemeral token" section here
       const ai = new GoogleGenAI({
-        apiKey: token.name
+        apiKey: token
       });
       const model = 'gemini-2.5-flash-native-audio-preview-12-2025';
       const config = { responseModalities: [Modality.TEXT] };
