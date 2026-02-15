@@ -15,6 +15,7 @@ import {
 } from '../components/session'
 import { CameraSourceSelector, CameraFeed, type CameraSource } from '../components/session/CameraSourceSelector'
 import { AudioSettings } from '../components/session/AudioSettings'
+import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -69,8 +70,9 @@ export function LiveSessionPage() {
   // Track which transcripts we've already sent to avoid duplicates
   const lastSentIndexRef = useRef(0)
 
-  // Combine socket and transcription transcripts
-  const allTranscripts = [...transcript, ...transcriptionTranscripts]
+  // Use socket transcripts only (backend broadcasts both user + coach entries).
+  // transcriptionTranscripts is only used for sending to backend, not for display.
+  const allTranscripts = transcript
 
   // Start ElevenLabs transcription + coaching when session becomes active
   useEffect(() => {
@@ -161,6 +163,9 @@ export function LiveSessionPage() {
   }, [phase, webcam])
 
   const handleStartSession = useCallback(async () => {
+    // Unlock browser audio during user gesture so coach TTS can play later
+    unlockAudio()
+
     try {
       const response = await fetch('/api/sessions/start', {
         method: 'POST',
@@ -185,6 +190,7 @@ export function LiveSessionPage() {
     endSession()
     webcam.stop()
     stopTranscription()
+    clearAudioQueue()
 
     if (activeSessionId) {
       try {

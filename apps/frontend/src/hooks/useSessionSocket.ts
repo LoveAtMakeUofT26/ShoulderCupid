@@ -83,6 +83,16 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
     })
 
+    // Initial state from backend when joining an existing session
+    socket.on('session-state', (data: { mode?: CoachingMode; targetEmotion?: string; distance?: number; heartRate?: number }) => {
+      const updates: Partial<SessionState> = {}
+      if (data.mode) updates.mode = data.mode
+      if (data.targetEmotion) updates.targetEmotion = data.targetEmotion
+      if (data.distance !== undefined) updates.distance = data.distance
+      if (data.heartRate !== undefined) updates.heartRate = data.heartRate
+      updateState(updates)
+    })
+
     // Session events
     socket.on('session-started', () => {
       updateState({ mode: 'IDLE', coachingMessage: 'Session started! Looking for targets...' })
