@@ -101,7 +101,18 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
       }
 
       // Save frame for Presage processing (SDK reads directly from directory)
-      await addFrame(session_id, _jpeg, timestamp || Date.now())
+      try {
+        await addFrame(session_id, _jpeg, timestamp || Date.now())
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to write frame to disk'
+        console.error(`[ShoulderCupid] Failed to persist frame for session ${session_id}:`, err)
+        if (ioInstance) {
+          broadcastToSession(ioInstance, session_id, 'presage-error', {
+            error: `Frame write failed: ${message}. Check FRAMES_DIR permissions.`,
+          })
+        }
+        return res.status(500).json({ error: 'Failed to persist frame' })
+      }
 
       // Start per-session processor if not already running
       if (!isProcessorRunning(session_id)) {
