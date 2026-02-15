@@ -32,7 +32,6 @@ export function useTranscriptionService() {
         const updated = [...prev, newEntry];
         return updated.length > 50 ? updated.slice(-50) : updated;
       });
-      setPartialTranscript(""); // Clear partial when committed
     },
     onCommittedTranscriptWithTimestamps: (data) => {
       console.log("Committed with timestamps:", data.text);
