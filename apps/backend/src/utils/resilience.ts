@@ -116,13 +116,25 @@ export class ConcurrencyGuard {
         this.pendingResolve = null
         this.pendingReject = null
 
-        // Run the queued call
-        nextFn()
-          .then(result => nextResolve(result))
-          .catch(() => nextResolve(null))
-          .finally(() => {
-            this.running = false
-          })
+        // Run the queued call; drain any further pending calls
+        const drain = (fn: () => Promise<unknown>, resolve: (v: unknown) => void) => {
+          fn()
+            .then(result => resolve(result))
+            .catch(() => resolve(null))
+            .finally(() => {
+              if (this.pendingFn) {
+                const fn2 = this.pendingFn
+                const resolve2 = this.pendingResolve!
+                this.pendingFn = null
+                this.pendingResolve = null
+                this.pendingReject = null
+                drain(fn2, resolve2)
+              } else {
+                this.running = false
+              }
+            })
+        }
+        drain(nextFn, nextResolve)
       } else {
         this.running = false
       }

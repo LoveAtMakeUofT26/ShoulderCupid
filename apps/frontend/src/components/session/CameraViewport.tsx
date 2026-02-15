@@ -70,15 +70,18 @@ export function CameraViewport({
 interface TranscriptionStatusProps {
   isConnected: boolean
   partialTranscript: string
+  error?: string | null
 }
 
-export function TranscriptionStatus({ isConnected, partialTranscript }: TranscriptionStatusProps) {
+export function TranscriptionStatus({ isConnected, partialTranscript, error }: TranscriptionStatusProps) {
   return (
     <div className="flex items-center gap-2 px-1">
       <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-        isConnected ? 'bg-green-500 animate-pulse' : 'bg-[var(--color-text-faint)]'
+        error ? 'bg-red-500' : isConnected ? 'bg-green-500 animate-pulse' : 'bg-[var(--color-text-faint)]'
       }`} />
-      {partialTranscript ? (
+      {error ? (
+        <p className="text-xs text-red-400 truncate">{error}</p>
+      ) : partialTranscript ? (
         <p className="text-xs text-[var(--color-text-tertiary)] italic truncate">"{partialTranscript}"</p>
       ) : (
         <p className="text-xs text-[var(--color-text-faint)]">
