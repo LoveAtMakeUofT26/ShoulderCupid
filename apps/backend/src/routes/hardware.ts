@@ -35,8 +35,13 @@ const requireHardwareAuth = (req: any, res: any, next: any) => {
     return next()
   }
 
+  // Dev mode: no token configured = allow all requests
+  if (!configuredDeviceToken) {
+    return next()
+  }
+
   const token = getDeviceToken(req)
-  if (configuredDeviceToken && token && token === configuredDeviceToken) {
+  if (token && token === configuredDeviceToken) {
     return next()
   }
 
