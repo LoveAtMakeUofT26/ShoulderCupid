@@ -63,10 +63,10 @@ export function CoachSelectStep({
 
   return (
     <div className="pt-8 animate-slide-up">
-      <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+      <h2 className="font-display text-2xl font-bold text-[var(--color-text)] mb-2">
         Choose Your Coach
       </h2>
-      <p className="text-gray-500 mb-6">
+      <p className="text-[var(--color-text-tertiary)] mb-6">
         Pick the AI wingman that matches your style
       </p>
 
@@ -81,7 +81,7 @@ export function CoachSelectStep({
               onClick={() => onSelect(coach._id)}
               className={`w-full card-elevated p-4 text-left transition-all ${
                 isSelected
-                  ? 'ring-2 ring-cupid-500 bg-cupid-50/30'
+                  ? 'ring-2 ring-cupid-500 bg-[var(--color-primary-surface)]'
                   : 'hover:shadow-card-hover'
               }`}
             >
@@ -99,15 +99,15 @@ export function CoachSelectStep({
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-semibold text-gray-900">{coach.name}</span>
+                    <span className="font-semibold text-[var(--color-text)]">{coach.name}</span>
                     {isRecommended && (
-                      <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full font-medium">
+                      <span className="text-xs bg-[var(--color-accent-surface)] text-gold-700 px-2 py-0.5 rounded-full font-medium">
                         Recommended
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{coach.tagline}</p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                  <p className="text-sm text-[var(--color-text-tertiary)] truncate">{coach.tagline}</p>
+                  <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-text-faint)]">
                     <span className="text-yellow-500">★</span>
                     <span>{coach.rating.toFixed(1)}</span>
                     <span>·</span>
@@ -127,7 +127,7 @@ export function CoachSelectStep({
 
               {/* Sample phrase */}
               {coach.sample_phrases?.[0] && (
-                <p className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500 italic">
+                <p className="mt-3 pt-3 border-t text-sm text-[var(--color-text-tertiary)] italic" style={{ borderColor: 'var(--color-border)' }}>
                   "{coach.sample_phrases[0]}"
                 </p>
               )}

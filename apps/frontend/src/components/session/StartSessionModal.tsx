@@ -37,7 +37,6 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
   const runAllChecks = async () => {
     setIsRunningChecks(true)
 
-    // Simulate hardware checks (in real app, would check actual hardware)
     const checkOrder = ['device', 'camera', 'microphone', 'speaker']
 
     for (const check of checkOrder) {
@@ -46,10 +45,8 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
         [check]: { checked: true, passed: false },
       }))
 
-      // Simulate check time
       await new Promise(resolve => setTimeout(resolve, 500))
 
-      // Randomly pass (90% success for demo)
       const passed = Math.random() > 0.1
       setChecks(prev => ({
         ...prev,
@@ -71,18 +68,19 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ backgroundColor: 'var(--color-overlay)' }}
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
+      <div className="relative rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up" style={{ backgroundColor: 'var(--color-surface)' }}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Start Session</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text)]">Start Session</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]"
           >
             ✕
           </button>
@@ -90,7 +88,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
         {/* Coach Display */}
         {coach && (
-          <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-br from-cupid-50 to-white rounded-xl">
+          <div className="flex items-center gap-3 mb-6 p-4 rounded-xl" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
             <div
               className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-md"
               style={{
@@ -100,15 +98,15 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
               {coach.avatar_emoji}
             </div>
             <div>
-              <p className="text-sm text-gray-500">Your Coach</p>
-              <p className="font-semibold text-gray-900">{coach.name}</p>
+              <p className="text-sm text-[var(--color-text-tertiary)]">Your Coach</p>
+              <p className="font-semibold text-[var(--color-text)]">{coach.name}</p>
             </div>
           </div>
         )}
 
         {/* Pre-flight Checks */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
+          <h3 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
             Pre-flight Checks
           </h3>
           <div className="space-y-2">
@@ -119,14 +117,14 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
                   key={key}
                   className={`flex items-center gap-3 p-3 rounded-xl border ${
                     status.passed
-                      ? 'border-green-200 bg-green-50'
+                      ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
                       : status.checked
-                      ? 'border-red-200 bg-red-50'
-                      : 'border-gray-200 bg-gray-50'
+                      ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+                      : 'border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)]'
                   }`}
                 >
                   <span className="text-xl">{icon}</span>
-                  <span className="flex-1 text-sm font-medium text-gray-700">{label}</span>
+                  <span className="flex-1 text-sm font-medium text-[var(--color-text-secondary)]">{label}</span>
                   {status.checked ? (
                     status.passed ? (
                       <span className="text-green-500 text-lg">✓</span>
@@ -134,7 +132,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
                       <span className="text-red-500 text-lg">✗</span>
                     )
                   ) : (
-                    <span className="text-gray-300 text-lg">○</span>
+                    <span className="text-[var(--color-text-faint)] text-lg">○</span>
                   )}
                 </div>
               )

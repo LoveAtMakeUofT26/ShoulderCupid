@@ -41,7 +41,7 @@ function getDistanceLabel(distance: number): string {
 }
 
 function getHeartRateLabel(hr: number): { label: string; color: string } {
-  if (hr < 0) return { label: '--', color: 'text-gray-400' }
+  if (hr < 0) return { label: '--', color: 'text-[var(--color-text-faint)]' }
   if (hr < 80) return { label: 'Calm', color: 'text-green-500' }
   if (hr < 100) return { label: 'Normal', color: 'text-blue-500' }
   if (hr < 120) return { label: 'Elevated', color: 'text-gold-500' }
@@ -74,7 +74,7 @@ export function CoachingPanel({
               {coach.avatar_emoji}
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-gray-900">{coach.name}</p>
+              <p className="font-semibold text-[var(--color-text)]">{coach.name}</p>
               <div className="flex items-center gap-2">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium text-white ${modeInfo.color}`}>
                   {modeInfo.label}
@@ -83,41 +83,38 @@ export function CoachingPanel({
             </div>
           </>
         ) : (
-          <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center text-xl">
+          <div className="w-12 h-12 rounded-full bg-[var(--color-surface-secondary)] flex items-center justify-center text-xl">
             🤖
           </div>
         )}
       </div>
 
       {/* Coaching Message */}
-      <div className="bg-gradient-to-br from-cupid-50 to-white rounded-xl p-4 min-h-[80px]">
-        <p className="text-lg font-medium text-gray-800 leading-relaxed">
+      <div className="rounded-xl p-4 min-h-[80px]" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
+        <p className="text-lg font-medium text-[var(--color-text)] leading-relaxed">
           {message || 'Waiting for coaching advice...'}
         </p>
       </div>
 
       {/* Context Stats */}
       <div className="grid grid-cols-3 gap-2 text-center">
-        {/* Target Emotion */}
-        <div className="bg-gray-50 rounded-lg py-2 px-1">
+        <div className="bg-[var(--color-surface-secondary)] rounded-lg py-2 px-1">
           <p className="text-xl mb-0.5">{EMOTION_EMOJI[targetEmotion] || '😐'}</p>
-          <p className="text-xs text-gray-500 capitalize">{targetEmotion}</p>
+          <p className="text-xs text-[var(--color-text-tertiary)] capitalize">{targetEmotion}</p>
         </div>
 
-        {/* Distance */}
-        <div className="bg-gray-50 rounded-lg py-2 px-1">
-          <p className="text-lg font-semibold text-gray-700">
+        <div className="bg-[var(--color-surface-secondary)] rounded-lg py-2 px-1">
+          <p className="text-lg font-semibold text-[var(--color-text-secondary)]">
             {distance > 0 ? `${Math.round(distance)}cm` : '--'}
           </p>
-          <p className="text-xs text-gray-500">{getDistanceLabel(distance)}</p>
+          <p className="text-xs text-[var(--color-text-tertiary)]">{getDistanceLabel(distance)}</p>
         </div>
 
-        {/* Heart Rate */}
-        <div className="bg-gray-50 rounded-lg py-2 px-1">
+        <div className="bg-[var(--color-surface-secondary)] rounded-lg py-2 px-1">
           <p className={`text-lg font-semibold ${hrInfo.color}`}>
             {heartRate > 0 ? `${heartRate}` : '--'}
           </p>
-          <p className="text-xs text-gray-500">{hrInfo.label}</p>
+          <p className="text-xs text-[var(--color-text-tertiary)]">{hrInfo.label}</p>
         </div>
       </div>
     </div>

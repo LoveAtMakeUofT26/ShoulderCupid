@@ -17,27 +17,29 @@ export function FloatingActionButton({ to, onClick, label = 'Start Session' }: F
     </>
   )
 
-  const className = `
+  const cls = `
     fixed bottom-24 right-4 z-40
     w-14 h-14 rounded-2xl
-    bg-cupid-500 text-white
+    text-white
     flex items-center justify-center
     shadow-fab
-    hover:bg-cupid-600 active:scale-95
+    active:scale-95
     transition-all duration-200
     animate-pulse-slow
   `
 
+  const style = { backgroundColor: 'var(--color-primary)' }
+
   if (to) {
     return (
-      <Link to={to} className={className} title={label}>
+      <Link to={to} className={cls} style={style} title={label}>
         {buttonContent}
       </Link>
     )
   }
 
   return (
-    <button onClick={onClick} className={className} title={label}>
+    <button onClick={onClick} className={cls} style={style} title={label}>
       {buttonContent}
     </button>
   )

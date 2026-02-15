@@ -8,7 +8,7 @@ interface AppShellProps {
 
 export function AppShell({ children, showNav = true }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-marble-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       {/* Main content area */}
       <main className={`container-mobile ${showNav ? 'pb-24' : ''}`}>
         {children}
