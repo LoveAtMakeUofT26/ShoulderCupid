@@ -142,6 +142,7 @@ export function useSessionSocket(sessionId: string | null) {
 
     socket.on('coaching-error', (data: { error: string }) => {
       console.error('Coaching error:', data.error)
+      updateState({ coachingMessage: `Coach error: ${data.error}` })
     })
 
     socket.on('warning-triggered', (data: { level: WarningLevel; message: string }) => {

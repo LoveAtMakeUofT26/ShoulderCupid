@@ -134,6 +134,9 @@ export function setupClientHandler(socket: Socket, io: Server) {
       }
     } catch (err) {
       console.error('Coaching pipeline error:', err)
+      broadcastToSession(io, sessionId, 'coaching-error', {
+        error: err instanceof Error ? err.message : 'Coaching pipeline failed',
+      })
     }
   })
 
