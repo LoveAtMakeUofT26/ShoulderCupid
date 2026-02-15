@@ -177,7 +177,7 @@ export function LiveSessionPage() {
         webcam.stop()
       }
     }
-  }, [phase, cameraSource])
+  }, [phase, cameraSource, webcam])
 
   useEffect(() => {
     if (transcriptionTranscripts.length > lastSentIndexRef.current) {
