@@ -23,4 +23,4 @@ jobs:
             cd apps/backend
             npm install --production
             npm run build
-            pm2 restart shoulder-cupid || pm2 start dist/index.js --name shoulder-cupid
+            pm2 restart shoulder-cupid || pm2 start dist/server.js --name shoulder-cupid

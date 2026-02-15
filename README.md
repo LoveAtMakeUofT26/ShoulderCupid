@@ -102,9 +102,13 @@ npm run --workspace=@shoulder-cupid/backend seed
 npm run dev
 ```
 
-**URLs:**
+**Local URLs:**
 - Frontend: http://localhost:3005
 - Backend: http://localhost:4005
+
+**Production URLs:**
+- Frontend: https://shoulder-cupid.vercel.app
+- Backend: http://155.138.146.221:4000 (proxied via Vercel)
 
 ---
 
@@ -237,10 +241,10 @@ GEMINI_API_KEY=<your-gemini-key>
 1. Go to [Google Cloud Console](https://console.cloud.google.com) > APIs & Services > Credentials
 2. Under **Authorized JavaScript origins**, add:
    - `https://shoulder-cupid.vercel.app`
-   - `http://localhost:3000` (for local dev)
+   - `http://localhost:3005` (for local dev)
 3. Under **Authorized redirect URIs**, add:
    - `https://shoulder-cupid.vercel.app/api/auth/google/callback`
-   - `http://localhost:4000/api/auth/google/callback` (for local dev)
+   - `http://localhost:4005/api/auth/google/callback` (for local dev)
 
 ### Manual Backend Deploy
 
