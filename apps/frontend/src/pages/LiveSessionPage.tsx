@@ -59,6 +59,7 @@ export function LiveSessionPage() {
     isConnected,
     mode,
     coachingMessage,
+    adviceMessage,
     transcript,
     targetEmotion,
     distance,
@@ -70,6 +71,7 @@ export function LiveSessionPage() {
     endSession,
     startCoaching,
     sendTranscript,
+    requestAdvice,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
   const {
@@ -83,8 +85,8 @@ export function LiveSessionPage() {
 
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
-    fps: 2,
-    quality: 0.7,
+    fps: 15,
+    quality: 0.5,
   })
 
   const lastSentIndexRef = useRef(0)
@@ -150,6 +152,11 @@ export function LiveSessionPage() {
   // transcriptionTranscripts is only used for sending to backend, not for display.
   const allTranscripts = transcript
 
+  const transcriptRef = useRef(allTranscripts)
+  const partialRef = useRef(partialTranscript)
+  transcriptRef.current = allTranscripts
+  partialRef.current = partialTranscript
+
   // Start ElevenLabs transcription when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
@@ -200,6 +207,31 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
+  // Request advice via socket every 2 seconds when session is active
+  useEffect(() => {
+    if (phase !== 'active') return
+
+    const emitAdvice = () => {
+      const transcripts = transcriptRef.current
+      const partial = partialRef.current
+      const transcriptForSocket = [...transcripts]
+      if (partial.trim()) {
+        transcriptForSocket.push({
+          id: 'partial',
+          timestamp: Date.now(),
+          speaker: 'user',
+          text: partial.trim(),
+        })
+      }
+      requestAdvice(transcriptForSocket)
+    }
+
+    emitAdvice()
+    const interval = setInterval(emitAdvice, 2000)
+    return () => clearInterval(interval)
+  }, [phase, requestAdvice])
+
+  // Fetch user on mount
   useEffect(() => {
     async function fetchUser() {
       // For non-new session URLs, check if it's a test session first
@@ -378,7 +410,7 @@ export function LiveSessionPage() {
             <CoachingPanel
               coach={user.coach || null}
               mode={mode}
-              message={coachingMessage}
+              message={adviceMessage || coachingMessage}
               targetEmotion={targetEmotion}
               distance={distance}
               heartRate={heartRate}
@@ -411,7 +443,7 @@ export function LiveSessionPage() {
           <CoachingPanel
             coach={user.coach || null}
             mode={mode}
-            message={coachingMessage}
+            message={adviceMessage || coachingMessage}
             targetEmotion={targetEmotion}
             distance={distance}
             heartRate={heartRate}

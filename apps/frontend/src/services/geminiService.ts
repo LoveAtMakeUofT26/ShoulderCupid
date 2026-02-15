@@ -35,7 +35,7 @@ export function useGeminiService() {
   const connectToGemini = useCallback(async () => {
     try {
       const token = await fetchGeminiToken();
-      
+
       // Use the token generated in the "Create an ephemeral token" section here
       const ai = new GoogleGenAI({
         apiKey: token

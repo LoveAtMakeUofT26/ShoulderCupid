@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { GoogleGenAI, Modality } from "@google/genai";
 import { loadEnv } from '../config/loadEnv.js';
 import { RateLimiter } from '../utils/resilience.js';
+import { getRelationshipAdvice, type TranscriptEntry } from '../services/relationshipAdviceAgent.js';
 
 export const geminiRouter = Router();
 
@@ -13,6 +14,9 @@ const client = new GoogleGenAI({
 
 const tokenLimiter = new RateLimiter(10_000, 20); // 20 req / 10s per IP
 const tokenInFlight = new Map<string, Promise<unknown>>();
+
+// Fallback when Gemini is unavailable (quota, key, etc.)
+const FALLBACK_ADVICE = 'Listen, then share a bit.';
 
 function getClientKey(req: any): string {
   return req.ip || 'anonymous';
@@ -31,6 +35,23 @@ geminiRouter.get("/health", requireAuth, (_req, res) => {
     res.json({ status: "ok" });
   } else {
     res.status(503).json({ error: "Gemini API key not configured (GOOGLE_AI_API_KEY or GEMINI_API_KEY)" });
+  }
+});
+
+// POST /api/gemini/advice - Get relationship advice from transcript
+geminiRouter.post('/advice', async (req, res) => {
+  try {
+    const { transcript } = req.body as { transcript: TranscriptEntry[] };
+    if (!Array.isArray(transcript)) {
+      return res.status(400).json({ error: 'Request body must include transcript array' });
+    }
+
+    const advice = await getRelationshipAdvice(transcript);
+    res.json({ advice });
+  } catch (error: unknown) {
+    console.error('Relationship advice error:', error);
+    // Return 200 with fallback so the UI keeps working when Gemini fails (quota, key, etc.)
+    res.status(200).json({ advice: FALLBACK_ADVICE });
   }
 });
 
