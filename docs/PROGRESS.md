@@ -1,8 +1,8 @@
 # Cupid - Development Progress
 
-## Current Status: Phase 2 In Progress 🔄
+## Current Status: ~75% Complete 🔄
 
-Foundation complete. Live session UI with real preflight checks, Presage vitals, and backend coaching pipeline integrated.
+Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Scribe STT (client-side) → Socket.io → Gemini 2.0 Flash coaching (server-side) → ElevenLabs TTS → audio playback. Live session UI with real preflight checks, Presage vitals, and transcript persistence.
 
 ---
 
@@ -66,14 +66,19 @@ Foundation complete. Live session UI with real preflight checks, Presage vitals,
 - [x] Target vitals panel in live session UI
 - [ ] Device pairing flow
 
-### Epic 3: AI Pipeline 🔄
-- [x] ElevenLabs STT (client-side Scribe SDK + backend token)
-- [x] Backend coaching pipeline (transcript → socket → Gemini → coach response)
-- [x] Coach audio playback (TTS audio via socket → browser → earbuds)
-- [x] Real preflight checks (camera, mic, speaker, backend, STT, AI)
+### Epic 3: AI Pipeline ✅ (Core Complete)
+- [x] ElevenLabs STT (client-side Scribe v2 realtime + backend token endpoint)
+- [x] Gemini coaching (server-side Gemini 2.0 Flash chat sessions with mode/emotion/distance context)
+- [x] Backend coaching pipeline (transcript-input → Gemini → coaching-update + coach-audio)
+- [x] ElevenLabs TTS (backend REST API, eleven_flash_v2_5, per-coach voice IDs)
+- [x] Coach audio playback (TTS MP3 via socket → base64 → browser → earbuds)
+- [x] Real preflight checks (camera, mic, speaker, backend, STT token, Gemini token)
+- [x] Coaching error surfacing to frontend (coaching-error socket event)
+- [x] API key consistency fix (GOOGLE_AI_API_KEY with GEMINI_API_KEY fallback)
+- [x] Mode-aware coaching (Gemini adapts to IDLE/APPROACH/CONVERSATION transitions)
+- [x] Transcript persistence to MongoDB (user, target, and coach entries)
 - [ ] Edge Impulse integration (person detection)
-- [ ] Full coaching context (person detection, emotion, coach personality)
-- [ ] Approach mode coaching
+- [ ] Approach mode coaching (triggered by person detection + distance)
 - [ ] Comfort check + slap escalation logic
 
 ---
@@ -82,7 +87,7 @@ Foundation complete. Live session UI with real preflight checks, Presage vitals,
 
 ### Epic 4: Sessions & Reports
 - [x] Session lifecycle API (start/end)
-- [ ] Transcript storage in MongoDB
+- [x] Transcript storage in MongoDB (auto-persisted during coaching pipeline)
 - [ ] Emotion timeline
 - [ ] Post-session Gemini reports
 
@@ -101,7 +106,7 @@ Foundation complete. Live session UI with real preflight checks, Presage vitals,
 1. ✅ Establish design system (consistency foundation)
 2. ✅ Build core pages with mobile layout
 3. ✅ Build Live Session UI (demo wow-factor)
-4. 🔄 Connect real AI services
+4. ✅ Connect real AI services (Gemini coaching + ElevenLabs STT/TTS)
 5. ⏳ Desktop layouts (stretch goal)
 6. ⏳ Polish pass (animations, micro-interactions)
 
@@ -113,8 +118,8 @@ Foundation complete. Live session UI with real preflight checks, Presage vitals,
 
 ```bash
 # Start development
-cd apps/backend && npm run dev    # Backend on :4005
-cd apps/frontend && npm run dev   # Frontend on :3005
+cd apps/backend && npm run dev    # Backend on :4000
+cd apps/frontend && npm run dev   # Frontend on :3000
 
 # Seed database
 cd apps/backend && npm run seed
@@ -129,10 +134,15 @@ npm run type-check
 
 | File | Purpose |
 |------|---------|
+| `apps/backend/src/services/aiService.ts` | Gemini 2.0 Flash coaching (init, respond, mode update, end) |
+| `apps/backend/src/services/ttsService.ts` | ElevenLabs TTS generation (eleven_flash_v2_5) |
+| `apps/backend/src/routes/gemini.ts` | Gemini token endpoint (preflight check) |
+| `apps/backend/src/routes/stt.ts` | ElevenLabs Scribe token endpoint |
+| `apps/backend/src/sockets/clientHandler.ts` | Socket coaching pipeline (transcript → Gemini → TTS → broadcast) |
+| `apps/frontend/src/services/transcriptionService.ts` | ElevenLabs Scribe STT hook (useScribe) |
+| `apps/frontend/src/hooks/useSessionSocket.ts` | Socket.io session state + coaching events |
+| `apps/frontend/src/hooks/usePreflightChecks.ts` | Device/service validation (camera, mic, backend, STT, Gemini) |
+| `apps/frontend/src/pages/LiveSessionPage.tsx` | Live session page (connects STT → socket → coaching) |
+| `apps/backend/src/scripts/seed.ts` | Coach seed data (names, prompts, ElevenLabs voice IDs) |
 | `docs/DESIGN_SYSTEM.md` | Colors, typography, components |
 | `docs/github-issues/*.md` | Epic breakdowns |
-| `apps/backend/src/scripts/seed.ts` | Coach seed data |
-| `apps/frontend/src/components/layout/` | AppShell, BottomNav, FAB |
-| `apps/frontend/src/components/session/PreflightPage.tsx` | Real preflight checks + I/O setup |
-| `apps/frontend/src/hooks/usePreflightChecks.ts` | Device/service validation hook |
-| `apps/frontend/tailwind.config.js` | Custom theme |

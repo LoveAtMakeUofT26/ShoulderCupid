@@ -62,16 +62,25 @@ sessionsRouter.post('/start', async (req, res) => {
       })
     }
 
-    // Get user's selected coach
+    // Get user's selected coach (check roster if legacy coach_id is not set)
     const user = await User.findById(userId)
-    if (!user?.coach_id) {
+    const roster = (user as any)?.coach_roster || []
+    const defaultRosterEntry = roster.find((r: any) => r.is_default) || roster[0]
+    const coachId = user?.coach_id || defaultRosterEntry?.coach_id
+
+    if (!coachId) {
       return res.status(400).json({ error: 'No coach selected' })
+    }
+
+    // Sync coach_id if it was only in roster
+    if (!user?.coach_id && coachId) {
+      await User.findByIdAndUpdate(userId, { coach_id: coachId })
     }
 
     // Create new session
     const session = await Session.create({
       user_id: userId,
-      coach_id: user.coach_id,
+      coach_id: coachId,
       status: 'active',
       mode: 'IDLE',
       started_at: new Date(),

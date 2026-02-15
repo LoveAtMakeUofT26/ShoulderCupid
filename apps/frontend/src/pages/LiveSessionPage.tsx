@@ -33,6 +33,7 @@ export function LiveSessionPage() {
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
+  const [startError, setStartError] = useState<string | null>(null)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
@@ -156,6 +157,7 @@ export function LiveSessionPage() {
   const handleStartSession = useCallback(async () => {
     // Unlock browser audio during user gesture so coach TTS can play later
     unlockAudio()
+    setStartError(null)
 
     try {
       const response = await fetch('/api/sessions/start', {
@@ -165,6 +167,21 @@ export function LiveSessionPage() {
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
         console.error('Failed to start session:', err)
+
+        if (err.error === 'Active session exists' && err.sessionId) {
+          // Resume the existing active session instead of blocking
+          setCreatedSessionId(err.sessionId)
+          setPhase('active')
+          setDuration(0)
+          return
+        }
+
+        if (err.error === 'No coach selected') {
+          setStartError('No coach selected. Pick a coach first.')
+          return
+        }
+
+        setStartError(err.error || 'Failed to start session. Please try again.')
         return
       }
       const session = await response.json()
@@ -173,6 +190,7 @@ export function LiveSessionPage() {
       setDuration(0)
     } catch (error) {
       console.error('Failed to start session:', error)
+      setStartError('Connection error. Check your internet and try again.')
     }
   }, [])
 
@@ -216,6 +234,7 @@ export function LiveSessionPage() {
         onCameraSourceChange={setCameraSource}
         onStart={handleStartSession}
         onBack={() => navigate('/dashboard')}
+        startError={startError}
       />
     )
   }

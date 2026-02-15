@@ -13,6 +13,7 @@ interface PreflightPageProps {
   onCameraSourceChange: (source: CameraSource) => void
   onStart: () => void
   onBack: () => void
+  startError?: string | null
 }
 
 const CHECK_META: Record<CheckId, { label: string; icon: string }> = {
@@ -30,6 +31,7 @@ export function PreflightPage({
   onCameraSourceChange,
   onStart,
   onBack,
+  startError,
 }: PreflightPageProps) {
   const {
     checks,
@@ -211,6 +213,11 @@ export function PreflightPage({
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t p-4 pb-safe" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
+          {startError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
+              <p className="text-sm text-red-600 dark:text-red-400 text-center">{startError}</p>
+            </div>
+          )}
           {anyFailed && !anyChecking && (
             <button
               onClick={retryFailed}

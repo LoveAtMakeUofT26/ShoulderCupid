@@ -4,14 +4,14 @@
 
 Real-time AI dating coach via ESP32-CAM smart glasses. Get live coaching during approaches and conversations.
 
-## Current Progress: ~60% Complete
+## Current Progress: ~75% Complete
 
 | Phase | Status |
 |-------|--------|
 | Phase 1: Foundation | ✅ Complete |
-| Phase 2: Hardware + Audio Integration | 🔧 In Progress |
-| Phase 3: AI Coaching Loop | ⏳ Pending |
-| Phase 4: Sessions + Reports | ⏳ Pending |
+| Phase 2: Hardware + Audio Integration | ✅ Core complete (ESP32 hardware pending) |
+| Phase 3: AI Coaching Loop | ✅ Core pipeline working |
+| Phase 4: Sessions + Reports | 🔧 Partial (lifecycle + transcripts done, reports pending) |
 | Phase 5: Polish + Deploy | 🔧 Partial (CI/CD done) |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
@@ -34,8 +34,9 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
 │              BACKEND (Vultr Ubuntu VPS)                   │
 │  Express API ─► Presage C++ SDK (HR, breathing, HRV)    │
 │              ─► Edge Impulse API (person detection)      │
-│              ─► Gemini 2.5 Flash (coaching LLM)          │
-│              ─► ElevenLabs TTS (coach audio)             │
+│              ─► Gemini 2.0 Flash (coaching via chat)     │
+│              ─► Gemini 2.5 Flash (token gen / preflight) │
+│              ─► ElevenLabs TTS (coach audio via REST)    │
 │              ─► ElevenLabs Scribe tokens (for client)    │
 │              ─► MongoDB Atlas (users, sessions)          │
 └───────────────────────┬─────────────────────────────────┘
@@ -85,7 +86,10 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
 | **Backend** | Node.js + Express + Socket.io |
 | **Database** | MongoDB Atlas |
 | **Auth** | Google OAuth (Passport.js) |
-| **AI** | Gemini API + ElevenLabs + Edge Impulse + Presage |
+| **AI Coaching** | Gemini 2.0 Flash (backend chat sessions) |
+| **STT** | ElevenLabs Scribe v2 (client-side real-time) |
+| **TTS** | ElevenLabs Flash v2.5 (backend REST API) |
+| **Vision** | Edge Impulse (person detection, pending) + Presage C++ (vitals) |
 | **Payments** | Solana Pay (Phase 4) |
 | **Hardware** | ESP32-CAM + sensors + servo |
 
@@ -98,8 +102,8 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
 npm install
 
 # Set up environment
-cp apps/backend/.env.example apps/backend/.env
-# Edit with your API keys
+cp .env.example .env
+# Edit with your API keys (GOOGLE_AI_API_KEY, ELEVENLABS_API_KEY, etc.)
 
 # Seed database
 npm run --workspace=@shoulder-cupid/backend seed
@@ -109,8 +113,8 @@ npm run dev
 ```
 
 **URLs:**
-- Frontend: http://localhost:3005
-- Backend: http://localhost:4005
+- Frontend: http://localhost:3000
+- Backend: http://localhost:4000
 
 ---
 
@@ -165,7 +169,7 @@ cupid/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Server health check (used by preflight) |
+| GET | `/api/health` | Server health check (used by preflight) |
 | GET | `/api/auth/google` | OAuth redirect |
 | GET | `/api/auth/me` | Current user |
 | POST | `/api/auth/logout` | Logout |
@@ -177,9 +181,28 @@ cupid/
 | POST | `/api/sessions/end` | End session |
 | GET | `/api/sessions` | List user sessions |
 | GET | `/api/sessions/:id` | Session detail |
-| GET | `/api/stt/scribe-token` | ElevenLabs Scribe token for client-side STT |
-| GET | `/api/gemini/token` | Gemini API key check (preflight) |
-| WS | Socket.io | Real-time events (transcript-input, coaching-update, coach-audio, target-vitals) |
+| GET | `/api/stt/scribe-token` | ElevenLabs Scribe single-use token for client-side STT |
+| GET | `/api/gemini/token` | Gemini ephemeral token (used by preflight to verify API key) |
+| WS | Socket.io | Real-time events (see Socket Events below) |
+
+### Socket.io Events
+
+| Direction | Event | Description |
+|-----------|-------|-------------|
+| Client → Server | `join-session` | Join a session room |
+| Client → Server | `start-coaching` | Initialize Gemini coaching with selected coach |
+| Client → Server | `transcript-input` | Send STT transcript for coaching (text, speaker, isFinal) |
+| Client → Server | `end-session` | End the coaching session |
+| Server → Client | `coaching-ready` | Coach initialized, includes coachName and voiceId |
+| Server → Client | `coaching-update` | Gemini coaching response text |
+| Server → Client | `coaching-error` | Coaching pipeline error |
+| Server → Client | `coach-audio` | ElevenLabs TTS audio (base64 MP3) |
+| Server → Client | `transcript-update` | Persisted transcript entry (user/target/coach) |
+| Server → Client | `mode-change` | Mode transition (IDLE/APPROACH/CONVERSATION) |
+| Server → Client | `sensors-update` | Distance and heart rate data |
+| Server → Client | `emotion-update` | Target emotion detection |
+| Server → Client | `target-vitals` | Presage vitals (HR, breathing, HRV) |
+| Server → Client | `warning-triggered` | Comfort warning (level 1-3) |
 
 ### Coming Soon
 
@@ -202,6 +225,46 @@ See [docs/DESIGN_SYSTEM.md](docs/DESIGN_SYSTEM.md)
 **Typography:**
 - Headings: Playfair Display
 - Body: Inter
+
+---
+
+## AI Services Integration
+
+### Gemini (Google AI)
+
+Coaching responses are generated **server-side** using Gemini 2.0 Flash chat sessions.
+
+| Component | Package | Model | Location |
+|-----------|---------|-------|----------|
+| Coaching chat | `@google/generative-ai` | `gemini-2.0-flash` | `apps/backend/src/services/aiService.ts` |
+| Token generation | `@google/genai` | `gemini-2.5-flash` | `apps/backend/src/routes/gemini.ts` |
+
+**Env var:** `GOOGLE_AI_API_KEY` (fallback: `GEMINI_API_KEY`)
+
+**Flow:** Frontend STT transcript → Socket.io `transcript-input` → backend `aiService.getCoachingResponse()` → Gemini chat session with mode/emotion/distance context → Socket.io `coaching-update` back to frontend.
+
+The coaching session maintains conversation history per session. System prompt includes the selected coach's personality + current mode (IDLE/APPROACH/CONVERSATION). Responses are capped at 100 tokens for quick earpiece delivery.
+
+### ElevenLabs
+
+| Component | Package | Model | Location |
+|-----------|---------|-------|----------|
+| STT (Scribe) | `@elevenlabs/react` | `scribe_v2_realtime` | `apps/frontend/src/services/transcriptionService.ts` |
+| STT tokens | `@elevenlabs/elevenlabs-js` | N/A | `apps/backend/src/routes/stt.ts` |
+| TTS | axios (REST API) | `eleven_flash_v2_5` | `apps/backend/src/services/ttsService.ts` |
+
+**Env var:** `ELEVENLABS_API_KEY`
+
+**STT flow:** Backend generates single-use Scribe token → frontend `useScribe` hook connects with echo cancellation + noise suppression → committed transcripts sent to backend via Socket.io.
+
+**TTS flow:** Backend receives coaching text from Gemini → calls ElevenLabs REST API with coach's voice ID → streams MP3 audio buffer back to frontend via Socket.io `coach-audio` event → browser plays through earbuds.
+
+**Coach voice IDs** (seeded in `apps/backend/src/scripts/seed.ts`):
+| Coach | Voice | ElevenLabs ID |
+|-------|-------|---------------|
+| Smooth Operator | Adam | `pNInz6obpgDQGcFmaJgB` |
+| Wingman Chad | Arnold | `VR6AewLTigWG4xSOukaG` |
+| Gentle Guide | Bella | `EXAVITQu4vr4xnSDxMaL` |
 
 ---
 
