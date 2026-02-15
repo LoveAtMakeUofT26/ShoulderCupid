@@ -21,6 +21,10 @@ export default defineConfig(({ mode }) => {
           target: backendTarget,
           changeOrigin: true,
         },
+        '/coaches': {
+          target: backendTarget,
+          changeOrigin: true,
+        },
         '/socket.io': {
           target: backendTarget,
           ws: true,
