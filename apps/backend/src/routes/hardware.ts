@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import mongoose from 'mongoose'
 import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
 import {
@@ -9,12 +10,8 @@ import {
 import { addFrame } from '../services/frameBuffer.js'
 import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
 import { generateSpeech } from '../services/ttsService.js'
-import mongoose from 'mongoose'
 
 export const hardwareRouter = Router()
-
-// Store pending commands per session (in production, use Redis)
-const commandQueues = new Map<string, string[]>()
 
 const getDeviceToken = (req: any) => {
   const headerToken =
@@ -51,6 +48,9 @@ const isValidObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
 }
 
+// Store pending commands per session (in production, use Redis)
+const commandQueues = new Map<string, string[]>()
+
 // Store io instance for broadcasting
 let ioInstance: Server | null = null
 
@@ -65,9 +65,9 @@ export function queueCommand(sessionId: string, command: string) {
   commandQueues.set(sessionId, queue)
 }
 
-// POST /api/frame - Receive camera frame from ESP32
+// POST /api/frame - Receive camera frame from ESP32 or webcam
 hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
-  const { session_id, jpeg: _jpeg, detection, timestamp } = req.body
+  const { session_id, jpeg: _jpeg, detection, timestamp, source } = req.body
 
   if (!session_id || !isValidObjectId(session_id)) {
     return res.status(400).json({ error: 'session_id required' })
@@ -83,10 +83,13 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
     let emotion: string | undefined
     let coaching: string | undefined
 
-    // If person detected, process the frame
-    if (detection?.person && detection.confidence > 0.5) {
-      // Broadcast person detection to web clients
-      if (ioInstance) {
+    const hasPersonDetected = Boolean(detection?.person) && (detection.confidence ?? 0) > 0.5
+    const shouldProcessFrame = source === 'webcam' || hasPersonDetected
+
+    // Process frame when person is detected (ESP32 path) or when source is webcam
+    if (shouldProcessFrame) {
+      // Broadcast person detection to web clients when detection data is available
+      if (hasPersonDetected && ioInstance) {
         broadcastToSession(ioInstance, session_id, 'person-detected', {
           confidence: detection.confidence,
           bbox: detection.bbox,
@@ -200,6 +203,7 @@ hardwareRouter.get('/commands', requireHardwareAuth, async (req, res) => {
   }
 
   try {
+    // Verify session exists and is active
     const session = await Session.findOne({ _id: session_id, status: 'active' })
     if (!session) {
       return res.status(404).json({ error: 'Active session not found' })

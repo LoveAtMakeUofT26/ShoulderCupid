@@ -120,7 +120,8 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     // Session events
-    socket.on('session-started', () => {
+    socket.on('session-started', (data: { sessionId?: string } | string | undefined) => {
+      if (typeof data === 'object' && data && data.sessionId !== undefined && data.sessionId !== sessionId) return
       updateState({ mode: 'IDLE', coachingMessage: 'Session started! Looking for targets...' })
     })
 
