@@ -82,7 +82,7 @@ export function PreflightPage({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className={`mx-auto p-4 pb-32 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
+        <div className={`mx-auto p-4 pb-32 ${isDesktop ? 'max-w-6xl' : 'max-w-[428px]'}`}>
           {/* Coach Card */}
           {coach && (
             <div className="flex items-center gap-3 p-4 rounded-2xl shadow-card mb-4" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
@@ -218,7 +218,7 @@ export function PreflightPage({
 
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 border-t p-4 pb-safe" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
+        <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-6xl' : 'max-w-[428px]'}`}>
           {startError && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
               <p className="text-sm text-red-600 text-center">{startError}</p>
