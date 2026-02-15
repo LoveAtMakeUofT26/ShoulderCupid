@@ -8,10 +8,20 @@ const client = new GoogleGenAI({
   apiKey: process.env.GOOGLE_AI_API_KEY,
 });
 
+// Lightweight health check — verifies API key is set without creating a token
+geminiRouter.get("/health", (_req, res) => {
+  if (process.env.GOOGLE_AI_API_KEY) {
+    res.json({ status: "ok" });
+  } else {
+    res.status(503).json({ error: "GOOGLE_AI_API_KEY not configured" });
+  }
+});
+
+// Create ephemeral token for live Gemini session (only called when session actually starts)
 geminiRouter.get("/token", async (_req, res) => {
   try {
     const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-    
+
     const token = await client.authTokens.create({
       config: {
         uses: 1,

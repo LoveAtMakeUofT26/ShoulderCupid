@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SwipeCard } from '../components/coaches/SwipeCard'
@@ -16,10 +16,18 @@ export function CoachDiscoveryPage() {
   const [rosterLimit, setRosterLimit] = useState(3)
   const [error, setError] = useState<string | null>(null)
   const [cardKey, setCardKey] = useState(0)
+  const lastGenerateRef = useRef(0)
 
-  // Preload next coach in background
+  // Preload next coach in background (throttled: min 3s between calls)
   const preloadNext = useCallback(async () => {
+    const now = Date.now()
+    const elapsed = now - lastGenerateRef.current
+    const MIN_GAP = 3000
+    if (elapsed < MIN_GAP) {
+      await new Promise(r => setTimeout(r, MIN_GAP - elapsed))
+    }
     try {
+      lastGenerateRef.current = Date.now()
       const coach = await generateCoach()
       setNextCoach(coach)
     } catch (err) {

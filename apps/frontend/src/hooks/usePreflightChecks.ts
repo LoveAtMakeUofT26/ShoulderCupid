@@ -176,7 +176,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), 10000)
       const effectiveSignal = signal || ctrl.signal
-      const res = await fetch('/api/gemini/token', { signal: effectiveSignal })
+      const res = await fetch('/api/gemini/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
         updateCheck('gemini', { state: 'passed' })
