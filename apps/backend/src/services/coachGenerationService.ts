@@ -47,7 +47,7 @@ async function sleep(ms: number) {
  */
 async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
   const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
+    model: 'gemini-2.5-flash-lite',
     generationConfig: {
       temperature: 1.0,
       maxOutputTokens: 1024,

@@ -1,7 +1,12 @@
 import { Server, Socket } from 'socket.io'
+import mongoose from 'mongoose'
 import { Session } from '../models/Session.js'
 import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
 import { generateSpeech } from '../services/ttsService.js'
+
+function isValidObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
+}
 
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
@@ -50,6 +55,10 @@ export function setupClientHandler(socket: Socket, io: Server) {
   // Initialize coaching with the user's selected coach
   socket.on('start-coaching', async (data: { sessionId: string }) => {
     const { sessionId } = data
+    if (!isValidObjectId(sessionId)) {
+      socket.emit('coaching-error', { error: 'Invalid session ID' })
+      return
+    }
     try {
       const session = await Session.findById(sessionId).populate('coach_id')
       if (!session) {
@@ -117,7 +126,9 @@ export function setupClientHandler(socket: Socket, io: Server) {
       await addTranscriptEntry(io, sessionId, 'coach', coachingText)
 
       // Generate TTS audio (don't block text delivery)
-      const session = await Session.findById(sessionId).populate('coach_id')
+      const session = isValidObjectId(sessionId)
+        ? await Session.findById(sessionId).populate('coach_id')
+        : null
       const coach = session?.coach_id as unknown as { voice_id: string } | undefined
 
       if (coach?.voice_id) {
@@ -220,7 +231,9 @@ export async function addTranscriptEntry(
       updateData.$inc = { 'analytics.total_tips': 1 }
     }
 
-    await Session.findByIdAndUpdate(sessionId, updateData)
+    if (isValidObjectId(sessionId)) {
+      await Session.findByIdAndUpdate(sessionId, updateData)
+    }
   } catch (err) {
     console.error('Failed to persist transcript:', err)
   }
@@ -265,16 +278,18 @@ export async function updateSensors(
     updateCoachingMode(sessionId, newMode)
 
     // Persist to DB
-    try {
-      await Session.findByIdAndUpdate(sessionId, {
-        mode: newMode,
-        $inc: {
-          'analytics.approach_count': newMode === 'APPROACH' ? 1 : 0,
-          'analytics.conversation_count': newMode === 'CONVERSATION' ? 1 : 0,
-        }
-      })
-    } catch (err) {
-      console.error('Failed to update session mode in DB:', err)
+    if (isValidObjectId(sessionId)) {
+      try {
+        await Session.findByIdAndUpdate(sessionId, {
+          mode: newMode,
+          $inc: {
+            'analytics.approach_count': newMode === 'APPROACH' ? 1 : 0,
+            'analytics.conversation_count': newMode === 'CONVERSATION' ? 1 : 0,
+          }
+        })
+      } catch (err) {
+        console.error('Failed to update session mode in DB:', err)
+      }
     }
   }
 
@@ -293,18 +308,20 @@ export async function updateEmotion(io: Server, sessionId: string, emotion: stri
     broadcastToSession(io, sessionId, 'emotion-update', { emotion, confidence })
 
     // Persist to DB
-    try {
-      await Session.findByIdAndUpdate(sessionId, {
-        $push: {
-          emotions: {
-            timestamp: new Date(),
-            emotion,
-            confidence,
+    if (isValidObjectId(sessionId)) {
+      try {
+        await Session.findByIdAndUpdate(sessionId, {
+          $push: {
+            emotions: {
+              timestamp: new Date(),
+              emotion,
+              confidence,
+            }
           }
-        }
-      })
-    } catch (err) {
-      console.error('Failed to persist emotion:', err)
+        })
+      } catch (err) {
+        console.error('Failed to persist emotion:', err)
+      }
     }
   }
 }
@@ -314,11 +331,13 @@ export async function triggerWarning(io: Server, sessionId: string, level: 1 | 2
   broadcastToSession(io, sessionId, 'warning-triggered', { level, message })
 
   // Persist warning count to DB
-  try {
-    await Session.findByIdAndUpdate(sessionId, {
-      $inc: { 'analytics.warnings_triggered': 1 }
-    })
-  } catch (err) {
-    console.error('Failed to persist warning:', err)
+  if (isValidObjectId(sessionId)) {
+    try {
+      await Session.findByIdAndUpdate(sessionId, {
+        $inc: { 'analytics.warnings_triggered': 1 }
+      })
+    } catch (err) {
+      console.error('Failed to persist warning:', err)
+    }
   }
 }
