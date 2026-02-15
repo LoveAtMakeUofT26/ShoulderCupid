@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
@@ -24,6 +24,7 @@ export function LiveSessionPage() {
   const [duration, setDuration] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
+  const [adviceMessage, setAdviceMessage] = useState<string>('')
 
   const isNewSession = sessionId === 'new'
   const activeSessionId = isNewSession ? null : sessionId || null
@@ -54,6 +55,11 @@ export function LiveSessionPage() {
   // Combine socket and transcription transcripts
   const allTranscripts = [...transcript, ...transcriptionTranscripts]
 
+  const transcriptRef = useRef(allTranscripts)
+  const partialRef = useRef(partialTranscript)
+  transcriptRef.current = allTranscripts
+  partialRef.current = partialTranscript
+
   // Start ElevenLabs transcription when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
@@ -68,6 +74,46 @@ export function LiveSessionPage() {
       }
     };
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
+
+  // Poll relationship advice API every 2 seconds when session is active
+  useEffect(() => {
+    if (phase !== 'active') return
+
+    const fetchAdvice = async () => {
+      const transcripts = transcriptRef.current
+      const partial = partialRef.current
+      const transcriptForApi = [...transcripts]
+      if (partial.trim()) {
+        transcriptForApi.push({
+          id: 'partial',
+          timestamp: Date.now(),
+          speaker: 'user',
+          text: partial.trim(),
+        })
+      }
+
+      try {
+        const res = await fetch('/api/gemini/advice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ transcript: transcriptForApi }),
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (data.advice) setAdviceMessage(data.advice)
+      } catch (err) {
+        console.error('Failed to fetch advice:', err)
+      }
+    }
+
+    fetchAdvice() // initial call
+    const interval = setInterval(fetchAdvice, 2000)
+    return () => {
+      clearInterval(interval)
+      setAdviceMessage('')
+    }
+  }, [phase])
 
   // Fetch user on mount
   useEffect(() => {
@@ -211,7 +257,7 @@ export function LiveSessionPage() {
         <CoachingPanel
           coach={user.coach || null}
           mode={mode}
-          message={coachingMessage}
+          message={adviceMessage || coachingMessage}
           targetEmotion={targetEmotion}
           distance={distance}
           heartRate={heartRate}
