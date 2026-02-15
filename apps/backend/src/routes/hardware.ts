@@ -7,7 +7,7 @@ import {
   broadcastToSession,
 } from '../sockets/clientHandler.js'
 import { addFrame } from '../services/frameBuffer.js'
-import { getLatestMetrics, deriveEmotion } from '../services/presageMetrics.js'
+import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
 
 export const hardwareRouter = Router()
 
@@ -57,8 +57,13 @@ hardwareRouter.post('/frame', async (req, res) => {
         })
       }
 
-      // Buffer frame for Presage processing (ffmpeg stitches into video segments)
+      // Save frame for Presage processing (SDK reads directly from directory)
       await addFrame(session_id, _jpeg, timestamp || Date.now())
+
+      // Start per-session processor if not already running
+      if (!isProcessorRunning(session_id)) {
+        startSessionProcessor(session_id)
+      }
 
       // Check for Presage metrics from the C++ processor
       const metrics = getLatestMetrics(session_id)
@@ -85,6 +90,14 @@ hardwareRouter.post('/frame', async (req, res) => {
 
       // TODO: Get coaching from Gemini based on context
       // coaching = await getCoachingResponse(session, emotion, detection)
+    }
+
+    // Check for Presage errors and broadcast to frontend
+    const presageError = getSessionError(session_id)
+    if (presageError && ioInstance) {
+      broadcastToSession(ioInstance, session_id, 'presage-error', {
+        error: presageError,
+      })
     }
 
     res.json({
@@ -220,4 +233,10 @@ hardwareRouter.post('/trigger-warning', async (req, res) => {
   }
 
   res.json({ success: true, level: warningLevel })
+})
+
+// GET /api/presage/status - Presage system health check
+hardwareRouter.get('/presage/status', (_req, res) => {
+  const status = getPresageStatus()
+  res.json(status)
 })

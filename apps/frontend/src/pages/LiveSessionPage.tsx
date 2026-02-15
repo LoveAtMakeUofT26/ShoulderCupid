@@ -46,6 +46,7 @@ export function LiveSessionPage() {
     warningLevel,
     warningMessage,
     targetVitals,
+    presageError,
     endSession,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
@@ -337,7 +338,7 @@ export function LiveSessionPage() {
         </div>
 
         {/* Target Vitals */}
-        <TargetVitalsPanel vitals={targetVitals} />
+        <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
 
         {/* Coaching Panel */}
         <CoachingPanel

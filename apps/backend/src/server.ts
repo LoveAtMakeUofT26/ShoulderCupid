@@ -13,7 +13,7 @@ import { hardwareRouter, setIoInstance } from './routes/hardware.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
-import { startPresageProcessor } from './services/presageMetrics.js'
+import { startPresageProcessor, stopAllProcessors } from './services/presageMetrics.js'
 
 dotenv.config()
 
@@ -65,4 +65,11 @@ const PORT = process.env.PORT || 4000
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Shutting down...')
+  await stopAllProcessors()
+  process.exit(0)
 })
