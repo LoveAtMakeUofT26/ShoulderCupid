@@ -27,7 +27,8 @@ export function LiveSessionPage() {
   const [isEnding, setIsEnding] = useState(false)
 
   const isNewSession = sessionId === 'new'
-  const activeSessionId = isNewSession ? null : sessionId || null
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
+  const activeSessionId = createdSessionId || (isNewSession ? null : sessionId || null)
 
   const {
     isConnected,
@@ -138,23 +139,43 @@ export function LiveSessionPage() {
   }, [phase])
 
   const handleStartSession = useCallback(async () => {
-    // TODO: Call POST /api/sessions/start to create session
-    // For now, just transition to active state
-    setPhase('active')
-    setDuration(0)
+    try {
+      const response = await fetch('/api/sessions/start', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        console.error('Failed to start session:', err)
+        return
+      }
+      const session = await response.json()
+      setCreatedSessionId(session._id)
+      setPhase('active')
+      setDuration(0)
+    } catch (error) {
+      console.error('Failed to start session:', error)
+    }
   }, [])
 
   const handleEndSession = useCallback(async () => {
     setIsEnding(true)
     endSession()
 
-    // TODO: Call POST /api/sessions/:id/end
-    // Simulate report generation
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    if (activeSessionId) {
+      try {
+        await fetch(`/api/sessions/${activeSessionId}/end`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+      } catch (error) {
+        console.error('Failed to end session:', error)
+      }
+    }
 
-    // Navigate to session report
-    navigate('/sessions')
-  }, [endSession, navigate])
+    // Navigate to session report (or list if no ID)
+    navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
+  }, [endSession, navigate, activeSessionId])
 
   if (loading) {
     return (
