@@ -33,14 +33,19 @@ export function HeroSection() {
               <span className="gold-foil-text">In Your Ear.</span>
             </motion.h1>
 
-            <motion.p
-              className="text-lg md:text-xl text-[var(--color-text-secondary)] mb-10 max-w-lg"
+            <motion.div
+              className="mb-10 max-w-xl space-y-3"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
             >
-              Real-time coaching through smart glasses. Never approach alone again.
-            </motion.p>
+              <p className="text-lg md:text-xl font-medium text-[var(--color-text-secondary)]">
+                Your AI coach hears the conversation, reads emotions, and whispers exactly what to say — live through your earpiece.
+              </p>
+              <p className="text-base md:text-lg text-[var(--color-text-tertiary)]">
+                Smart glasses track biometrics, distance, and facial expressions. Choose from 1M+ unique AI coaches, each with their own voice and personality.
+              </p>
+            </motion.div>
 
             <motion.div
               className="flex flex-col sm:flex-row gap-4"
@@ -73,10 +78,16 @@ export function HeroSection() {
               </div>
 
               <div className="relative animate-float">
-                <div className="w-64 h-80 md:w-80 md:h-96 mx-auto rounded-3xl border shadow-marble flex flex-col items-center justify-center" style={{ background: 'linear-gradient(to bottom, var(--color-surface), var(--color-surface-hover), var(--color-surface-secondary))', borderColor: 'var(--color-border)' }}>
-                  <span className="text-8xl md:text-9xl mb-4">💘</span>
-                  <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mb-3" />
-                  <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
+                <div className="w-64 h-80 md:w-80 md:h-96 mx-auto rounded-3xl border shadow-marble overflow-hidden flex flex-col items-center justify-end" style={{ background: 'linear-gradient(to bottom, var(--color-surface), var(--color-surface-hover), var(--color-surface-secondary))', borderColor: 'var(--color-border)' }}>
+                  <img
+                    src="/assets/cupid-statue.png"
+                    alt="Marble cupid statue"
+                    className="w-full h-[85%] object-cover object-top grayscale brightness-110 contrast-90 opacity-90"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-white/80 via-white/50 to-transparent dark:from-gray-900/80 dark:via-gray-900/50">
+                    <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mx-auto mb-2" />
+                    <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
+                  </div>
                 </div>
 
                 <div className="absolute -left-4 top-12 w-8 h-24 rounded-full bg-gradient-to-b from-gold-200/30 to-transparent" />

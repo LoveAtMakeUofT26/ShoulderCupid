@@ -5,6 +5,7 @@ import { Navbar } from '../components/landing/sections/Navbar'
 import { HeroSection } from '../components/landing/sections/HeroSection'
 import { HowItWorksSection } from '../components/landing/sections/HowItWorksSection'
 import { CoachShowcaseSection } from '../components/landing/sections/CoachShowcaseSection'
+import { TechnologySection } from '../components/landing/sections/TechnologySection'
 import { FeaturesSection } from '../components/landing/sections/FeaturesSection'
 import { CTASection } from '../components/landing/sections/CTASection'
 import { FooterSection } from '../components/landing/sections/FooterSection'
@@ -45,6 +46,7 @@ export function LandingPage() {
       <main id="main-content">
       <HeroSection />
       <HowItWorksSection />
+      <TechnologySection />
       <CoachShowcaseSection />
       <FeaturesSection />
       <CTASection />
