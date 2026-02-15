@@ -27,6 +27,17 @@ const sessionStates = new Map<string, SessionState>()
 // Per-session concurrency guards for the coaching pipeline
 const coachingGuards = new Map<string, ConcurrencyGuard>()
 
+// Per-session timestamp of last coaching response (for cooldown)
+const lastCoachingTime = new Map<string, number>()
+const COACHING_COOLDOWN_MS = 4000 // minimum 4s between coaching responses
+
+// Filter out filler/noise transcripts that aren't worth a Gemini call
+const FILLER_PATTERN = /^(um+|uh+|ah+|oh+|hm+|hmm+|mhm+|yeah|yep|yea|ok|okay|like|so|well|right|sure)\.?$/i
+function isFillerText(text: string): boolean {
+  const trimmed = text.trim()
+  return trimmed.length < 3 || FILLER_PATTERN.test(trimmed)
+}
+
 export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
 
@@ -112,12 +123,20 @@ export function setupClientHandler(socket: Socket, io: Server) {
     // Only process final transcripts with actual text
     if (!isFinal || !text.trim()) return
 
-    // Persist user/target transcript immediately (not guarded)
-    await addTranscriptEntry(io, sessionId, speaker, text)
+    // Persist user/target transcript (broadcast immediately, DB write batched)
+    addTranscriptEntry(io, sessionId, speaker, text)
 
     // Get current session state for context
     const state = sessionStates.get(sessionId)
     if (!state || state.mode === 'IDLE') return // No coaching in IDLE mode
+
+    // Skip filler/noise transcripts — not worth a Gemini call
+    if (isFillerText(text)) return
+
+    // Enforce coaching cooldown — don't spam Gemini faster than every 4s
+    const now = Date.now()
+    const lastTime = lastCoachingTime.get(sessionId) || 0
+    if (now - lastTime < COACHING_COOLDOWN_MS) return
 
     // Get or create concurrency guard for this session
     if (!coachingGuards.has(sessionId)) {
@@ -137,11 +156,14 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
         if (!coachingText.trim()) return
 
+        // Update cooldown timestamp
+        lastCoachingTime.set(sessionId, Date.now())
+
         // Send coaching text immediately for UI display
         sendCoachingUpdate(io, sessionId, coachingText)
 
-        // Persist coach transcript
-        await addTranscriptEntry(io, sessionId, 'coach', coachingText)
+        // Persist coach transcript (batched)
+        addTranscriptEntry(io, sessionId, 'coach', coachingText)
 
         // Generate TTS audio using cached voiceId (no DB re-query)
         const voiceId = state.voiceId
@@ -167,12 +189,16 @@ export function setupClientHandler(socket: Socket, io: Server) {
   })
 
   // End session
-  socket.on('end-session', (data: { sessionId: string }) => {
+  socket.on('end-session', async (data: { sessionId: string }) => {
     const { sessionId } = data
     console.log(`Client ${socket.id} ending session ${sessionId}`)
     socket.leave(`session-${sessionId}`)
+    // Flush any buffered transcripts before cleanup
+    await flushTranscripts(sessionId)
+    transcriptBuffers.delete(sessionId)
     sessionStates.delete(sessionId)
     coachingGuards.delete(sessionId)
+    lastCoachingTime.delete(sessionId)
     endCoachingSession(sessionId)
   })
 
@@ -211,8 +237,57 @@ export function sendCoachingUpdate(io: Server, sessionId: string, message: strin
   broadcastToSession(io, sessionId, 'coaching-update', { message })
 }
 
-// Add transcript entry and persist to DB
-export async function addTranscriptEntry(
+// Get session mode from in-memory state (avoids DB query)
+export function getSessionMode(sessionId: string): string {
+  return sessionStates.get(sessionId)?.mode || 'IDLE'
+}
+
+// --- Batched transcript persistence ---
+interface PendingTranscript {
+  timestamp: Date
+  speaker: string
+  text: string
+  emotion?: string
+}
+
+const transcriptBuffers = new Map<string, { entries: PendingTranscript[]; tipCount: number }>()
+const TRANSCRIPT_FLUSH_INTERVAL_MS = 3000 // flush every 3 seconds
+
+// Flush buffered transcripts to DB
+async function flushTranscripts(sessionId: string) {
+  const buffer = transcriptBuffers.get(sessionId)
+  if (!buffer || buffer.entries.length === 0) return
+
+  const { entries, tipCount } = buffer
+  buffer.entries = []
+  buffer.tipCount = 0
+
+  if (!isValidObjectId(sessionId)) return
+
+  try {
+    const updateData: Record<string, unknown> = {
+      $push: {
+        transcript: { $each: entries }
+      }
+    }
+    if (tipCount > 0) {
+      updateData.$inc = { 'analytics.total_tips': tipCount }
+    }
+    await Session.findByIdAndUpdate(sessionId, updateData)
+  } catch (err) {
+    console.error('Failed to flush transcripts:', err)
+  }
+}
+
+// Periodic flush for all active sessions
+setInterval(() => {
+  for (const sessionId of transcriptBuffers.keys()) {
+    flushTranscripts(sessionId)
+  }
+}, TRANSCRIPT_FLUSH_INTERVAL_MS)
+
+// Add transcript entry: broadcast immediately, batch DB writes
+export function addTranscriptEntry(
   io: Server,
   sessionId: string,
   speaker: 'user' | 'target' | 'coach',
@@ -227,31 +302,17 @@ export async function addTranscriptEntry(
     emotion,
   }
 
+  // Broadcast to frontend immediately
   broadcastToSession(io, sessionId, 'transcript-update', entry)
 
-  // Persist to DB
-  try {
-    const updateData: Record<string, unknown> = {
-      $push: {
-        transcript: {
-          timestamp: new Date(),
-          speaker,
-          text,
-          emotion,
-        }
-      }
-    }
-
-    // Increment tip count if coach message
-    if (speaker === 'coach') {
-      updateData.$inc = { 'analytics.total_tips': 1 }
-    }
-
-    if (isValidObjectId(sessionId)) {
-      await Session.findByIdAndUpdate(sessionId, updateData)
-    }
-  } catch (err) {
-    console.error('Failed to persist transcript:', err)
+  // Buffer for batched DB write
+  if (!transcriptBuffers.has(sessionId)) {
+    transcriptBuffers.set(sessionId, { entries: [], tipCount: 0 })
+  }
+  const buffer = transcriptBuffers.get(sessionId)!
+  buffer.entries.push({ timestamp: new Date(), speaker, text, emotion })
+  if (speaker === 'coach') {
+    buffer.tipCount++
   }
 }
 

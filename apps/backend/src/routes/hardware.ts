@@ -5,6 +5,7 @@ import {
   updateSensors,
   updateEmotion,
   broadcastToSession,
+  getSessionMode,
 } from '../sockets/clientHandler.js'
 import { addFrame } from '../services/frameBuffer.js'
 import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
@@ -13,6 +14,25 @@ export const hardwareRouter = Router()
 
 // Store pending commands per session (in production, use Redis)
 const commandQueues = new Map<string, string[]>()
+
+// Cache of verified active sessions (avoids DB query on every frame)
+// Key: session_id, Value: expiry timestamp
+const activeSessionCache = new Map<string, number>()
+const SESSION_CACHE_TTL_MS = 30_000 // 30 seconds
+
+function isSessionCached(sessionId: string): boolean {
+  const expiry = activeSessionCache.get(sessionId)
+  if (!expiry) return false
+  if (Date.now() > expiry) {
+    activeSessionCache.delete(sessionId)
+    return false
+  }
+  return true
+}
+
+function cacheSession(sessionId: string): void {
+  activeSessionCache.set(sessionId, Date.now() + SESSION_CACHE_TTL_MS)
+}
 
 // Store io instance for broadcasting
 let ioInstance: Server | null = null
@@ -37,10 +57,13 @@ hardwareRouter.post('/frame', async (req, res) => {
   }
 
   try {
-    // Verify session exists and is active
-    const session = await Session.findOne({ _id: session_id, status: 'active' })
-    if (!session) {
-      return res.status(404).json({ error: 'Active session not found' })
+    // Verify session exists and is active (cached to avoid DB hit on every frame)
+    if (!isSessionCached(session_id)) {
+      const session = await Session.findOne({ _id: session_id, status: 'active' })
+      if (!session) {
+        return res.status(404).json({ error: 'Active session not found' })
+      }
+      cacheSession(session_id)
     }
 
     let emotion: string | undefined
@@ -120,10 +143,13 @@ hardwareRouter.post('/sensors', async (req, res) => {
   }
 
   try {
-    // Verify session exists and is active
-    const session = await Session.findOne({ _id: session_id, status: 'active' })
-    if (!session) {
-      return res.status(404).json({ error: 'Active session not found' })
+    // Verify session exists and is active (cached to avoid DB hit every call)
+    if (!isSessionCached(session_id)) {
+      const session = await Session.findOne({ _id: session_id, status: 'active' })
+      if (!session) {
+        return res.status(404).json({ error: 'Active session not found' })
+      }
+      cacheSession(session_id)
     }
 
     // Update sensors via WebSocket (this also handles mode transitions)
@@ -141,12 +167,12 @@ hardwareRouter.post('/sensors', async (req, res) => {
       queueCommand(session_id, 'BUZZ')
     }
 
-    // Get current mode from session
-    const updatedSession = await Session.findById(session_id)
+    // Return mode from in-memory state (no second DB query needed)
+    const currentMode = getSessionMode(session_id)
 
     res.json({
       received: true,
-      mode: updatedSession?.mode || 'IDLE',
+      mode: currentMode,
     })
   } catch (error) {
     console.error('Sensor processing error:', error)
