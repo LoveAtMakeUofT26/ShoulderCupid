@@ -64,8 +64,8 @@ export function SessionsPage() {
 
   return (
     <AppShell>
-      <div className="pt-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="pt-6 md:pt-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Your Sessions
         </h1>
         <p className="text-gray-500 mb-6">
@@ -101,7 +101,7 @@ export function SessionsPage() {
         )}
 
         {!loading && !error && sessions.length > 0 && (
-          <div className="space-y-3">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {sessions.map((session) => (
               <Link
                 key={session._id}

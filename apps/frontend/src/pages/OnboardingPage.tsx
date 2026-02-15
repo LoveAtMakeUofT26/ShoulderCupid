@@ -78,7 +78,7 @@ export function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-marble-50">
-      <div className="container-mobile px-5 py-6 min-h-screen flex flex-col">
+      <div className="container-mobile md:max-w-xl mx-auto px-5 md:px-8 py-6 md:py-12 min-h-screen flex flex-col">
         {/* Progress bar — hide on welcome step */}
         {currentStep > 1 && (
           <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />

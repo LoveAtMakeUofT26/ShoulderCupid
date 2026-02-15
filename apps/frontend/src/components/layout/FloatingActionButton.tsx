@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
 
 interface FloatingActionButtonProps {
   to?: string
@@ -7,9 +8,11 @@ interface FloatingActionButtonProps {
 }
 
 export function FloatingActionButton({ to, onClick, label = 'Start Session' }: FloatingActionButtonProps) {
+  const isDesktop = useIsDesktop()
+  if (isDesktop) return null
+
   const buttonContent = (
     <>
-      {/* Play/Start icon */}
       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
         <path d="M8 5v14l11-7z" />
       </svg>
