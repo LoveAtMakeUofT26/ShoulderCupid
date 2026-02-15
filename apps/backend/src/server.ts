@@ -40,9 +40,11 @@ await connectDB()
 setupAuth(app)
 
 // Routes
-app.get('/health', (_req, res) => {
+const healthHandler: express.RequestHandler = (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
-})
+}
+app.get('/health', healthHandler)
+app.get('/api/health', healthHandler)
 
 app.use('/api/auth', authRouter)
 app.use('/api/coaches', coachesRouter)

@@ -24,8 +24,19 @@
 - Browser requests microphone permissions (Web Audio API)
 - User wears Bluetooth earbuds for both input and output
 - STT flow: Browser mic -> ElevenLabs Scribe (client-side SDK, token from backend) -> transcript
-- Gemini flow: Transcript text -> Gemini 2.5 Flash Live session (client-side SDK, token from backend) -> coaching response
-- TTS flow: Backend (ElevenLabs TTS) -> browser -> Bluetooth earbuds
+- Coaching flow: Transcript -> WebSocket (`transcript-input`) -> Backend -> Gemini -> coaching response + TTS audio
+- TTS flow: Backend (ElevenLabs TTS) -> WebSocket (`coach-audio`) -> browser -> Bluetooth earbuds
+
+### Pre-flight Checks (Real)
+- Full-page setup UI with real device/service validation before session
+- Camera: `getUserMedia({ video })` with live preview
+- Microphone: `getUserMedia({ audio })` with volume meter
+- Speaker: `enumerateDevices()` checking `audiooutput`
+- Backend: `GET /health` with 5s timeout
+- STT: `GET /api/stt/scribe-token` with 10s timeout
+- AI Coach: `GET /api/gemini/token` with 10s timeout
+- All 6 checks run in parallel, per-check retry on failure
+- I/O configuration (camera source, audio devices) integrated into preflight
 
 ### Hosting
 - **Backend**: Vultr Ubuntu VPS (Edge Impulse + Presage C++ + Express API)
@@ -102,11 +113,11 @@
    └─► ElevenLabs Scribe SDK (client-side, token from /api/stt)
    └─► Real-time partial + committed transcripts
 
-4. Transcripts streamed to Gemini Live session
-   └─► Gemini 2.5 Flash (client-side SDK, token from /api/gemini)
-   └─► Real-time coaching responses
+4. Transcripts sent to backend via WebSocket (transcript-input event)
+   └─► Backend forwards to Gemini for coaching response
+   └─► Coaching text sent back via WebSocket (coaching-update event)
 
-5. TODO: Backend assembles full context for richer coaching
+5. Backend assembles coaching context
    {
      person_detected, gender, distance_cm,
      heart_rate_bpm, target_emotion,
@@ -114,8 +125,8 @@
      coach_personality
    }
 
-6. ElevenLabs TTS converts coaching text to audio
-   └─► Streamed back to browser -> Bluetooth earbuds
+6. ElevenLabs TTS converts coaching text to audio on backend
+   └─► Audio sent via WebSocket (coach-audio event) -> browser -> earbuds
 
 7. Comfort check (conversation mode only)
    └─► Presage detects discomfort
@@ -159,10 +170,15 @@
 
 ## Backend Endpoints
 
+### Health
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Server health check (used by preflight) |
+
 ### ESP32 Hardware
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/frame` | Receive JPEG frame from ESP32-CAM |
+| POST | `/api/frame` | Receive JPEG frame (ESP32-CAM or webcam) |
 | GET | `/api/stream` | Expose MJPEG stream to frontend |
 | POST | `/api/sensors` | Receive sensor data (distance, HR) |
 | GET | `/api/commands` | Command queue for ESP32 (buzz, slap) |
@@ -171,9 +187,8 @@
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/stt/scribe-token` | ElevenLabs Scribe single-use token for client-side STT |
-| GET | `/api/gemini/token` | Gemini Live ephemeral token for client-side coaching |
-| POST | `/api/coach` | Assemble full context, get coaching response (TODO) |
-| WS | `/ws/session` | Real-time session data (bidirectional) |
+| GET | `/api/gemini/token` | Gemini token (used by preflight check + backend coaching) |
+| WS | Socket.io | Real-time session data (transcript-input, coaching-update, coach-audio, target-vitals) |
 
 ### Auth & Users
 | Method | Endpoint | Description |
@@ -202,7 +217,7 @@
 | **Presage SDK** | Emotion analysis from face | Backend (C++ native on Ubuntu) |
 | **ElevenLabs Scribe** | Real-time speech-to-text | Frontend (client-side SDK, token from backend) |
 | **ElevenLabs TTS** | Coaching text to speech | Backend (API call) |
-| **Gemini 2.5 Flash Live** | Real-time coaching from transcript | Frontend (client-side SDK, token from backend) |
+| **Gemini 2.5 Flash** | Real-time coaching from transcript | Backend (via coaching pipeline, triggered by WebSocket) |
 
 ---
 
@@ -231,20 +246,26 @@
 - [x] React frontend scaffold
 - [x] Mobile app shell + design system
 - [x] Dashboard, Coaches, Sessions pages
+- [x] Onboarding wizard
+- [x] Marketing landing page
 
 ### Phase 2: Hardware + Audio Integration (CURRENT)
-- [ ] ESP32-CAM streaming MJPEG to backend
-- [ ] Backend exposes video stream endpoint
-- [ ] Frontend displays live video feed
+- [x] Frame ingestion endpoint (`POST /api/frame`)
+- [x] Configurable camera source (webcam or ESP32-CAM)
+- [x] Webcam frame capture (2 FPS, JPEG)
+- [x] Frame buffer + MP4 stitching via ffmpeg
+- [x] Presage C++ SDK integration (HR, breathing, HRV)
+- [x] Target vitals panel in live session UI
 - [x] Browser audio capture (mic permissions via ElevenLabs Scribe SDK)
-- [x] ElevenLabs STT integration (client-side Scribe + backend token endpoint)
-- [ ] ElevenLabs TTS integration + playback to earbuds
+- [x] ElevenLabs STT integration (client-side Scribe + backend token)
+- [x] Backend coaching pipeline (transcript -> Gemini -> coach-audio TTS)
+- [x] Real preflight checks (camera, mic, speaker, backend, STT, AI)
+- [ ] ESP32-CAM streaming MJPEG to backend (hardware pending)
 - [ ] Edge Impulse person detection on backend
-- [ ] Presage C++ SDK on Vultr Ubuntu
 
 ### Phase 3: AI Coaching Loop
-- [x] Gemini Live session (basic - streams transcript, gets responses)
-- [ ] Gemini coaching with full context (person detection, emotion, coach personality)
+- [x] Backend coaching pipeline (transcript-input -> Gemini -> coaching-update + coach-audio)
+- [ ] Full coaching context (person detection, emotion, coach personality)
 - [ ] Approach mode (person detected, far away)
 - [ ] Conversation mode (close, STT active)
 - [ ] Coach personality system (prompt variations)
@@ -252,19 +273,17 @@
 - [ ] Command queue (buzz/slap -> ESP32)
 
 ### Phase 4: Sessions + Reports
-- [ ] Session lifecycle (start/end)
+- [x] Session lifecycle (start/end API)
+- [x] Sessions frontend connected to backend API
 - [ ] Transcript storage in MongoDB
 - [ ] Emotion timeline tracking
 - [ ] Post-session Gemini report generation
-- [ ] Session history on frontend
 - [ ] Session detail view with report
 
 ### Phase 5: Polish + Deploy
-- [ ] Onboarding wizard (profile, quiz, hardware setup)
-- [ ] Landing page
+- [x] Deploy backend to Vultr (GitHub Actions CI/CD)
+- [x] Deploy frontend to Vercel (auto-deploy)
 - [ ] Payment flow (Solana or Stripe)
-- [ ] Deploy backend to Vultr
-- [ ] Deploy frontend to Vercel
 - [ ] Edge case handling (disconnects, timeouts)
 - [ ] Demo video
 

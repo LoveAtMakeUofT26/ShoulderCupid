@@ -133,11 +133,15 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       clearTimeout(timer)
       if (res.ok) {
         updateCheck('backend', { state: 'passed' })
+      } else if (res.status === 502 || res.status === 503) {
+        updateCheck('backend', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
+      } else if (res.status === 404) {
+        updateCheck('backend', { state: 'failed', error: 'Server is outdated — health endpoint not found' })
       } else {
-        updateCheck('backend', { state: 'failed', error: `Server responded with ${res.status}` })
+        updateCheck('backend', { state: 'failed', error: `Server error (${res.status}) — try again` })
       }
     } catch {
-      updateCheck('backend', { state: 'failed', error: 'Cannot reach server' })
+      updateCheck('backend', { state: 'failed', error: 'Cannot reach server — is the backend running?' })
     }
   }, [updateCheck])
 
@@ -154,13 +158,15 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
         if (data.token) {
           updateCheck('stt', { state: 'passed' })
         } else {
-          updateCheck('stt', { state: 'failed', error: 'No token returned' })
+          updateCheck('stt', { state: 'failed', error: 'No token returned — check ELEVENLABS_API_KEY' })
         }
+      } else if (res.status === 502 || res.status === 503) {
+        updateCheck('stt', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
       } else {
-        updateCheck('stt', { state: 'failed', error: 'STT service unavailable' })
+        updateCheck('stt', { state: 'failed', error: 'Speech-to-text unavailable — check API key' })
       }
     } catch {
-      updateCheck('stt', { state: 'failed', error: 'Speech-to-text service unreachable' })
+      updateCheck('stt', { state: 'failed', error: 'Cannot reach server for STT' })
     }
   }, [updateCheck])
 
@@ -174,11 +180,13 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       clearTimeout(timer)
       if (res.ok) {
         updateCheck('gemini', { state: 'passed' })
+      } else if (res.status === 502 || res.status === 503) {
+        updateCheck('gemini', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
       } else {
-        updateCheck('gemini', { state: 'failed', error: 'AI service unavailable' })
+        updateCheck('gemini', { state: 'failed', error: 'AI coach unavailable — check GOOGLE_AI_API_KEY' })
       }
     } catch {
-      updateCheck('gemini', { state: 'failed', error: 'AI service unreachable' })
+      updateCheck('gemini', { state: 'failed', error: 'Cannot reach server for AI coach' })
     }
   }, [updateCheck])
 
