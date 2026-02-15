@@ -5,7 +5,7 @@ const APP_URL = import.meta.env.VITE_APP_URL || '/app'
 
 export function CTASection() {
   return (
-    <section id="cta" className="py-24 md:py-32 bg-gray-900 dark:bg-[#0A0A0C] relative overflow-hidden">
+    <section id="cta" className="py-24 md:py-32 bg-gray-900 relative overflow-hidden">
       {/* Background accents */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-80 h-80 bg-cupid-500/10 rounded-full blur-3xl" />

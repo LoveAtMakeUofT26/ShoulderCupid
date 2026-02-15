@@ -48,39 +48,6 @@
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* ============================================
-   Theme Tokens — Dark
-   ============================================ */
-.dark {
-  --color-bg: #0F0F11;
-  --color-surface: #1A1A1F;
-  --color-surface-elevated: #222228;
-  --color-surface-hover: #2A2A32;
-  --color-surface-secondary: #1A1A1F;
-
-  --color-text: #F5F0EC;
-  --color-text-secondary: #B0AAA4;
-  --color-text-tertiary: #8A8480;
-  --color-text-faint: #5A5550;
-
-  --color-border: #2A2A32;
-  --color-border-strong: #3A3A44;
-
-  --color-primary: #F07A8C;
-  --color-primary-hover: #E8566C;
-  --color-primary-surface: rgba(232, 86, 108, 0.15);
-  --color-primary-text: #F07A8C;
-
-  --color-accent: #C9A962;
-  --color-accent-surface: rgba(201, 169, 98, 0.15);
-
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-card-hover: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
-
-  --color-overlay: rgba(0, 0, 0, 0.7);
-}
-
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;

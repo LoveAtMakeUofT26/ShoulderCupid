@@ -195,14 +195,14 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
       />
 
       {/* Modal */}
-      <div className="relative bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
+      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 id="start-session-title" className="text-xl font-bold text-gray-900 dark:text-white">Start Session</h2>
+          <h2 id="start-session-title" className="text-xl font-bold text-gray-900">Start Session</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500"
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
           >
             ✕
           </button>
@@ -210,7 +210,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
         {/* Coach Display */}
         {coach && (
-          <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-br from-cupid-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-xl">
+          <div className="flex items-center gap-3 mb-6 p-4 bg-gradient-to-br from-cupid-50 to-white rounded-xl">
             {coach.avatar_url ? (
               <img
                 src={coach.avatar_url}
@@ -228,8 +228,8 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
               </div>
             )}
             <div className="flex-1">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Your Coach</p>
-              <p className="font-semibold text-gray-900 dark:text-white">{coach.name}</p>
+              <p className="text-sm text-gray-500">Your Coach</p>
+              <p className="font-semibold text-gray-900">{coach.name}</p>
             </div>
             {coach.pricing && (
               <span className="text-sm font-medium text-gold-600">
@@ -241,7 +241,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
         {/* Pre-flight Checks */}
         <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
             Pre-flight Checks
           </h3>
           <div className="space-y-2">
@@ -252,17 +252,17 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
                   key={key}
                   className={`flex items-center gap-3 p-3 rounded-xl border ${
                     status.passed
-                      ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/30'
+                      ? 'border-green-200 bg-green-50'
                       : status.checked && key === 'presage'
-                      ? 'border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/30'
+                      ? 'border-yellow-200 bg-yellow-50'
                       : status.checked
-                      ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/30'
-                      : 'border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800'
+                      ? 'border-red-200 bg-red-50'
+                      : 'border-gray-200 bg-gray-50'
                   }`}
                 >
                   <span className="text-xl">{icon}</span>
                   <div className="flex-1">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-200">{label}</span>
+                    <span className="text-sm font-medium text-gray-700">{label}</span>
                     {status.detail && (
                       <p className={`text-xs mt-0.5 ${key === 'presage' ? 'text-yellow-600' : 'text-red-500'}`}>
                         {status.detail}
@@ -288,8 +288,8 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
         {/* Warning about presage */}
         {hasWarnings && (
-          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-            <p className="text-xs text-yellow-700 dark:text-yellow-400">
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+            <p className="text-xs text-yellow-700">
               Vitals analysis won't work without Presage setup. Session will still work for coaching + transcription.
             </p>
           </div>
@@ -298,26 +298,26 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
         {/* Payment Section */}
         {hardwareReady && payment.step !== 'idle' && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
               Payment
             </h3>
 
             {payment.step === 'checking' && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50">
                 <svg className="animate-spin h-5 w-5 text-cupid-500" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">Checking session quota...</span>
+                <span className="text-sm text-gray-600">Checking session quota...</span>
               </div>
             )}
 
             {payment.step === 'free' && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30">
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 bg-green-50">
                 <span className="text-green-500 text-lg">✓</span>
                 <div>
-                  <span className="text-sm font-medium text-green-700 dark:text-green-400">Free session</span>
-                  <p className="text-xs text-green-600 dark:text-green-500">
+                  <span className="text-sm font-medium text-green-700">Free session</span>
+                  <p className="text-xs text-green-600">
                     {payment.sessionsRemaining} free session{payment.sessionsRemaining !== 1 ? 's' : ''} remaining this month
                   </p>
                 </div>
@@ -326,12 +326,12 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
             {payment.step === 'requires_payment' && (
               <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 rounded-xl border border-cupid-200 dark:border-cupid-800 bg-cupid-50 dark:bg-cupid-900/30">
+                <div className="flex items-center justify-between p-3 rounded-xl border border-cupid-200 bg-cupid-50">
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="text-sm font-medium text-gray-900">
                       ${payment.request.amount_usdc?.toFixed(2)} USDC
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-xs text-gray-500">
                       Free sessions used ({payment.request.sessions_used}/3)
                     </p>
                   </div>
@@ -357,29 +357,29 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
             )}
 
             {(payment.step === 'paying' || payment.step === 'verifying') && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-cupid-200 dark:border-cupid-800 bg-cupid-50 dark:bg-cupid-900/30">
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-cupid-200 bg-cupid-50">
                 <svg className="animate-spin h-5 w-5 text-cupid-500" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                 </svg>
-                <span className="text-sm text-gray-600 dark:text-gray-300">
+                <span className="text-sm text-gray-600">
                   {payment.step === 'paying' ? 'Processing payment...' : 'Verifying on-chain...'}
                 </span>
               </div>
             )}
 
             {payment.step === 'paid' && (
-              <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30">
+              <div className="flex items-center gap-3 p-3 rounded-xl border border-green-200 bg-green-50">
                 <span className="text-green-500 text-lg">✓</span>
-                <span className="text-sm font-medium text-green-700 dark:text-green-400">Payment confirmed</span>
+                <span className="text-sm font-medium text-green-700">Payment confirmed</span>
               </div>
             )}
 
             {payment.step === 'error' && (
               <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-red-200 bg-red-50">
                   <span className="text-red-500 text-lg">✗</span>
-                  <span className="text-sm text-red-700 dark:text-red-400">{payment.message}</span>
+                  <span className="text-sm text-red-700">{payment.message}</span>
                 </div>
                 <button
                   onClick={checkPaymentStatus}

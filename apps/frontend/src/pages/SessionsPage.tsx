@@ -47,8 +47,8 @@ function getStatusLabel(status: string) {
 }
 
 function getStatusClasses(status: string) {
-  if (status === 'ended') return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-  if (status === 'active') return 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)] dark:bg-cupid-900/20 dark:text-cupid-400'
+  if (status === 'ended') return 'bg-green-100 text-green-700'
+  if (status === 'active') return 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)]'
   return 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]'
 }
 

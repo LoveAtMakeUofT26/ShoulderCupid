@@ -244,7 +244,7 @@ export function SessionReportPage() {
                         entry.speaker === 'user'
                           ? 'bg-[var(--color-primary-surface)] text-[var(--color-text)]'
                           : entry.speaker === 'coach'
-                            ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200'
+                            ? 'bg-blue-50 text-blue-900'
                             : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'
                       }`}>
                         <span className="font-medium capitalize">{entry.speaker}: </span>

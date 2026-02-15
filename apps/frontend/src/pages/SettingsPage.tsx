@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AppShell } from '../components/layout'
 import { useIsDesktop } from '../hooks/useIsDesktop'
-import { useThemeStore } from '../hooks'
 import { getCurrentUser, logout, type User } from '../services/auth'
 import { Spinner } from '../components/ui/Spinner'
 import { useWallet } from '@solana/wallet-adapter-react'
@@ -19,12 +18,6 @@ const sectionBorderColors: Record<string, string> = {
   device: 'md:border-l-4 md:border-l-blue-400',
   account: 'md:border-l-4 md:border-l-gray-300',
 }
-
-const THEME_OPTIONS = [
-  { value: 'light' as const, label: 'Light' },
-  { value: 'dark' as const, label: 'Dark' },
-  { value: 'system' as const, label: 'System' },
-]
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -66,8 +59,6 @@ function ProfileSection({ user, isDesktop }: { user: User; isDesktop: boolean })
 }
 
 function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolean }) {
-  const { theme, setTheme } = useThemeStore()
-
   return (
     <section id="preferences">
       <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
@@ -84,7 +75,7 @@ function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolea
           </span>
         </div>
         <div className={`border-t border-[var(--color-border)] ${isDesktop ? '-mx-6 mx-0' : ''}`} />
-        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors' : 'py-2'}`}>
+        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors rounded-b-2xl' : 'py-2'}`}>
           <div>
             <p className="font-medium text-[var(--color-text)]">Comfort Sensitivity</p>
             <p className="text-sm text-[var(--color-text-tertiary)]">When to trigger warnings</p>
@@ -92,28 +83,6 @@ function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolea
           <span className="text-sm text-[var(--color-primary-text)] font-medium">
             {capitalize(user.preferences.comfort_sensitivity || 'medium')}
           </span>
-        </div>
-        <div className={`border-t border-[var(--color-border)] ${isDesktop ? '-mx-6 mx-0' : ''}`} />
-        <div className={`flex items-center justify-between ${isDesktop ? '-mx-6 px-6 py-4 hover:bg-marble-50 transition-colors rounded-b-2xl' : 'py-2'}`}>
-          <div>
-            <p className="font-medium text-[var(--color-text)]">Theme</p>
-            <p className="text-sm text-[var(--color-text-tertiary)]">App appearance</p>
-          </div>
-          <div className="flex rounded-xl overflow-hidden border border-[var(--color-border-strong)]">
-            {THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => setTheme(opt.value)}
-                className={`px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
-                  theme === opt.value
-                    ? 'bg-[var(--color-primary)] text-white'
-                    : 'bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </section>
@@ -150,7 +119,7 @@ function WalletSection({ user, isDesktop }: { user: User; isDesktop: boolean }) 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
                   <svg className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M21 7H3a2 2 0 00-2 2v6a2 2 0 002 2h18a2 2 0 002-2V9a2 2 0 00-2-2zm-3 7a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
                   </svg>
