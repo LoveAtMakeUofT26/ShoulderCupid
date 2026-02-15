@@ -83,8 +83,8 @@ export function LiveSessionPage() {
 
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
-    fps: 2,
-    quality: 0.7,
+    fps: 15,
+    quality: 0.5,
   })
 
   const lastSentIndexRef = useRef(0)
