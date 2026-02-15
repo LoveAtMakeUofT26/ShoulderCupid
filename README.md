@@ -283,14 +283,14 @@ The frontend auto-deploys to [shoulder-cupid.vercel.app](https://shoulder-cupid.
 **Vercel environment variables:**
 | Variable | Value |
 |---|---|
-| `VITE_API_URL` | `http://155.138.146.221:4000` |
-| `VITE_SOCKET_URL` | `http://155.138.146.221:4000` |
+| `VITE_API_URL` | `https://shouldercupid.duckdns.org` |
+| `VITE_SOCKET_URL` | `https://shouldercupid.duckdns.org` |
 
 API calls (`/api/*`) are proxied to the Vultr backend via `vercel.json` rewrites.
 
 ### Backend (Vultr)
 
-The backend auto-deploys to `155.138.146.221` via GitHub Actions when `apps/backend/` or `packages/` change on `main`.
+The backend auto-deploys to `shouldercupid.duckdns.org` (`155.138.146.221`) via GitHub Actions when `apps/backend/` or `packages/` change on `main`.
 
 **Required GitHub Actions secrets** (Settings > Secrets and variables > Actions):
 | Secret | Value |
@@ -304,7 +304,7 @@ The backend auto-deploys to `155.138.146.221` via GitHub Actions when `apps/back
 ```
 NODE_ENV=production
 FRONTEND_URL=https://shoulder-cupid.vercel.app
-BACKEND_URL=https://shoulder-cupid.vercel.app
+BACKEND_URL=https://shouldercupid.duckdns.org
 SESSION_SECRET=<random-secret>
 MONGODB_URI=mongodb://localhost:27017/shoulder-cupid
 GOOGLE_CLIENT_ID=<your-google-client-id>
@@ -318,9 +318,10 @@ ELEVENLABS_API_KEY=<your-elevenlabs-key>
 1. Go to [Google Cloud Console](https://console.cloud.google.com) > APIs & Services > Credentials
 2. Under **Authorized JavaScript origins**, add:
    - `https://shoulder-cupid.vercel.app`
+   - `https://shouldercupid.duckdns.org`
    - `http://localhost:3000` (for local dev)
 3. Under **Authorized redirect URIs**, add:
-   - `https://shoulder-cupid.vercel.app/api/auth/google/callback`
+   - `https://shouldercupid.duckdns.org/api/auth/google/callback`
    - `http://localhost:4000/api/auth/google/callback` (for local dev)
 
 ### Manual Backend Deploy
