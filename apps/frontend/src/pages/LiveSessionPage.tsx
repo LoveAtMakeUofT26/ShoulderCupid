@@ -186,6 +186,9 @@ export function LiveSessionPage() {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
       webcam.start()
     }
+    if (phase === 'active' && cameraSource === 'esp32' && webcam.isActive) {
+      webcam.stop()
+    }
     return () => {
       if (webcam.isActive && phase !== 'active') {
         webcam.stop()
@@ -229,7 +232,7 @@ export function LiveSessionPage() {
     }
 
     emitAdvice()
-    const interval = setInterval(emitAdvice, 2000)
+    const interval = setInterval(emitAdvice, 4000)
     return () => clearInterval(interval)
   }, [phase, requestAdvice])
 
@@ -411,6 +414,7 @@ export function LiveSessionPage() {
               distance={distance}
               webcamError={webcam.error}
               minHeight="300px"
+              onCameraSourceChange={setCameraSource}
             />
             <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           </div>
@@ -448,6 +452,7 @@ export function LiveSessionPage() {
             mode={mode}
             distance={distance}
             webcamError={webcam.error}
+            onCameraSourceChange={setCameraSource}
           />
           <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           <CoachingPanel

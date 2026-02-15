@@ -13,6 +13,24 @@ import { generateSpeech } from '../services/ttsService.js'
 
 export const hardwareRouter = Router()
 
+// In-memory buffer for the latest ESP32 frame (shared between socket + HTTP paths)
+let latestEsp32Frame: Buffer | null = null
+const esp32StreamClients = new Set<import('express').Response>()
+
+export function setLatestEsp32Frame(jpeg: Buffer) {
+  latestEsp32Frame = jpeg
+  // Push to all MJPEG stream clients
+  for (const client of esp32StreamClients) {
+    try {
+      client.write(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpeg.length}\r\n\r\n`)
+      client.write(jpeg)
+      client.write('\r\n')
+    } catch {
+      esp32StreamClients.delete(client)
+    }
+  }
+}
+
 const getDeviceToken = (req: any) => {
   const headerToken =
     (req.headers?.authorization &&
@@ -53,6 +71,43 @@ const isValidObjectId = (id: string): boolean => {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
 }
 
+// Cached test session ID so we don't query Mongo on every ESP32 frame
+let cachedTestSessionId: string | null = null
+
+// Auto-resolve session ID: use provided value, or fall back to the active test session
+async function resolveSessionId(provided?: string): Promise<string | null> {
+  if (provided && isValidObjectId(provided)) return provided
+
+  // Return cached ID if still valid
+  if (cachedTestSessionId) {
+    const still = await Session.exists({ _id: cachedTestSessionId, status: 'active', test_session: true })
+    if (still) return cachedTestSessionId
+    cachedTestSessionId = null
+  }
+
+  // Find or create test session
+  const existing = await Session.findOne({ status: 'active', test_session: true }).select('_id')
+  if (existing) {
+    cachedTestSessionId = existing._id.toString()
+    return cachedTestSessionId
+  }
+
+  // Auto-create one
+  const coach = await Coach.findOne()
+  if (!coach) return null
+
+  const session = await Session.create({
+    coach_id: coach._id,
+    status: 'active',
+    mode: 'IDLE',
+    started_at: new Date(),
+    test_session: true,
+  })
+  cachedTestSessionId = session._id.toString()
+  console.log(`[ShoulderCupid] Auto-created test session: ${cachedTestSessionId}`)
+  return cachedTestSessionId
+}
+
 // Store pending commands per session (in production, use Redis)
 const commandQueues = new Map<string, string[]>()
 
@@ -72,13 +127,23 @@ export function queueCommand(sessionId: string, command: string) {
 
 // POST /api/frame - Receive camera frame from ESP32 or webcam
 hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
-  const { session_id, jpeg: _jpeg, detection, timestamp, source } = req.body
+  const { session_id: rawSessionId, jpeg: _jpeg, detection, timestamp, source } = req.body
 
-  if (!session_id || !isValidObjectId(session_id)) {
-    return res.status(400).json({ error: 'session_id required' })
+  const session_id = await resolveSessionId(rawSessionId)
+  if (!session_id) {
+    return res.status(400).json({ error: 'No active session (provide session_id or create a test session)' })
   }
 
   console.log(`[ShoulderCupid] Frame received: source=${source || 'unknown'}, session=${session_id}, hasDetection=${!!detection}`)
+
+  // Update MJPEG stream buffer so GET /api/stream serves the latest frame
+  if (_jpeg) {
+    const base64Data = typeof _jpeg === 'string' && _jpeg.startsWith('data:')
+      ? _jpeg.split(',')[1] || ''
+      : _jpeg
+    const frameBuffer = Buffer.from(base64Data, 'base64')
+    setLatestEsp32Frame(frameBuffer)
+  }
 
   try {
     // Verify session exists and is active
@@ -168,10 +233,11 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
 
 // POST /api/sensors - Receive sensor data from ESP32
 hardwareRouter.post('/sensors', requireHardwareAuth, async (req, res) => {
-  const { session_id, distance, heart_rate, person_detected } = req.body
+  const { session_id: rawSessionId, distance, heart_rate, person_detected } = req.body
 
-  if (!session_id || !isValidObjectId(session_id)) {
-    return res.status(400).json({ error: 'session_id required' })
+  const session_id = await resolveSessionId(rawSessionId)
+  if (!session_id) {
+    return res.status(400).json({ error: 'No active session (provide session_id or create a test session)' })
   }
 
   try {
@@ -211,10 +277,11 @@ hardwareRouter.post('/sensors', requireHardwareAuth, async (req, res) => {
 
 // GET /api/commands - ESP32 polls for commands
 hardwareRouter.get('/commands', requireHardwareAuth, async (req, res) => {
-  const { session_id } = req.query
+  const rawSessionId = typeof req.query.session_id === 'string' ? req.query.session_id : undefined
 
-  if (!session_id || typeof session_id !== 'string' || !isValidObjectId(session_id)) {
-    return res.status(400).json({ error: 'session_id required' })
+  const session_id = await resolveSessionId(rawSessionId)
+  if (!session_id) {
+    return res.status(400).json({ error: 'No active session (provide session_id or create a test session)' })
   }
 
   try {
@@ -352,6 +419,44 @@ hardwareRouter.get('/test-session', async (_req, res) => {
 export function clearCommandQueue(sessionId: string) {
   commandQueues.delete(sessionId)
 }
+
+// GET /api/stream - MJPEG stream of ESP32 frames for <img> tag consumption
+hardwareRouter.get('/stream', (_req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  })
+
+  // Send the latest frame immediately if available
+  if (latestEsp32Frame) {
+    res.write(`--frame\r\nContent-Type: image/jpeg\r\nContent-Length: ${latestEsp32Frame.length}\r\n\r\n`)
+    res.write(latestEsp32Frame)
+    res.write('\r\n')
+  }
+
+  esp32StreamClients.add(res)
+  _req.on('close', () => {
+    esp32StreamClients.delete(res)
+  })
+})
+
+// POST /api/esp32/frame - Receive frame from ESP32 without requiring a session ID
+hardwareRouter.post('/esp32/frame', requireHardwareAuth, (req, res) => {
+  const { jpeg } = req.body
+  if (!jpeg) {
+    return res.status(400).json({ error: 'jpeg required' })
+  }
+
+  // Decode base64 data-URL or raw base64
+  const base64Data = typeof jpeg === 'string' && jpeg.startsWith('data:')
+    ? jpeg.split(',')[1] || ''
+    : jpeg
+  const buffer = Buffer.from(base64Data, 'base64')
+  setLatestEsp32Frame(buffer)
+
+  res.json({ received: true })
+})
 
 // GET /api/presage/status - Presage system health check
 hardwareRouter.get('/presage/status', (_req, res) => {
