@@ -1,9 +1,8 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
-import { useGeminiService } from '../services/geminiService'
 import { useWebcamService } from '../services/webcamService'
 import {
   CoachingPanel,
@@ -47,25 +46,18 @@ export function LiveSessionPage() {
     warningMessage,
     targetVitals,
     endSession,
+    startCoaching,
+    sendTranscript,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
   // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
-    partialTranscript: _partialTranscript,
+    partialTranscript,
     isConnected: transcriptionConnected,
     startTranscription,
     stopTranscription,
   } = useTranscriptionService()
-
-  // Gemini AI service
-  const {
-    isConnected: geminiConnected,
-    responses: geminiResponses,
-    connectToGemini,
-    sendTranscriptToGemini,
-    disconnectFromGemini,
-  } = useGeminiService()
 
   // Webcam service for browser camera capture
   const webcam = useWebcamService({
@@ -74,30 +66,31 @@ export function LiveSessionPage() {
     quality: 0.7,
   })
 
+  // Track which transcripts we've already sent to avoid duplicates
+  const lastSentIndexRef = useRef(0)
+
   // Combine socket and transcription transcripts
   const allTranscripts = [...transcript, ...transcriptionTranscripts]
 
-  // Start ElevenLabs transcription when session becomes active
+  // Start ElevenLabs transcription + coaching when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
-      startTranscription();
+      startTranscription()
     }
 
-    // Start Gemini when session becomes active
-    if (phase === 'active' && !geminiConnected) {
-      connectToGemini();
-    }
-
-    // Cleanup when session ends
     return () => {
       if (transcriptionConnected && phase !== 'active') {
-        stopTranscription();
+        stopTranscription()
       }
-      if (geminiConnected && phase !== 'active') {
-        disconnectFromGemini();
-      }
-    };
-  }, [phase, transcriptionConnected, startTranscription, stopTranscription, geminiConnected, connectToGemini, disconnectFromGemini])
+    }
+  }, [phase, transcriptionConnected, startTranscription, stopTranscription])
+
+  // Initialize coaching once socket is connected and session is active
+  useEffect(() => {
+    if (phase === 'active' && isConnected && activeSessionId) {
+      startCoaching()
+    }
+  }, [phase, isConnected, activeSessionId, startCoaching])
 
   // Start/stop webcam when session becomes active and source is webcam
   useEffect(() => {
@@ -112,23 +105,18 @@ export function LiveSessionPage() {
     }
   }, [phase, cameraSource])
 
-  // Stream committed transcripts to Gemini (not partial)
+  // Send committed transcripts to backend pipeline (not directly to Gemini)
   useEffect(() => {
-    if (transcriptionTranscripts.length > 0 && geminiConnected) {
-      const latestTranscript = transcriptionTranscripts[transcriptionTranscripts.length - 1];
-      if (latestTranscript) {
-        sendTranscriptToGemini(latestTranscript.text);
+    if (transcriptionTranscripts.length > lastSentIndexRef.current) {
+      for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
+        const entry = transcriptionTranscripts[i]
+        if (entry) {
+          sendTranscript(entry.text, 'user', true)
+        }
       }
+      lastSentIndexRef.current = transcriptionTranscripts.length
     }
-  }, [transcriptionTranscripts, geminiConnected, sendTranscriptToGemini]);
-
-  // Log Gemini responses
-  useEffect(() => {
-    if (geminiResponses.length > 0) {
-      const latestResponse = geminiResponses[geminiResponses.length - 1];
-      console.log("Latest Gemini Response:", latestResponse);
-    }
-  }, [geminiResponses]);
+  }, [transcriptionTranscripts, sendTranscript])
 
   // Fetch user on mount
   useEffect(() => {
@@ -197,7 +185,6 @@ export function LiveSessionPage() {
     endSession()
     webcam.stop()
     stopTranscription()
-    disconnectFromGemini()
 
     if (activeSessionId) {
       try {
@@ -212,7 +199,7 @@ export function LiveSessionPage() {
 
     // Navigate to session report (or list if no ID)
     navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
-  }, [endSession, navigate, activeSessionId, webcam, stopTranscription, disconnectFromGemini])
+  }, [endSession, navigate, activeSessionId, webcam, stopTranscription])
 
   if (loading) {
     return (
@@ -352,6 +339,20 @@ export function LiveSessionPage() {
         {/* Transcript */}
         <div className="h-[180px] min-h-[180px]">
           <TranscriptStream entries={allTranscripts} />
+        </div>
+
+        {/* Interim transcript + mic status */}
+        <div className="flex items-center gap-2 px-1">
+          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+            transcriptionConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+          }`} />
+          {partialTranscript ? (
+            <p className="text-xs text-gray-400 italic truncate">"{partialTranscript}"</p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              {transcriptionConnected ? 'Listening...' : 'Mic off'}
+            </p>
+          )}
         </div>
       </div>
 

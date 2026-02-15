@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
+import { queueCoachAudio } from '../services/audioPlaybackService'
 
 export type CoachingMode = 'IDLE' | 'APPROACH' | 'CONVERSATION'
 export type WarningLevel = 0 | 1 | 2 | 3
@@ -113,6 +114,18 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ targetVitals: data })
     })
 
+    socket.on('coaching-ready', (data: { coachName: string }) => {
+      updateState({ coachingMessage: `${data.coachName} is ready! Start talking...` })
+    })
+
+    socket.on('coach-audio', (data: { audio: string; format: string }) => {
+      queueCoachAudio(data.audio, data.format)
+    })
+
+    socket.on('coaching-error', (data: { error: string }) => {
+      console.error('Coaching error:', data.error)
+    })
+
     socket.on('warning-triggered', (data: { level: WarningLevel; message: string }) => {
       updateState({ warningLevel: data.level, warningMessage: data.message })
 
@@ -132,8 +145,22 @@ export function useSessionSocket(sessionId: string | null) {
     socketRef.current?.emit('end-session', { sessionId })
   }, [sessionId])
 
+  const startCoaching = useCallback(() => {
+    if (sessionId) {
+      socketRef.current?.emit('start-coaching', { sessionId })
+    }
+  }, [sessionId])
+
+  const sendTranscript = useCallback((text: string, speaker: 'user' | 'target', isFinal: boolean) => {
+    if (sessionId) {
+      socketRef.current?.emit('transcript-input', { sessionId, text, speaker, isFinal })
+    }
+  }, [sessionId])
+
   return {
     ...state,
     endSession,
+    startCoaching,
+    sendTranscript,
   }
 }
