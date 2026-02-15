@@ -100,7 +100,7 @@ export async function stopSession(sessionId: string): Promise<void> {
   const handle = processors.get(sessionId)
   if (!handle) return
 
-  // Close stdin -> C++ sees EOF -> graceful shutdown
+  // Close stdin -> process sees EOF -> graceful shutdown
   handle.process.stdin?.end()
 
   // Give it 5 seconds to finish, then force kill

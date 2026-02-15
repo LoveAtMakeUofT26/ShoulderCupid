@@ -87,13 +87,27 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
+    logger.log('Connecting to socket:', SOCKET_URL)
+
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      withCredentials: true,
+      reconnectionAttempts: 5,
+      timeout: 10000,
     })
     socketRef.current = socket
 
+    // Detect if we never connect within 10s
+    const connectTimeout = setTimeout(() => {
+      if (!socket.connected) {
+        logger.error('Socket connection timed out after 10s. Target:', SOCKET_URL)
+        updateState({ coachingMessage: `Connection timed out. Is the backend running at ${SOCKET_URL}?` })
+      }
+    }, 10_000)
+
     socket.on('connect', () => {
+      clearTimeout(connectTimeout)
       logger.log('Socket connected, sessionId:', sessionId)
       updateState({ isConnected: true, coachingMessage: 'Connected! Waiting for session to start...' })
 
@@ -103,13 +117,31 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     socket.on('connect_error', (err) => {
-      logger.error('Socket connection error:', err.message)
-      updateState({ coachingMessage: `Connection failed: ${err.message}` })
+      logger.error('Socket connection error:', err.message, 'Target:', SOCKET_URL)
+
+      let detail = err.message
+      if (err.message.includes('cors') || err.message.includes('CORS')) {
+        detail = 'CORS error — backend FRONTEND_URL may be misconfigured'
+      } else if (err.message.includes('xhr poll error') || err.message.includes('timeout')) {
+        detail = `Cannot reach backend at ${SOCKET_URL}`
+      }
+
+      updateState({ coachingMessage: `Connection failed: ${detail}` })
     })
 
     socket.on('disconnect', () => {
       logger.log('Socket disconnected')
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
+    })
+
+    socket.io.on('reconnect_attempt', (attempt) => {
+      logger.log(`Reconnection attempt ${attempt}`)
+      updateState({ coachingMessage: `Reconnecting (attempt ${attempt})...` })
+    })
+
+    socket.io.on('reconnect_failed', () => {
+      logger.error('All reconnection attempts failed')
+      updateState({ coachingMessage: 'Unable to connect. Please refresh the page.' })
     })
 
     // Initial state from backend when joining an existing session
@@ -199,6 +231,7 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     return () => {
+      clearTimeout(connectTimeout)
       socket.disconnect()
       socketRef.current = null
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current)

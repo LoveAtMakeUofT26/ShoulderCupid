@@ -234,11 +234,21 @@ export async function createGeneratedCoach(preferences?: TraitMap) {
   // 1. Generate profile via Gemini (text - free tier)
   const profile = await generateCoachProfile(preferences)
 
-  // 2. Generate image via Cloudflare Workers AI (FLUX Schnell)
-  const { url: avatarUrl, prompt: imagePrompt } = await generateCoachImage(
-    profile.appearance,
-    profile.personality_tags
-  )
+  // 2. Generate image via Cloudflare Workers AI (best-effort)
+  let avatarUrl: string | undefined
+  let imagePrompt: string | undefined
+  try {
+    const imageResult = await generateCoachImage(
+      profile.appearance,
+      profile.personality_tags
+    )
+    avatarUrl = imageResult.url
+    imagePrompt = imageResult.prompt
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    console.error(`Image generation failed for coach "${profile.name}", continuing without avatar: ${msg}`)
+    imagePrompt = buildCoachImagePrompt(profile.personality_tags, profile.appearance)
+  }
 
   // 3. Select matching voice
   const voice = selectVoiceByTraits(
@@ -254,7 +264,7 @@ export async function createGeneratedCoach(preferences?: TraitMap) {
     name: profile.name,
     tagline: profile.tagline,
     description: `AI-generated ${profile.personality_tone} coach with ${profile.personality_style} style.`,
-    specialty: profile.specialty,
+    specialty: 'dating',
     personality: {
       tone: profile.personality_tone,
       style: profile.personality_style,
