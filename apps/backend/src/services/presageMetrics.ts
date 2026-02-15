@@ -21,8 +21,8 @@ const processors = new Map<string, ChildProcess>()
 // Per-session error tracking
 const sessionErrors = new Map<string, string>()
 
-const PROCESSOR_PATH = process.env.PRESAGE_PROCESSOR_PATH || '/opt/cupid/services/presage-processor/build/presage-processor'
-const PRESAGE_API_KEY = process.env.PRESAGE_API_KEY || ''
+const getProcessorPath = () => process.env.PRESAGE_PROCESSOR_PATH || '/opt/cupid/services/presage-processor/build/presage-processor'
+const getApiKey = () => process.env.PRESAGE_API_KEY || ''
 
 export interface PresageStatus {
   binaryInstalled: boolean
@@ -39,10 +39,10 @@ export interface PresageStatus {
  */
 export function getPresageStatus(): PresageStatus {
   return {
-    binaryInstalled: existsSync(PROCESSOR_PATH),
-    apiKeyConfigured: PRESAGE_API_KEY.length > 0,
+    binaryInstalled: existsSync(getProcessorPath()),
+    apiKeyConfigured: getApiKey().length > 0,
     framesDir: process.env.FRAMES_DIR || '/opt/cupid/data/frames',
-    processorPath: PROCESSOR_PATH,
+    processorPath: getProcessorPath(),
     activeSessions: [...processors.keys()],
     errors: Object.fromEntries(sessionErrors),
   }
@@ -65,8 +65,8 @@ export function startSessionProcessor(sessionId: string): void {
     return
   }
 
-  if (!existsSync(PROCESSOR_PATH)) {
-    console.warn(`[presage] Processor binary not found at ${PROCESSOR_PATH}`)
+  if (!existsSync(getProcessorPath())) {
+    console.warn(`[presage] Processor binary not found at ${getProcessorPath()}`)
     console.warn('[presage] Build it on Vultr: cd /opt/cupid/services/presage-processor && mkdir build && cd build && cmake .. && make')
     return
   }
@@ -75,12 +75,12 @@ export function startSessionProcessor(sessionId: string): void {
   const args = [sessionId, framesDir]
 
   // Add API key if available (enables heart rate via cloud processing)
-  if (PRESAGE_API_KEY) {
-    args.push(PRESAGE_API_KEY)
+  if (getApiKey()) {
+    args.push(getApiKey())
   }
 
   console.log(`[presage] Starting processor for session ${sessionId}`)
-  const proc = spawn(PROCESSOR_PATH, args, {
+  const proc = spawn(getProcessorPath(), args, {
     stdio: ['ignore', 'pipe', 'pipe'],
   })
 

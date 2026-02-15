@@ -1,8 +1,10 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import { connectDB } from './config/database.js'
 import { setupAuth } from './config/auth.js'
 import { authRouter } from './routes/auth.js'
@@ -14,8 +16,6 @@ import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
 import { startPresageProcessor, stopAllProcessors } from './services/presageMetrics.js'
-
-dotenv.config()
 
 const app = express()
 const httpServer = createServer(app)
