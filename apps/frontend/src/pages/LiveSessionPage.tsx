@@ -25,6 +25,7 @@ type ExistingSession = {
   _id: string
   status: 'active' | 'ended' | 'cancelled' | string
   started_at?: string
+  test_session?: boolean
 }
 
 function elapsedSeconds(startedAt?: string): number {
@@ -47,6 +48,7 @@ export function LiveSessionPage() {
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
+  const [isTestSession, setIsTestSession] = useState(false)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
@@ -120,6 +122,7 @@ export function LiveSessionPage() {
       }
 
       const session = (await response.json()) as ExistingSession
+      if (session.test_session) setIsTestSession(true)
 
       if (session.status !== 'active') {
         if (session.status === 'ended') {
@@ -231,6 +234,26 @@ export function LiveSessionPage() {
   // Fetch user on mount
   useEffect(() => {
     async function fetchUser() {
+      // For non-new session URLs, check if it's a test session first
+      if (sessionId && !isNewSession) {
+        try {
+          const res = await fetch(`/api/sessions/${sessionId}`, { credentials: 'include' })
+          if (res.ok) {
+            const session = (await res.json()) as ExistingSession
+            if (session.test_session) {
+              setIsTestSession(true)
+              setCreatedSessionId(session._id || sessionId)
+              setDuration(elapsedSeconds(session.started_at))
+              setPhase('active')
+              setLoading(false)
+              return
+            }
+          }
+        } catch {
+          // Fall through to normal user auth
+        }
+      }
+
       try {
         const currentUser = await getCurrentUser()
         if (!currentUser) {
@@ -246,7 +269,7 @@ export function LiveSessionPage() {
       }
     }
     fetchUser()
-  }, [navigate])
+  }, [navigate, sessionId, isNewSession, setCreatedSessionId, setPhase])
 
   useEffect(() => {
     if (phase !== 'active') return

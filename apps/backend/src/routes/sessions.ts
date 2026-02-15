@@ -73,10 +73,6 @@ sessionsRouter.get('/stats', async (req, res) => {
 
 // Get session by ID
 sessionsRouter.get('/:id', async (req, res) => {
-  if (!req.isAuthenticated()) {
-    return res.status(401).json({ error: 'Not authenticated' })
-  }
-
   try {
     if (!isValidObjectId(req.params.id)) {
       return res.status(400).json({ error: 'Invalid session ID' })
@@ -87,7 +83,16 @@ sessionsRouter.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Session not found' })
     }
 
-    if (session.user_id.toString() !== (req.user as any)._id.toString()) {
+    // Test sessions are public — no auth needed
+    if ((session as any).test_session) {
+      return res.json(session)
+    }
+
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Not authenticated' })
+    }
+
+    if (session.user_id?.toString() !== (req.user as any)._id.toString()) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
