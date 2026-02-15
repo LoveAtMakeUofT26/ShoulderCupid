@@ -19,7 +19,7 @@ export function AppShell({ children, showNav = true }: AppShellProps) {
           className="min-h-screen"
           style={showNav ? { marginLeft: SIDEBAR_WIDTH } : undefined}
         >
-          <div className="max-w-5xl mx-auto px-6 lg:px-8">
+          <div className="max-w-5xl px-6 lg:px-8">
             {children}
           </div>
         </main>
