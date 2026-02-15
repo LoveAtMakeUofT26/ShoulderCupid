@@ -5,12 +5,17 @@ import { useIsDesktop } from '../hooks/useIsDesktop'
 import { useThemeStore } from '../hooks'
 import { getCurrentUser, logout, type User } from '../services/auth'
 import { Spinner } from '../components/ui/Spinner'
+import { useWallet } from '@solana/wallet-adapter-react'
+import { useWalletModal } from '@solana/wallet-adapter-react-ui'
+import { useConnection } from '@solana/wallet-adapter-react'
+import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 
-const sections = ['Profile', 'Preferences', 'Device', 'Account'] as const
+const sections = ['Profile', 'Preferences', 'Wallet', 'Device', 'Account'] as const
 
 const sectionBorderColors: Record<string, string> = {
   profile: 'md:border-l-4 md:border-l-cupid-400',
   preferences: 'md:border-l-4 md:border-l-gold-400',
+  wallet: 'md:border-l-4 md:border-l-purple-400',
   device: 'md:border-l-4 md:border-l-blue-400',
   account: 'md:border-l-4 md:border-l-gray-300',
 }
@@ -110,6 +115,95 @@ function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolea
             ))}
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+function WalletSection({ user, isDesktop }: { user: User; isDesktop: boolean }) {
+  const { publicKey, connected, disconnect } = useWallet()
+  const { setVisible: setWalletModalVisible } = useWalletModal()
+  const { connection } = useConnection()
+  const [solBalance, setSolBalance] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (connected && publicKey) {
+      connection.getBalance(publicKey).then(bal => {
+        setSolBalance(bal / LAMPORTS_PER_SOL)
+      }).catch(() => setSolBalance(null))
+    } else {
+      setSolBalance(null)
+    }
+  }, [connected, publicKey, connection])
+
+  const truncatedAddress = publicKey
+    ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
+    : null
+
+  return (
+    <section id="wallet">
+      <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
+        Wallet
+      </h2>
+      <div className={`${isDesktop ? 'card-desktop' : 'card'} ${sectionBorderColors.wallet}`}>
+        {connected && publicKey ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-purple-600" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21 7H3a2 2 0 00-2 2v6a2 2 0 002 2h18a2 2 0 002-2V9a2 2 0 00-2-2zm-3 7a1.5 1.5 0 110-3 1.5 1.5 0 010 3z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-medium text-[var(--color-text)]">Phantom</p>
+                  <p className="text-sm text-[var(--color-text-tertiary)] font-mono">{truncatedAddress}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => disconnect()}
+                className="text-sm text-red-500 font-medium hover:opacity-80"
+              >
+                Disconnect
+              </button>
+            </div>
+
+            {solBalance !== null && (
+              <>
+                <div className="border-t border-[var(--color-border)]" />
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-[var(--color-text-secondary)]">SOL Balance</p>
+                  <p className="text-sm font-medium text-[var(--color-text)]">
+                    {solBalance.toFixed(4)} SOL
+                  </p>
+                </div>
+              </>
+            )}
+
+            <div className="border-t border-[var(--color-border)]" />
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-[var(--color-text-secondary)]">Free Sessions</p>
+              <p className="text-sm font-medium text-[var(--color-text)]">
+                {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}/{user.free_sessions_limit || 3} remaining
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-[var(--color-text)]">Connect Wallet</p>
+              <p className="text-sm text-[var(--color-text-tertiary)]">
+                Pay for coaching sessions with USDC
+              </p>
+            </div>
+            <button
+              onClick={() => setWalletModalVisible(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium bg-purple-600 text-white hover:bg-purple-700 transition-colors"
+            >
+              Connect
+            </button>
+          </div>
+        )}
       </div>
     </section>
   )
@@ -230,6 +324,7 @@ export function SettingsPage() {
     <>
       <ProfileSection user={user} isDesktop={isDesktop} />
       <PreferencesSection user={user} isDesktop={isDesktop} />
+      <WalletSection user={user} isDesktop={isDesktop} />
       <DeviceSection isDesktop={isDesktop} />
       <AccountSection onLogout={handleLogout} isDesktop={isDesktop} />
     </>

@@ -11,7 +11,7 @@ export interface TranscriptEntry {
 
 let inFlightTokenRequest: Promise<string> | null = null;
 
-async function fetchTokenFromServer() {
+export async function fetchTokenFromServer() {
   if (!inFlightTokenRequest) {
     inFlightTokenRequest = (async () => {
       try {

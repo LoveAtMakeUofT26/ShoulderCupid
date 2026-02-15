@@ -76,9 +76,18 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  wallet_address: String, // Solana public key
   credits: {
     type: Number,
     default: 100,
+  },
+  sessions_this_month: {
+    type: Number,
+    default: 0,
+  },
+  sessions_month_reset: {
+    type: Date,
+    default: Date.now,
   },
   devices: [{
     device_id: String,

@@ -87,8 +87,10 @@ export function DashboardPage() {
             <p className="text-3xl font-bold text-[var(--color-text)] font-display">{stats.avgScore ?? '--'}</p>
           </div>
           <div className="card-stat">
-            <p className="section-label mb-1">Credits</p>
-            <p className="text-3xl font-bold text-[var(--color-primary-text)] font-display">{user.credits}</p>
+            <p className="section-label mb-1">Free Sessions</p>
+            <p className="text-3xl font-bold text-[var(--color-primary-text)] font-display">
+              {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}/{user.free_sessions_limit || 3}
+            </p>
           </div>
           <div className="card-stat">
             <p className="section-label mb-1">Current Coach</p>
@@ -114,8 +116,10 @@ export function DashboardPage() {
                 <p className="text-xs text-[var(--color-text-tertiary)]">Avg Score</p>
               </div>
               <div className="card text-center py-4">
-                <p className="text-2xl font-bold text-[var(--color-text)]">{user.credits}</p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">Credits</p>
+                <p className="text-2xl font-bold text-[var(--color-text)]">
+                  {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}
+                </p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">Free Left</p>
               </div>
             </div>
           </section>
