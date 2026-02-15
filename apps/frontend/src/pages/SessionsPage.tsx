@@ -14,6 +14,9 @@ interface SessionItem {
   coach_id?: {
     name: string
     avatar_emoji: string
+    avatar_url?: string
+    color_from?: string
+    color_to?: string
   }
   analytics?: {
     total_tips: number
@@ -152,8 +155,30 @@ export function SessionsPage() {
 
                   {/* Content */}
                   <div className="flex-1 flex items-center gap-4 pb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-surface)] flex items-center justify-center text-xl
-                      group-hover:scale-105 transition-transform duration-200">
+                    {session.coach_id?.avatar_url ? (
+                      <img
+                        src={session.coach_id.avatar_url}
+                        alt={session.coach_id.name}
+                        className="w-12 h-12 rounded-2xl object-cover shadow-md flex-shrink-0
+                          group-hover:scale-105 transition-transform duration-200"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          const fallback = target.nextElementSibling as HTMLElement
+                          if (fallback) fallback.style.display = 'flex'
+                          target.style.display = 'none'
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-md flex-shrink-0
+                        group-hover:scale-105 transition-transform duration-200"
+                      style={{
+                        display: session.coach_id?.avatar_url ? 'none' : 'flex',
+                        background: session.coach_id?.color_from
+                          ? `linear-gradient(135deg, ${session.coach_id.color_from}, ${session.coach_id.color_to})`
+                          : 'var(--color-primary-surface)',
+                      }}
+                    >
                       {session.coach_id?.avatar_emoji || '💘'}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -191,7 +216,28 @@ export function SessionsPage() {
                   to={`/sessions/${session._id}`}
                   className="card flex items-center gap-3 hover:shadow-card-hover transition-shadow"
                 >
-                  <div className="w-10 h-10 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center text-lg">
+                  {session.coach_id?.avatar_url ? (
+                    <img
+                      src={session.coach_id.avatar_url}
+                      alt={session.coach_id.name}
+                      className="w-10 h-10 rounded-full object-cover shadow-md flex-shrink-0"
+                      onError={(e) => {
+                        const target = e.currentTarget
+                        const fallback = target.nextElementSibling as HTMLElement
+                        if (fallback) fallback.style.display = 'flex'
+                        target.style.display = 'none'
+                      }}
+                    />
+                  ) : null}
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-lg shadow-md flex-shrink-0"
+                    style={{
+                      display: session.coach_id?.avatar_url ? 'none' : 'flex',
+                      background: session.coach_id?.color_from
+                        ? `linear-gradient(135deg, ${session.coach_id.color_from}, ${session.coach_id.color_to})`
+                        : 'var(--color-primary-surface)',
+                    }}
+                  >
                     {session.coach_id?.avatar_emoji || '💘'}
                   </div>
                   <div className="flex-1 min-w-0">

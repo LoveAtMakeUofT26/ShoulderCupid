@@ -14,6 +14,9 @@ interface SessionDetail {
   coach_id?: {
     name: string
     avatar_emoji: string
+    avatar_url?: string
+    color_from?: string
+    color_to?: string
   }
   transcript: Array<{
     timestamp: string
@@ -152,9 +155,32 @@ export function SessionReportPage() {
             {/* Header */}
             <div className={isDesktop ? 'card-featured flex items-center gap-6 p-8' : 'card'}>
               <div className={`flex items-center gap-3 ${isDesktop ? 'gap-6' : 'mb-3'}`}>
-                <div className={`rounded-2xl bg-[var(--color-primary-surface)] flex items-center justify-center shadow-md ${
-                  isDesktop ? 'w-20 h-20 text-4xl' : 'w-12 h-12 text-2xl rounded-full'
-                }`}>
+                {session.coach_id?.avatar_url ? (
+                  <img
+                    src={session.coach_id.avatar_url}
+                    alt={session.coach_id.name}
+                    className={`object-cover shadow-md flex-shrink-0 ${
+                      isDesktop ? 'w-20 h-20 rounded-2xl' : 'w-12 h-12 rounded-full'
+                    }`}
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      const fallback = target.nextElementSibling as HTMLElement
+                      if (fallback) fallback.style.display = 'flex'
+                      target.style.display = 'none'
+                    }}
+                  />
+                ) : null}
+                <div
+                  className={`flex items-center justify-center shadow-md flex-shrink-0 ${
+                    isDesktop ? 'w-20 h-20 rounded-2xl text-4xl' : 'w-12 h-12 rounded-full text-2xl'
+                  }`}
+                  style={{
+                    display: session.coach_id?.avatar_url ? 'none' : 'flex',
+                    background: session.coach_id?.color_from
+                      ? `linear-gradient(135deg, ${session.coach_id.color_from}, ${session.coach_id.color_to})`
+                      : 'var(--color-primary-surface)',
+                  }}
+                >
                   {session.coach_id?.avatar_emoji || '💘'}
                 </div>
                 <div className="flex-1">
@@ -200,36 +226,36 @@ export function SessionReportPage() {
             {session.analytics && (
               <div className={isDesktop ? '' : 'card'}>
                 {!isDesktop && <h2 className="font-semibold text-[var(--color-text)] mb-3">Stats</h2>}
-                <div className={`grid gap-3 text-center ${
-                  isDesktop ? 'grid-cols-5' : 'grid-cols-3 md:grid-cols-5'
+                <div className={`gap-3 text-center ${
+                  isDesktop ? 'flex' : 'grid grid-cols-3 md:grid-cols-5'
                 }`}>
-                  <div className={isDesktop ? 'card-stat' : ''}>
+                  <div className={isDesktop ? 'card-stat flex-1' : ''}>
                     <div className={`font-bold text-cupid-600 ${isDesktop ? 'text-3xl font-display' : 'text-2xl'}`}>
                       {session.analytics.total_tips}
                     </div>
                     <div className="text-xs text-[var(--color-text-tertiary)] mt-1">Tips</div>
                   </div>
-                  <div className={isDesktop ? 'card-stat' : ''}>
+                  <div className={isDesktop ? 'card-stat flex-1' : ''}>
                     <div className={`font-bold text-gold-600 ${isDesktop ? 'text-3xl font-display' : 'text-2xl'}`}>
                       {session.analytics.approach_count}
                     </div>
                     <div className="text-xs text-[var(--color-text-tertiary)] mt-1">Approaches</div>
                   </div>
-                  <div className={isDesktop ? 'card-stat' : ''}>
+                  <div className={isDesktop ? 'card-stat flex-1' : ''}>
                     <div className={`font-bold text-green-600 ${isDesktop ? 'text-3xl font-display' : 'text-2xl'}`}>
                       {session.analytics.conversation_count}
                     </div>
                     <div className="text-xs text-[var(--color-text-tertiary)] mt-1">Conversations</div>
                   </div>
                   {session.analytics.avg_emotion_score != null && (
-                    <div className={isDesktop ? 'card-stat' : 'hidden md:block'}>
+                    <div className={isDesktop ? 'card-stat flex-1' : 'hidden md:block'}>
                       <div className={`font-bold text-blue-600 ${isDesktop ? 'text-3xl font-display' : 'text-2xl'}`}>
                         {session.analytics.avg_emotion_score.toFixed(1)}
                       </div>
                       <div className="text-xs text-[var(--color-text-tertiary)] mt-1">Emotion Score</div>
                     </div>
                   )}
-                  <div className={isDesktop ? 'card-stat' : 'hidden md:block'}>
+                  <div className={isDesktop ? 'card-stat flex-1' : 'hidden md:block'}>
                     <div className={`font-bold text-orange-600 ${isDesktop ? 'text-3xl font-display' : 'text-2xl'}`}>
                       {session.analytics.warnings_triggered}
                     </div>
