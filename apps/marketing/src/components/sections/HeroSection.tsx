@@ -82,20 +82,25 @@ export function HeroSection() {
                 <div className="w-72 h-72 md:w-96 md:h-96 rounded-full bg-gradient-to-br from-cupid-200/30 via-gold-100/20 to-cupid-100/30 blur-2xl" />
               </div>
 
-              {/* Marble pedestal + statue */}
+              {/* Marble cupid statue */}
               <div className="relative animate-float">
-                {/* Cupid figure */}
                 <div
-                  className="w-64 h-80 md:w-80 md:h-96 mx-auto rounded-3xl border flex flex-col items-center justify-center"
+                  className="w-64 h-80 md:w-80 md:h-96 mx-auto rounded-3xl border overflow-hidden flex flex-col items-center justify-end"
                   style={{
                     background: 'linear-gradient(to bottom, var(--color-surface), var(--color-surface-hover))',
                     borderColor: 'var(--color-border)',
                     boxShadow: 'var(--shadow-marble)',
                   }}
                 >
-                  <span className="text-8xl md:text-9xl mb-4">💘</span>
-                  <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mb-3" />
-                  <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
+                  <img
+                    src="/assets/cupid-statue.png"
+                    alt="Marble cupid statue"
+                    className="w-full h-[85%] object-cover object-top grayscale brightness-110 contrast-90 opacity-90"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-white/80 via-white/50 to-transparent dark:from-gray-900/80 dark:via-gray-900/50">
+                    <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mx-auto mb-2" />
+                    <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
+                  </div>
                 </div>
 
                 {/* Decorative column accents */}
