@@ -46,6 +46,7 @@ interface SessionState {
   heartRate: number
   personDetected: boolean
   voiceId?: string
+  lastAdvice?: string
 }
 
 // Distance threshold (in cm) - switch to CONVERSATION when closer than this
@@ -230,9 +231,27 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
     await guard.run(async () => {
       try {
-        const advice = await getAdvice(sessionId, transcript)
-        if (advice.trim()) {
-          broadcastToSession(io, sessionId, 'advice-update', { advice })
+        const advice = (await getAdvice(sessionId, transcript)).trim()
+        if (!advice) return
+
+        const state = sessionStates.get(sessionId)
+        if (state?.lastAdvice === advice) return
+        if (state) state.lastAdvice = advice
+
+        broadcastToSession(io, sessionId, 'advice-update', { advice })
+
+        // Speak the same short hint we're showing in the UI.
+        const voiceId = state?.voiceId || DEFAULT_VOICE_ID
+        try {
+          const audioBuffer = await generateSpeech(advice, voiceId)
+          broadcastToSession(io, sessionId, 'coach-audio', {
+            audio: audioBuffer.toString('base64'),
+            format: 'mp3',
+            text: advice,
+            source: 'advice',
+          })
+        } catch (ttsErr) {
+          console.error('Advice TTS failed (text still delivered):', ttsErr)
         }
       } catch (err) {
         console.error('Advice request error:', err)

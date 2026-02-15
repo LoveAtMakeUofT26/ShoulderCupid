@@ -40,6 +40,22 @@ export function LiveSessionPage() {
   const { sessionId } = useParams()
   const navigate = useNavigate()
 
+  // Sessions can be resumed without a "Start" click, so ensure we still unlock
+  // audio on the first user interaction to satisfy autoplay policy.
+  useEffect(() => {
+    const handler = () => {
+      unlockAudio()
+      window.removeEventListener('pointerdown', handler)
+      window.removeEventListener('keydown', handler)
+    }
+    window.addEventListener('pointerdown', handler, { once: true })
+    window.addEventListener('keydown', handler, { once: true })
+    return () => {
+      window.removeEventListener('pointerdown', handler)
+      window.removeEventListener('keydown', handler)
+    }
+  }, [])
+
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<SessionPhase>('preflight')
