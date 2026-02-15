@@ -76,6 +76,11 @@ export function useOnboarding() {
   }, [])
 
   const submit = useCallback(async () => {
+    if (!data.selectedCoachId) {
+      console.error('Onboarding submission blocked: no coach selected')
+      return false
+    }
+
     setSubmitting(true)
     try {
       const response = await fetch('/api/user/onboarding', {

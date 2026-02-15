@@ -48,11 +48,11 @@ export function OnboardingPage() {
     checkAuth()
   }, [navigate]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleSkip() {
-    const success = await submit()
-    if (success) {
-      navigate('/dashboard')
-    }
+  function handleSkip() {
+    // Keep onboarding flow consistent: users must still pass the coach selection step.
+    goNext()
+    goNext()
+    goNext()
   }
 
   async function handleSubmit() {

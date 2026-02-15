@@ -21,6 +21,18 @@ import { Spinner } from '../components/ui/Spinner'
 import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
+type ExistingSession = {
+  _id: string
+  status: 'active' | 'ended' | 'cancelled' | string
+  started_at?: string
+}
+
+function elapsedSeconds(startedAt?: string): number {
+  if (!startedAt) return 0
+  const startedMs = Date.parse(startedAt)
+  if (!Number.isFinite(startedMs)) return 0
+  return Math.max(0, Math.floor((Date.now() - startedMs) / 1000))
+}
 
 export function LiveSessionPage() {
   const { sessionId } = useParams()
@@ -34,6 +46,7 @@ export function LiveSessionPage() {
   const [isEnding, setIsEnding] = useState(false)
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
+  const [resumingSession, setResumingSession] = useState(false)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
@@ -73,6 +86,60 @@ export function LiveSessionPage() {
 
   const lastSentIndexRef = useRef(0)
 
+  const initializeExistingSession = useCallback(async (id: string) => {
+    setResumingSession(true)
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/sessions/${id}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+
+        if (response.status === 403 || response.status === 401) {
+          navigate('/')
+          return
+        }
+
+        if (response.status === 404) {
+          setStartError('Session not found.')
+          return
+        }
+
+        if (response.status === 400 && error.error) {
+          setStartError(error.error)
+          return
+        }
+
+        setStartError('Unable to load this session.')
+        return
+      }
+
+      const session = (await response.json()) as ExistingSession
+
+      if (session.status !== 'active') {
+        if (session.status === 'ended') {
+          navigate(`/sessions/${id}`, { replace: true })
+          return
+        }
+        navigate('/sessions', { replace: true })
+        return
+      }
+
+      setCreatedSessionId(session._id || id)
+      setDuration(elapsedSeconds(session.started_at))
+      setPhase('active')
+      setStartError(null)
+    } catch (error) {
+      console.error('Failed to load existing session:', error)
+      setStartError('Unable to load this session. Please try again.')
+    } finally {
+      setLoading(false)
+      setResumingSession(false)
+    }
+  }, [navigate, setDuration, setCreatedSessionId, setPhase, setStartError])
+
   // Combine socket and transcription transcripts
   // Use socket transcripts only (backend broadcasts both user + coach entries).
   // transcriptionTranscripts is only used for sending to backend, not for display.
@@ -89,6 +156,11 @@ export function LiveSessionPage() {
       }
     }
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
+
+  useEffect(() => {
+    if (!user || isNewSession || !sessionId || resumingSession) return
+    initializeExistingSession(sessionId)
+  }, [initializeExistingSession, isNewSession, resumingSession, sessionId, user])
 
   useEffect(() => {
     if (phase === 'active' && isConnected && activeSessionId) {
@@ -266,7 +338,7 @@ export function LiveSessionPage() {
         /* Desktop: side-by-side layout */
         <div className="flex-1 flex p-4 gap-4 overflow-hidden">
           {/* Left panel: Camera + Vitals */}
-          <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
+          <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
             <CameraSourceSelector
               value={cameraSource}
               onChange={handleCameraSourceChange}
@@ -288,7 +360,7 @@ export function LiveSessionPage() {
           </div>
 
           {/* Right panel: Coaching + Transcript */}
-          <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
+          <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
             <CoachingPanel
               coach={user.coach || null}
               mode={mode}
