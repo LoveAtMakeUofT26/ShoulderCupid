@@ -1,36 +1,44 @@
-import axios from 'axios'
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js'
 import { loadEnv } from '../config/loadEnv.js'
 import { retryWithBackoff } from '../utils/resilience.js'
 
 loadEnv()
 
-const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1'
+const apiKey = process.env.ELEVENLABS_API_KEY
+if (!apiKey) {
+  console.warn('WARNING: ELEVENLABS_API_KEY not set. TTS will fail.')
+}
 
+const elevenlabs = new ElevenLabsClient({
+  apiKey: apiKey || '',
+})
+
+/**
+ * Convert text to speech using ElevenLabs streaming API.
+ * Uses the same ELEVENLABS_API_KEY as STT (scribe token creation).
+ */
 export async function generateSpeech(text: string, voiceId: string): Promise<Buffer> {
-  const response = await retryWithBackoff(
-    () => axios.post(
-      `${ELEVENLABS_API_URL}/text-to-speech/${voiceId}/stream`,
-      {
+  return retryWithBackoff(
+    async () => {
+      const audioStream = await elevenlabs.textToSpeech.stream(voiceId, {
+        modelId: 'eleven_multilingual_v2',
         text,
-        model_id: 'eleven_flash_v2_5',
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.75,
-          style: 0.0,
-          use_speaker_boost: true,
+        outputFormat: 'mp3_44100_128',
+        voiceSettings: {
+          stability: 0,
+          similarityBoost: 1.0,
+          useSpeakerBoost: true,
+          speed: 1.0,
         },
-      },
-      {
-        headers: {
-          'xi-api-key': process.env.ELEVENLABS_API_KEY || '',
-          'Content-Type': 'application/json',
-          Accept: 'audio/mpeg',
-        },
-        responseType: 'arraybuffer',
+      })
+
+      const chunks: Buffer[] = []
+      for await (const chunk of audioStream) {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
       }
-    ),
+
+      return Buffer.concat(chunks)
+    },
     { maxRetries: 2, baseDelayMs: 800 }
   )
-
-  return Buffer.from(response.data)
 }
