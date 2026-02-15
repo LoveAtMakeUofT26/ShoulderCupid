@@ -13,6 +13,7 @@ import { hardwareRouter, setIoInstance } from './routes/hardware.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
+import { startPresageProcessor } from './services/presageMetrics.js'
 
 dotenv.config()
 
@@ -56,6 +57,9 @@ setupSocketHandlers(io)
 
 // Pass io instance to hardware routes for broadcasting
 setIoInstance(io)
+
+// Start Presage C++ processor (if binary exists on Vultr)
+startPresageProcessor()
 
 const PORT = process.env.PORT || 4000
 

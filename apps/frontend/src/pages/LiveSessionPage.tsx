@@ -4,6 +4,7 @@ import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
 import { useGeminiService } from '../services/geminiService'
+import { useWebcamService } from '../services/webcamService'
 import {
   CoachingPanel,
   TranscriptStream,
@@ -11,7 +12,10 @@ import {
   StatsBar,
   StartSessionModal,
   EndSessionModal,
+  TargetVitalsPanel,
 } from '../components/session'
+import { CameraSourceSelector, CameraFeed, type CameraSource } from '../components/session/CameraSourceSelector'
+import { AudioSettings } from '../components/session/AudioSettings'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -25,6 +29,7 @@ export function LiveSessionPage() {
   const [duration, setDuration] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
+  const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
 
   const isNewSession = sessionId === 'new'
   const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
@@ -40,6 +45,7 @@ export function LiveSessionPage() {
     heartRate,
     warningLevel,
     warningMessage,
+    targetVitals,
     endSession,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
@@ -60,6 +66,13 @@ export function LiveSessionPage() {
     sendTranscriptToGemini,
     disconnectFromGemini,
   } = useGeminiService()
+
+  // Webcam service for browser camera capture
+  const webcam = useWebcamService({
+    sessionId: activeSessionId || 'test',
+    fps: 2,
+    quality: 0.7,
+  })
 
   // Combine socket and transcription transcripts
   const allTranscripts = [...transcript, ...transcriptionTranscripts]
@@ -86,14 +99,24 @@ export function LiveSessionPage() {
     };
   }, [phase, transcriptionConnected, startTranscription, stopTranscription, geminiConnected, connectToGemini, disconnectFromGemini])
 
+  // Start/stop webcam when session becomes active and source is webcam
+  useEffect(() => {
+    if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
+      webcam.start()
+    }
+
+    return () => {
+      if (webcam.isActive && phase !== 'active') {
+        webcam.stop()
+      }
+    }
+  }, [phase, cameraSource])
+
   // Stream committed transcripts to Gemini (not partial)
   useEffect(() => {
-    console.log("Transcription transcripts:", transcriptionTranscripts);
     if (transcriptionTranscripts.length > 0 && geminiConnected) {
-      console.log("Transcription transcripts:", transcriptionTranscripts);
       const latestTranscript = transcriptionTranscripts[transcriptionTranscripts.length - 1];
       if (latestTranscript) {
-        console.log("📤 Sending committed transcript to Gemini:", latestTranscript.text);
         sendTranscriptToGemini(latestTranscript.text);
       }
     }
@@ -103,7 +126,7 @@ export function LiveSessionPage() {
   useEffect(() => {
     if (geminiResponses.length > 0) {
       const latestResponse = geminiResponses[geminiResponses.length - 1];
-      console.log("🤖 Latest Gemini Response in LiveSessionPage:", latestResponse);
+      console.log("Latest Gemini Response:", latestResponse);
     }
   }, [geminiResponses]);
 
@@ -138,6 +161,17 @@ export function LiveSessionPage() {
     return () => clearInterval(interval)
   }, [phase])
 
+  const handleCameraSourceChange = useCallback((source: CameraSource) => {
+    // Stop current camera before switching
+    if (webcam.isActive) webcam.stop()
+    setCameraSource(source)
+
+    // Start new source if session is active
+    if (phase === 'active' && source === 'webcam') {
+      webcam.start()
+    }
+  }, [phase, webcam])
+
   const handleStartSession = useCallback(async () => {
     try {
       const response = await fetch('/api/sessions/start', {
@@ -161,6 +195,9 @@ export function LiveSessionPage() {
   const handleEndSession = useCallback(async () => {
     setIsEnding(true)
     endSession()
+    webcam.stop()
+    stopTranscription()
+    disconnectFromGemini()
 
     if (activeSessionId) {
       try {
@@ -175,7 +212,7 @@ export function LiveSessionPage() {
 
     // Navigate to session report (or list if no ID)
     navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
-  }, [endSession, navigate, activeSessionId])
+  }, [endSession, navigate, activeSessionId, webcam, stopTranscription, disconnectFromGemini])
 
   if (loading) {
     return (
@@ -192,7 +229,7 @@ export function LiveSessionPage() {
 
   if (!user) return null
 
-  // Pre-flight phase - show modal
+  // Pre-flight phase - show modal with I/O configuration
   if (phase === 'preflight') {
     return (
       <div className="min-h-screen bg-marble-50">
@@ -204,7 +241,23 @@ export function LiveSessionPage() {
             </svg>
           </Link>
           <h1 className="flex-1 text-center font-semibold text-gray-900">New Session</h1>
-          <div className="w-6" /> {/* Spacer for centering */}
+          <div className="w-6" />
+        </div>
+
+        {/* I/O Configuration */}
+        <div className="p-4 space-y-4">
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Camera Source</h3>
+            <CameraSourceSelector
+              value={cameraSource}
+              onChange={setCameraSource}
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">Audio Devices</h3>
+            <AudioSettings />
+          </div>
         </div>
 
         <StartSessionModal
@@ -236,14 +289,25 @@ export function LiveSessionPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
-        {/* Video Feed Area (placeholder) */}
-        <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 flex items-center justify-center relative overflow-hidden">
-          {/* Placeholder for video feed */}
-          <div className="text-center text-gray-500">
-            <p className="text-4xl mb-2">📷</p>
-            <p className="text-sm">Camera feed will appear here</p>
-            <p className="text-xs mt-1 text-gray-600">ESP32-CAM connection required</p>
-          </div>
+        {/* Camera Source Toggle */}
+        <CameraSourceSelector
+          value={cameraSource}
+          onChange={handleCameraSourceChange}
+          esp32Connected={isConnected}
+        />
+
+        {/* Video Feed Area */}
+        <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 relative overflow-hidden">
+          <CameraFeed
+            source={cameraSource}
+            videoRef={webcam.videoRef}
+            esp32StreamUrl={isConnected ? '/api/stream' : undefined}
+            isActive={webcam.isActive}
+            frameCount={webcam.frameCount}
+          />
+
+          {/* Hidden canvas for webcam frame capture */}
+          <canvas ref={webcam.canvasRef} className="hidden" />
 
           {/* Mode Badge Overlay */}
           <div className="absolute top-3 left-3">
@@ -263,7 +327,17 @@ export function LiveSessionPage() {
               </span>
             </div>
           )}
+
+          {/* Webcam Error */}
+          {webcam.error && (
+            <div className="absolute bottom-3 right-3 bg-red-500/80 rounded-lg px-3 py-1">
+              <span className="text-white text-xs">{webcam.error}</span>
+            </div>
+          )}
         </div>
+
+        {/* Target Vitals */}
+        <TargetVitalsPanel vitals={targetVitals} />
 
         {/* Coaching Panel */}
         <CoachingPanel

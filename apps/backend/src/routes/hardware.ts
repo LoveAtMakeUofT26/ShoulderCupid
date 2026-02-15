@@ -6,6 +6,8 @@ import {
   updateEmotion,
   broadcastToSession,
 } from '../sockets/clientHandler.js'
+import { addFrame } from '../services/frameBuffer.js'
+import { getLatestMetrics, deriveEmotion } from '../services/presageMetrics.js'
 
 export const hardwareRouter = Router()
 
@@ -55,15 +57,30 @@ hardwareRouter.post('/frame', async (req, res) => {
         })
       }
 
-      // TODO: Send JPEG to Presage SDK for emotion analysis
-      // const emotionResult = await presageAnalyze(jpeg)
-      // emotion = emotionResult.emotion
+      // Buffer frame for Presage processing (ffmpeg stitches into video segments)
+      await addFrame(session_id, _jpeg, timestamp || Date.now())
 
-      // For now, mock emotion
-      emotion = 'neutral'
+      // Check for Presage metrics from the C++ processor
+      const metrics = getLatestMetrics(session_id)
+      if (metrics) {
+        emotion = deriveEmotion(metrics)
+
+        // Broadcast target vitals to frontend
+        if (ioInstance) {
+          broadcastToSession(ioInstance, session_id, 'target-vitals', {
+            heart_rate: metrics.hr,
+            breathing_rate: metrics.br,
+            hrv: metrics.hrv,
+            blinking: metrics.blinking,
+            talking: metrics.talking,
+          })
+        }
+      } else {
+        emotion = 'neutral'
+      }
 
       if (ioInstance && emotion) {
-        updateEmotion(ioInstance, session_id, emotion, 0.8)
+        updateEmotion(ioInstance, session_id, emotion, metrics ? 0.9 : 0.5)
       }
 
       // TODO: Get coaching from Gemini based on context
