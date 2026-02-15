@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "http://155.138.146.221:4000/api/:path*"
+      "destination": "https://shouldercupid.duckdns.org/api/:path*"
     }
   ]
 }
