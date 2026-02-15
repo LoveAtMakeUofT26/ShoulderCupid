@@ -19,15 +19,19 @@
     "marketing": "cd apps/marketing && npm run dev"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "^5.5.0",
     "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
     "prettier": "^3.3.0",
-    "eslint": "^9.0.0"
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
   },
   "engines": {
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
-  "packageManager": "npm@10.9.2"
+  "packageManager": "npm@10.9.2",
+  "dependencies": {
+    "@elevenlabs/elevenlabs-js": "^2.35.0",
+    "@elevenlabs/react": "^0.14.0"
+  }
 }

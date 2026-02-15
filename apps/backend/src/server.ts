@@ -10,6 +10,8 @@ import { coachesRouter } from './routes/coaches.js'
 import { sessionsRouter } from './routes/sessions.js'
 import { userRouter } from './routes/user.js'
 import { hardwareRouter, setIoInstance } from './routes/hardware.js'
+import { sttRouter } from './routes/stt.js'
+import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
 
 dotenv.config()
@@ -46,6 +48,8 @@ app.use('/api/coaches', coachesRouter)
 app.use('/api/sessions', sessionsRouter)
 app.use('/api/user', userRouter)
 app.use('/api', hardwareRouter) // /api/frame, /api/sensors, /api/commands
+app.use('/api/stt', sttRouter)
+app.use('/api/gemini', geminiRouter)
 
 // Socket.io handlers
 setupSocketHandlers(io)
