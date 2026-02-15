@@ -19,16 +19,21 @@ import { startPresageProcessor, stopAllProcessors } from './services/presageMetr
 
 const app = express()
 const httpServer = createServer(app)
+// In dev, allow any localhost port. In prod, restrict to FRONTEND_URL.
+const corsOrigin = process.env.NODE_ENV === 'production'
+  ? process.env.FRONTEND_URL!
+  : [process.env.FRONTEND_URL || 'http://localhost:3000', /^http:\/\/localhost:\d+$/]
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: corsOrigin,
     credentials: true,
   },
 })
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOrigin,
   credentials: true,
 }))
 app.use(express.json({ limit: '5mb' })) // Allow larger payloads for JPEG frames
