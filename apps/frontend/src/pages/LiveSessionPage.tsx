@@ -48,7 +48,7 @@ export function LiveSessionPage() {
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
-  const [, setIsTestSession] = useState(false)
+  const [isTestSession, setIsTestSession] = useState(false)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
@@ -158,8 +158,9 @@ export function LiveSessionPage() {
   partialRef.current = partialTranscript
 
   // Start ElevenLabs transcription when session becomes active
+  // Test sessions skip STT — no auth means no token endpoint access
   useEffect(() => {
-    if (phase === 'active' && !transcriptionConnected) {
+    if (phase === 'active' && !transcriptionConnected && !isTestSession) {
       startTranscription()
     }
     return () => {
@@ -167,7 +168,7 @@ export function LiveSessionPage() {
         stopTranscription()
       }
     }
-  }, [phase, transcriptionConnected, startTranscription, stopTranscription])
+  }, [phase, transcriptionConnected, startTranscription, stopTranscription, isTestSession])
 
   useEffect(() => {
     if (!user || isNewSession || !sessionId || resumingSession) return
@@ -175,10 +176,10 @@ export function LiveSessionPage() {
   }, [initializeExistingSession, isNewSession, resumingSession, sessionId, user])
 
   useEffect(() => {
-    if (phase === 'active' && isConnected && activeSessionId) {
+    if (phase === 'active' && isConnected && activeSessionId && !isTestSession) {
       startCoaching()
     }
-  }, [phase, isConnected, activeSessionId, startCoaching])
+  }, [phase, isConnected, activeSessionId, startCoaching, isTestSession])
 
   useEffect(() => {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
@@ -192,6 +193,7 @@ export function LiveSessionPage() {
   }, [phase, cameraSource, webcam])
 
   useEffect(() => {
+    if (isTestSession) return
     // Reset index if transcripts array was cleared/reset
     if (transcriptionTranscripts.length < lastSentIndexRef.current) {
       lastSentIndexRef.current = 0
@@ -205,11 +207,11 @@ export function LiveSessionPage() {
       }
       lastSentIndexRef.current = transcriptionTranscripts.length
     }
-  }, [transcriptionTranscripts, sendTranscript])
+  }, [transcriptionTranscripts, sendTranscript, isTestSession])
 
   // Request advice via socket every 2 seconds when session is active
   useEffect(() => {
-    if (phase !== 'active') return
+    if (phase !== 'active' || isTestSession) return
 
     const emitAdvice = () => {
       const transcripts = transcriptRef.current
@@ -229,7 +231,7 @@ export function LiveSessionPage() {
     emitAdvice()
     const interval = setInterval(emitAdvice, 2000)
     return () => clearInterval(interval)
-  }, [phase, requestAdvice])
+  }, [phase, requestAdvice, isTestSession])
 
   // Fetch user on mount
   useEffect(() => {
@@ -352,13 +354,13 @@ export function LiveSessionPage() {
     )
   }
 
-  if (!user) return null
+  if (!user && !isTestSession) return null
 
   // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
       <PreflightPage
-        coach={user.coach || null}
+        coach={user?.coach || null}
         cameraSource={cameraSource}
         onCameraSourceChange={setCameraSource}
         onStart={handleStartSession}
@@ -408,7 +410,7 @@ export function LiveSessionPage() {
           {/* Right panel: Coaching + Transcript */}
           <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
             <CoachingPanel
-              coach={user.coach || null}
+              coach={user?.coach || null}
               mode={mode}
               message={adviceMessage || coachingMessage}
               targetEmotion={targetEmotion}
@@ -441,7 +443,7 @@ export function LiveSessionPage() {
           />
           <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           <CoachingPanel
-            coach={user.coach || null}
+            coach={user?.coach || null}
             mode={mode}
             message={adviceMessage || coachingMessage}
             targetEmotion={targetEmotion}

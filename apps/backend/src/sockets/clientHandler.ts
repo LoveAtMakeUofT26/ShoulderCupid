@@ -99,7 +99,18 @@ export function setupClientHandler(socket: Socket, io: Server) {
     }
     try {
       const session = await Session.findById(sessionId).populate('coach_id')
-      if (!session || session.user_id.toString() !== userId) {
+      if (!session) {
+        socket.emit('coaching-error', { error: 'Session not found' })
+        return
+      }
+
+      // Test sessions don't need coaching (hardware viewing only)
+      if (session.test_session) {
+        socket.emit('coaching-ready', { sessionId, coachName: 'Test Mode', voiceId: null })
+        return
+      }
+
+      if (session.user_id?.toString() !== userId) {
         socket.emit('coaching-error', { error: 'Session not found' })
         return
       }
