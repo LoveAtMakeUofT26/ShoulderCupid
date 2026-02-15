@@ -48,7 +48,7 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
     }
 
     loadDevices()
-  }, [])
+  }, [selectedMic, selectedSpeaker])
 
   const handleMicChange = (deviceId: string) => {
     setSelectedMic(deviceId)

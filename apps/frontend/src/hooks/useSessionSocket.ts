@@ -38,12 +38,27 @@ export interface SessionState {
 
 // Socket connects directly to the backend (not through Vite proxy).
 // Vite proxy works for REST but is unreliable for socket.io WebSocket upgrades.
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV
-    ? `${window.location.protocol}//${window.location.hostname}:4000`
-    : window.location.origin)
+const SOCKET_URL = (() => {
+  const explicitSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim()
+  if (explicitSocketUrl) return explicitSocketUrl
+
+  const apiUrl = import.meta.env.VITE_API_URL?.trim()
+  if (apiUrl) return apiUrl
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:4000'
+  }
+
+  const { hostname, port, protocol, origin } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (port === '3000') {
+      return `${protocol}//${hostname}:4000`
+    }
+    return `${protocol}//${hostname}:4000`
+  }
+
+  return origin
+})()
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)

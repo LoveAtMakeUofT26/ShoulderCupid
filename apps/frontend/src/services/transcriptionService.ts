@@ -90,13 +90,13 @@ export function useTranscriptionService() {
         console.error('Failed to start transcription:', error);
       }
     }
-  }, [scribe.isConnected]);
+  }, [scribe]);
 
   const stopTranscription = useCallback(() => {
     if (scribe.isConnected) {
       scribe.disconnect();
     }
-  }, [scribe.isConnected]);
+  }, [scribe]);
 
   return {
     transcripts,

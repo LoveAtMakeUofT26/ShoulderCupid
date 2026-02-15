@@ -177,7 +177,7 @@ export function LiveSessionPage() {
         webcam.stop()
       }
     }
-  }, [phase, cameraSource])
+  }, [phase, cameraSource, webcam])
 
   useEffect(() => {
     // Reset index if transcripts array was cleared/reset
