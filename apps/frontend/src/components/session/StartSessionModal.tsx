@@ -112,7 +112,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
   const hasWarnings = checks.presage.checked && !checks.presage.passed
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="start-session-title">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -123,9 +123,10 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
       <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Start Session</h2>
+          <h2 id="start-session-title" className="text-xl font-bold text-gray-900">Start Session</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
           >
             ✕

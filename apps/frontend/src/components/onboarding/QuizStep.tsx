@@ -127,11 +127,11 @@ export function QuizStep({ data, onUpdate, onNext, onBack, onRecommendCoach }: Q
 
       {/* Question */}
       <div key={questionIndex} className="animate-slide-up">
-        <p className="text-lg font-medium text-[var(--color-text)] mb-6">
+        <p id="quiz-question" className="text-lg font-medium text-[var(--color-text)] mb-6">
           {currentQuestion.question}
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-3" role="group" aria-labelledby="quiz-question">
           {currentQuestion.options.map((option) => (
             <button
               key={option.value}

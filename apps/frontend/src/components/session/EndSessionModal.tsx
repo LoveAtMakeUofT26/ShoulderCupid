@@ -23,7 +23,7 @@ export function EndSessionModal({
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="end-session-title">
       {/* Backdrop */}
       <div
         className="absolute inset-0 backdrop-blur-sm"
@@ -68,7 +68,7 @@ export function EndSessionModal({
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-accent-surface)] flex items-center justify-center">
                 <span className="text-3xl">🎯</span>
               </div>
-              <h2 className="text-xl font-bold text-[var(--color-text)]">End Session?</h2>
+              <h2 id="end-session-title" className="text-xl font-bold text-[var(--color-text)]">End Session?</h2>
               <p className="text-[var(--color-text-tertiary)] mt-1">
                 You've been coaching for {formatDuration(duration)}
               </p>

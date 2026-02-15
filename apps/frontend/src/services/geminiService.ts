@@ -12,7 +12,6 @@ export function useGeminiService() {
       throw new Error('Failed to fetch Gemini token');
     }
     const data = await response.json();
-    console.log("🤖 Gemini token fetched:", data.token);
     return data.token;
   };
 
@@ -32,24 +31,19 @@ export function useGeminiService() {
         config: config,
         callbacks: {
           onopen: () => {
-            console.log("🤖 Gemini session opened");
             setIsConnected(true);
           },
           onmessage: (message) => {
-            console.log("🤖 Gemini message:", message);
-            // Handle Gemini responses here
             if (message.text) {
               const responseText = String(message.text);
-              console.log("🤖 Gemini Response:", responseText);
               setResponses(prev => [...prev, responseText]);
             }
           },
           onerror: (error) => {
-            console.error("🤖 Gemini error:", error);
+            console.error("Gemini error:", error);
             setIsConnected(false);
           },
           onclose: () => {
-            console.log("🤖 Gemini session closed");
             setIsConnected(false);
           },
         },
@@ -64,17 +58,10 @@ export function useGeminiService() {
   }, []);
 
   const sendTranscriptToGemini = useCallback(async (transcript: string) => {
-    if (!session || !isConnected) {
-      console.warn("Gemini session not connected");
-      return;
-    }
+    if (!session || !isConnected) return;
 
     try {
-      // Send content...
-      await session.send({
-        text: transcript
-      });
-      console.log("📤 Sent transcript to Gemini:", transcript);
+      await session.send({ text: transcript });
     } catch (error) {
       console.error("Failed to send transcript to Gemini:", error);
     }
@@ -85,7 +72,6 @@ export function useGeminiService() {
       session.close();
       setSession(null);
       setIsConnected(false);
-      console.log("🤖 Gemini session disconnected");
     }
   }, [session]);
 

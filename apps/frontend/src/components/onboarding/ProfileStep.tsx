@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ProfileData } from '../../hooks/useOnboarding'
 
 interface ProfileStepProps {
@@ -15,6 +16,27 @@ const INTEREST_OPTIONS = [
 ]
 
 export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps) {
+  const [errors, setErrors] = useState<{ name?: string; age?: string }>({})
+
+  function handleContinue() {
+    const newErrors: { name?: string; age?: string } = {}
+    if (!data.name.trim()) {
+      newErrors.name = 'Please enter your name'
+    }
+    if (data.age) {
+      const ageNum = parseInt(data.age, 10)
+      if (isNaN(ageNum) || ageNum < 18 || ageNum > 99) {
+        newErrors.age = 'Age must be between 18 and 99'
+      }
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+    onNext()
+  }
+
   return (
     <div className="pt-8 animate-slide-up">
       <h2 className="font-display text-2xl font-bold text-[var(--color-text)] mb-2">
@@ -27,34 +49,39 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
       <div className="space-y-6">
         {/* Display Name */}
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+          <label htmlFor="profile-name" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
             Display Name
           </label>
           <input
+            id="profile-name"
             type="text"
             value={data.name}
-            onChange={(e) => onUpdate({ name: e.target.value })}
+            onChange={(e) => { onUpdate({ name: e.target.value }); setErrors(prev => ({ ...prev, name: undefined })) }}
             placeholder="What should we call you?"
-            className="w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)]"
-            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border-strong)' }}
+            className={`w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] ${errors.name ? 'border-red-400' : ''}`}
+            style={{ backgroundColor: 'var(--color-surface)', borderColor: errors.name ? undefined : 'var(--color-border-strong)' }}
+            required
           />
+          {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
         </div>
 
         {/* Age */}
         <div>
-          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+          <label htmlFor="profile-age" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
             Age <span className="text-[var(--color-text-faint)] font-normal">(optional)</span>
           </label>
           <input
+            id="profile-age"
             type="number"
             value={data.age}
-            onChange={(e) => onUpdate({ age: e.target.value })}
+            onChange={(e) => { onUpdate({ age: e.target.value }); setErrors(prev => ({ ...prev, age: undefined })) }}
             placeholder="Your age"
             min="18"
             max="99"
-            className="w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)]"
-            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border-strong)' }}
+            className={`w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)] ${errors.age ? 'border-red-400' : ''}`}
+            style={{ backgroundColor: 'var(--color-surface)', borderColor: errors.age ? undefined : 'var(--color-border-strong)' }}
           />
+          {errors.age && <p className="text-red-500 text-xs mt-1">{errors.age}</p>}
         </div>
 
         {/* Pronouns */}
@@ -113,7 +140,7 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
           Back
         </button>
         <button
-          onClick={onNext}
+          onClick={handleContinue}
           className="btn-primary flex-1 py-3"
         >
           Continue

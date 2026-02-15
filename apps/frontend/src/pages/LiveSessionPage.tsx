@@ -180,6 +180,10 @@ export function LiveSessionPage() {
   }, [phase, cameraSource])
 
   useEffect(() => {
+    // Reset index if transcripts array was cleared/reset
+    if (transcriptionTranscripts.length < lastSentIndexRef.current) {
+      lastSentIndexRef.current = 0
+    }
     if (transcriptionTranscripts.length > lastSentIndexRef.current) {
       for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
         const entry = transcriptionTranscripts[i]
