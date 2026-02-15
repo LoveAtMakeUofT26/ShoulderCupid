@@ -2,6 +2,87 @@ import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
 import { buildAvatarUrl, type AppearanceSpec } from '../config/imagePrompts.js'
 
+// ---------------------------------------------------------------------------
+// Component pools — combined randomly for ~1M+ unique coaches
+// ---------------------------------------------------------------------------
+
+const MALE_NAMES = [
+  'Marco', 'Dex', 'Kai', 'Blaze', 'Theo', 'Rio', 'Ash', 'Jax', 'Leo', 'Finn',
+  'Niko', 'Soren', 'Dante', 'Rex', 'Cruz',
+]
+
+const FEMALE_NAMES = [
+  'Luna', 'Mia', 'Zara', 'Nova', 'Sage', 'Ivy', 'Raven', 'Cleo', 'Ruby', 'Willow',
+  'Aria', 'Jade', 'Ember', 'Skye', 'Kira',
+]
+
+interface PersonalityProfile {
+  tone: string
+  style: string
+  tags: string[]
+  quote: string
+}
+
+const PERSONALITIES: PersonalityProfile[] = [
+  { tone: 'confident', style: 'playful', tags: ['confident', 'smooth', 'witty'], quote: "She glanced twice. That's your green light, go." },
+  { tone: 'energetic', style: 'bold', tags: ['hype', 'bold', 'energetic'], quote: "BRO she's literally right there. GO!" },
+  { tone: 'calm', style: 'supportive', tags: ['calm', 'supportive', 'gentle'], quote: 'Take a breath. Just be present and listen.' },
+  { tone: 'fierce', style: 'direct', tags: ['fierce', 'direct', 'motivational'], quote: 'Stop overthinking. Walk up and say hi. Now.' },
+  { tone: 'witty', style: 'serious', tags: ['analytical', 'witty', 'sophisticated'], quote: 'She mentioned travel — ask which country changed her most.' },
+  { tone: 'calm', style: 'playful', tags: ['chill', 'playful', 'warm'], quote: 'Easy does it. Compliment something specific, not generic.' },
+  { tone: 'gentle', style: 'supportive', tags: ['nerdy', 'empathetic', 'warm'], quote: "You both like that show? Perfect — bond over the finale." },
+  { tone: 'bold', style: 'sarcastic', tags: ['bold', 'sarcastic', 'direct'], quote: "Standing there staring won't work. Trust me, I've done the math." },
+  { tone: 'confident', style: 'supportive', tags: ['confident', 'warm', 'motivational'], quote: "You've got this. Smile, make eye contact, and just say hey." },
+  { tone: 'energetic', style: 'playful', tags: ['playful', 'energetic', 'witty'], quote: "Make her laugh and you're already winning." },
+  { tone: 'fierce', style: 'direct', tags: ['fierce', 'bold', 'direct'], quote: "Shoulders back, chin up. You're a catch — act like it." },
+  { tone: 'gentle', style: 'nurturing', tags: ['empathetic', 'warm', 'supportive'], quote: "You're doing great. Just be genuine — that's attractive." },
+  { tone: 'witty', style: 'sarcastic', tags: ['sarcastic', 'witty', 'direct'], quote: 'Honey, that line was terrible. Try asking about her dog instead.' },
+  { tone: 'energetic', style: 'bold', tags: ['motivational', 'bold', 'energetic'], quote: "The universe put you both here. Don't waste the moment!" },
+  { tone: 'calm', style: 'serious', tags: ['calm', 'analytical', 'gentle'], quote: "Notice her body language — she's leaning in. Good sign." },
+  { tone: 'witty', style: 'playful', tags: ['playful', 'warm', 'witty'], quote: 'Okay that joke landed. Now ask her something real.' },
+  { tone: 'bold', style: 'direct', tags: ['bold', 'fierce', 'sophisticated'], quote: "Mystery is attractive. Don't reveal everything at once." },
+  { tone: 'confident', style: 'serious', tags: ['sophisticated', 'confident', 'analytical'], quote: "Mirror her energy. She's calm, so match that pace." },
+  { tone: 'energetic', style: 'playful', tags: ['hype', 'energetic', 'warm'], quote: 'OMG she smiled at you! Go go go!' },
+  { tone: 'gentle', style: 'nurturing', tags: ['gentle', 'empathetic', 'calm'], quote: "There's no rush. Let the silence be comfortable." },
+]
+
+const TAGLINES = [
+  'Smooth moves only', 'Hype king energy', 'Calm and collected', 'No fear, full send',
+  'Strategize and charm', 'Chill vibes always', 'Nerdy charm expert', 'Bold moves pay off',
+  'Charming and steady', 'Fun first, always', 'Fierce and fabulous', 'Warm and wise',
+  'Sassy truth-teller', 'Cosmic confidence boost', 'Thoughtful and grounded',
+  'Playful matchmaker', 'Dark horse energy', 'Queen of conversation', 'Hype girl supreme',
+  'Gentle confidence builder', 'Vibes on lock', 'Main character energy', 'Quiet confidence',
+  'Zero cringe guaranteed', 'Reads the room perfectly',
+]
+
+const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'silver', 'pink', 'blue', 'white', 'auburn', 'platinum']
+const HAIR_STYLES_M = ['short spiky', 'short', 'curly', 'braided', 'long flowing', 'buzzcut', 'messy']
+const HAIR_STYLES_F = ['long flowing', 'curly', 'bob', 'ponytail', 'braided', 'pixie', 'messy bun']
+const EYE_COLORS = ['brown', 'blue', 'green', 'amber', 'violet', 'hazel', 'grey', 'teal']
+const OUTFIT_COLORS = ['crimson', 'gold', 'teal', 'lavender', 'emerald', 'pink', 'blue', 'silver', 'purple', 'red']
+
+const PRICING_TIERS = {
+  budget: { quick_5min: 0.5, standard_15min: 1.5, deep_30min: 3.0 },
+  standard: { quick_5min: 1.0, standard_15min: 3.0, deep_30min: 5.0 },
+  premium: { quick_5min: 2.0, standard_15min: 5.0, deep_30min: 8.0 },
+}
+
+// Weighted: 30% budget, 50% standard, 20% premium
+const PRICING_WEIGHTS: Array<'budget' | 'standard' | 'premium'> = [
+  'budget', 'budget', 'budget',
+  'standard', 'standard', 'standard', 'standard', 'standard',
+  'premium', 'premium',
+]
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
+}
+
 interface CoachTemplate {
   name: string
   gender: 'male' | 'female'
@@ -12,242 +93,6 @@ interface CoachTemplate {
   sample_quote: string
   appearance: AppearanceSpec
   pricing_tier: 'budget' | 'standard' | 'premium'
-}
-
-const PRICING_TIERS = {
-  budget: { quick_5min: 0.5, standard_15min: 1.5, deep_30min: 3.0 },
-  standard: { quick_5min: 1.0, standard_15min: 3.0, deep_30min: 5.0 },
-  premium: { quick_5min: 2.0, standard_15min: 5.0, deep_30min: 8.0 },
-}
-
-const COACH_TEMPLATES: CoachTemplate[] = [
-  // --- Male coaches ---
-  {
-    name: 'Marco',
-    gender: 'male',
-    tagline: 'Smooth moves only',
-    personality_tags: ['confident', 'smooth', 'witty'],
-    personality_tone: 'confident',
-    personality_style: 'playful',
-    sample_quote: "She glanced twice. That's your green light, go.",
-    appearance: { hair_color: 'black', hair_style: 'short spiky', eye_color: 'brown', outfit_color: 'crimson', gender: 'male' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Dex',
-    gender: 'male',
-    tagline: 'Hype king energy',
-    personality_tags: ['hype', 'bold', 'energetic'],
-    personality_tone: 'energetic',
-    personality_style: 'bold',
-    sample_quote: "BRO she's literally right there. GO!",
-    appearance: { hair_color: 'blonde', hair_style: 'short spiky', eye_color: 'blue', outfit_color: 'gold', gender: 'male' },
-    pricing_tier: 'budget',
-  },
-  {
-    name: 'Kai',
-    gender: 'male',
-    tagline: 'Calm and collected',
-    personality_tags: ['calm', 'supportive', 'gentle'],
-    personality_tone: 'calm',
-    personality_style: 'supportive',
-    sample_quote: 'Take a breath. Just be present and listen.',
-    appearance: { hair_color: 'black', hair_style: 'long flowing', eye_color: 'green', outfit_color: 'teal', gender: 'male' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Blaze',
-    gender: 'male',
-    tagline: 'No fear, full send',
-    personality_tags: ['fierce', 'direct', 'motivational'],
-    personality_tone: 'fierce',
-    personality_style: 'direct',
-    sample_quote: "Stop overthinking. Walk up and say hi. Now.",
-    appearance: { hair_color: 'red', hair_style: 'short spiky', eye_color: 'amber', outfit_color: 'crimson', gender: 'male' },
-    pricing_tier: 'premium',
-  },
-  {
-    name: 'Theo',
-    gender: 'male',
-    tagline: 'Strategize and charm',
-    personality_tags: ['analytical', 'witty', 'sophisticated'],
-    personality_tone: 'witty',
-    personality_style: 'serious',
-    sample_quote: "She mentioned travel — ask which country changed her most.",
-    appearance: { hair_color: 'brown', hair_style: 'curly', eye_color: 'brown', outfit_color: 'emerald', gender: 'male' },
-    pricing_tier: 'premium',
-  },
-  {
-    name: 'Rio',
-    gender: 'male',
-    tagline: 'Chill vibes always',
-    personality_tags: ['chill', 'playful', 'warm'],
-    personality_tone: 'calm',
-    personality_style: 'playful',
-    sample_quote: "Easy does it. Compliment something specific, not generic.",
-    appearance: { hair_color: 'black', hair_style: 'braided', eye_color: 'brown', outfit_color: 'blue', gender: 'male' },
-    pricing_tier: 'budget',
-  },
-  {
-    name: 'Ash',
-    gender: 'male',
-    tagline: 'Nerdy charm expert',
-    personality_tags: ['nerdy', 'empathetic', 'warm'],
-    personality_tone: 'gentle',
-    personality_style: 'supportive',
-    sample_quote: "You both like that show? Perfect — bond over the finale.",
-    appearance: { hair_color: 'brown', hair_style: 'short', eye_color: 'green', outfit_color: 'lavender', gender: 'male' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Jax',
-    gender: 'male',
-    tagline: 'Bold moves pay off',
-    personality_tags: ['bold', 'sarcastic', 'direct'],
-    personality_tone: 'bold',
-    personality_style: 'sarcastic',
-    sample_quote: "Standing there staring won't work. Trust me, I've done the math.",
-    appearance: { hair_color: 'silver', hair_style: 'short spiky', eye_color: 'blue', outfit_color: 'silver', gender: 'male' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Leo',
-    gender: 'male',
-    tagline: 'Charming and steady',
-    personality_tags: ['confident', 'warm', 'motivational'],
-    personality_tone: 'confident',
-    personality_style: 'supportive',
-    sample_quote: "You've got this. Smile, make eye contact, and just say hey.",
-    appearance: { hair_color: 'black', hair_style: 'short', eye_color: 'brown', outfit_color: 'gold', gender: 'male' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Finn',
-    gender: 'male',
-    tagline: 'Fun first, always',
-    personality_tags: ['playful', 'energetic', 'witty'],
-    personality_tone: 'energetic',
-    personality_style: 'playful',
-    sample_quote: "Make her laugh and you're already winning.",
-    appearance: { hair_color: 'blonde', hair_style: 'curly', eye_color: 'green', outfit_color: 'teal', gender: 'male' },
-    pricing_tier: 'budget',
-  },
-
-  // --- Female coaches ---
-  {
-    name: 'Luna',
-    gender: 'female',
-    tagline: 'Fierce and fabulous',
-    personality_tags: ['fierce', 'bold', 'direct'],
-    personality_tone: 'fierce',
-    personality_style: 'direct',
-    sample_quote: "Shoulders back, chin up. You're a catch — act like it.",
-    appearance: { hair_color: 'pink', hair_style: 'long flowing', eye_color: 'violet', outfit_color: 'crimson', gender: 'female' },
-    pricing_tier: 'premium',
-  },
-  {
-    name: 'Mia',
-    gender: 'female',
-    tagline: 'Warm and wise',
-    personality_tags: ['empathetic', 'warm', 'supportive'],
-    personality_tone: 'gentle',
-    personality_style: 'nurturing',
-    sample_quote: "You're doing great. Just be genuine — that's attractive.",
-    appearance: { hair_color: 'brown', hair_style: 'curly', eye_color: 'brown', outfit_color: 'lavender', gender: 'female' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Zara',
-    gender: 'female',
-    tagline: 'Sassy truth-teller',
-    personality_tags: ['sarcastic', 'witty', 'direct'],
-    personality_tone: 'witty',
-    personality_style: 'sarcastic',
-    sample_quote: "Honey, that line was terrible. Try asking about her dog instead.",
-    appearance: { hair_color: 'black', hair_style: 'bob', eye_color: 'amber', outfit_color: 'gold', gender: 'female' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Nova',
-    gender: 'female',
-    tagline: 'Cosmic confidence boost',
-    personality_tags: ['motivational', 'bold', 'energetic'],
-    personality_tone: 'energetic',
-    personality_style: 'bold',
-    sample_quote: "The universe put you both here. Don't waste the moment!",
-    appearance: { hair_color: 'blue', hair_style: 'long flowing', eye_color: 'blue', outfit_color: 'purple', gender: 'female' },
-    pricing_tier: 'premium',
-  },
-  {
-    name: 'Sage',
-    gender: 'female',
-    tagline: 'Thoughtful and grounded',
-    personality_tags: ['calm', 'analytical', 'gentle'],
-    personality_tone: 'calm',
-    personality_style: 'serious',
-    sample_quote: "Notice her body language — she's leaning in. Good sign.",
-    appearance: { hair_color: 'silver', hair_style: 'ponytail', eye_color: 'green', outfit_color: 'emerald', gender: 'female' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Ivy',
-    gender: 'female',
-    tagline: 'Playful matchmaker',
-    personality_tags: ['playful', 'warm', 'witty'],
-    personality_tone: 'witty',
-    personality_style: 'playful',
-    sample_quote: "Okay that joke landed. Now ask her something real.",
-    appearance: { hair_color: 'red', hair_style: 'curly', eye_color: 'green', outfit_color: 'emerald', gender: 'female' },
-    pricing_tier: 'budget',
-  },
-  {
-    name: 'Raven',
-    gender: 'female',
-    tagline: 'Dark horse energy',
-    personality_tags: ['bold', 'fierce', 'sophisticated'],
-    personality_tone: 'bold',
-    personality_style: 'direct',
-    sample_quote: "Mystery is attractive. Don't reveal everything at once.",
-    appearance: { hair_color: 'black', hair_style: 'long flowing', eye_color: 'brown', outfit_color: 'crimson', gender: 'female' },
-    pricing_tier: 'premium',
-  },
-  {
-    name: 'Cleo',
-    gender: 'female',
-    tagline: 'Queen of conversation',
-    personality_tags: ['sophisticated', 'confident', 'analytical'],
-    personality_tone: 'confident',
-    personality_style: 'serious',
-    sample_quote: "Mirror her energy. She's calm, so match that pace.",
-    appearance: { hair_color: 'blonde', hair_style: 'ponytail', eye_color: 'blue', outfit_color: 'gold', gender: 'female' },
-    pricing_tier: 'standard',
-  },
-  {
-    name: 'Ruby',
-    gender: 'female',
-    tagline: 'Hype girl supreme',
-    personality_tags: ['hype', 'energetic', 'warm'],
-    personality_tone: 'energetic',
-    personality_style: 'playful',
-    sample_quote: "OMG she smiled at you! Go go go!",
-    appearance: { hair_color: 'red', hair_style: 'bob', eye_color: 'brown', outfit_color: 'pink', gender: 'female' },
-    pricing_tier: 'budget',
-  },
-  {
-    name: 'Willow',
-    gender: 'female',
-    tagline: 'Gentle confidence builder',
-    personality_tags: ['gentle', 'empathetic', 'calm'],
-    personality_tone: 'gentle',
-    personality_style: 'nurturing',
-    sample_quote: "There's no rush. Let the silence be comfortable.",
-    appearance: { hair_color: 'brown', hair_style: 'braided', eye_color: 'amber', outfit_color: 'teal', gender: 'female' },
-    pricing_tier: 'standard',
-  },
-]
-
-function pickRandom<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)]
 }
 
 function generateSystemPrompt(template: CoachTemplate): string {
@@ -276,43 +121,72 @@ RULES:
 - If discomfort detected, advise graceful exit`
 }
 
+// ---------------------------------------------------------------------------
+// Main generator — combinatorial, instant, no AI
+// ---------------------------------------------------------------------------
+
 /**
- * Create a coach from the random template pool and save to database.
- * No AI APIs — instant, deterministic, can't fail.
+ * Create a coach by randomly combining pools of names, personalities,
+ * appearances, taglines, and pricing tiers.
+ * ~1M+ unique combinations. No AI APIs — instant, can't fail.
  */
 export async function createGeneratedCoach() {
-  const template = pickRandom(COACH_TEMPLATES)
+  const gender: 'male' | 'female' = pickRandom(['male', 'female'])
+  const name = pickRandom(gender === 'male' ? MALE_NAMES : FEMALE_NAMES)
+  const personality = pickRandom(PERSONALITIES)
+  const tagline = pickRandom(TAGLINES)
+  const pricingTier = pickRandom(PRICING_WEIGHTS)
 
-  const avatarUrl = buildAvatarUrl(template.name, template.appearance)
+  const appearance: AppearanceSpec = {
+    hair_color: pickRandom(HAIR_COLORS),
+    hair_style: pickRandom(gender === 'male' ? HAIR_STYLES_M : HAIR_STYLES_F),
+    eye_color: pickRandom(EYE_COLORS),
+    outfit_color: pickRandom(OUTFIT_COLORS),
+    gender,
+  }
+
+  const template: CoachTemplate = {
+    name,
+    gender,
+    tagline,
+    personality_tags: personality.tags,
+    personality_tone: personality.tone,
+    personality_style: personality.style,
+    sample_quote: personality.quote,
+    appearance,
+    pricing_tier: pricingTier,
+  }
+
+  const avatarUrl = buildAvatarUrl(name, appearance)
 
   const voice = selectVoiceByTraits(
-    [template.personality_tone, template.personality_style, ...template.personality_tags],
-    template.gender
+    [personality.tone, personality.style, ...personality.tags],
+    gender
   )
 
   const systemPrompt = generateSystemPrompt(template)
 
   const coach = await Coach.create({
-    name: template.name,
-    tagline: template.tagline,
-    description: `${template.personality_tone.charAt(0).toUpperCase() + template.personality_tone.slice(1)} coach with ${template.personality_style} style.`,
+    name,
+    tagline,
+    description: `${personality.tone.charAt(0).toUpperCase() + personality.tone.slice(1)} coach with ${personality.style} style.`,
     specialty: 'dating',
     personality: {
-      tone: template.personality_tone,
-      style: template.personality_style,
+      tone: personality.tone,
+      style: personality.style,
     },
-    personality_tags: template.personality_tags,
+    personality_tags: personality.tags,
     system_prompt: systemPrompt,
-    sample_phrases: [template.sample_quote],
+    sample_phrases: [personality.quote],
     voice_id: voice.voice_id,
     avatar_url: avatarUrl,
-    pricing: PRICING_TIERS[template.pricing_tier],
+    pricing: PRICING_TIERS[pricingTier],
     is_active: true,
     is_generated: true,
     generation_metadata: {
-      traits: [template.personality_tone, template.personality_style, ...template.personality_tags],
-      voice_mapping_reason: `Matched voice "${voice.name}" (${voice.traits.join(', ')}) to personality (${template.personality_tone}, ${template.personality_style})`,
-      appearance: template.appearance,
+      traits: [personality.tone, personality.style, ...personality.tags],
+      voice_mapping_reason: `Matched voice "${voice.name}" (${voice.traits.join(', ')}) to personality (${personality.tone}, ${personality.style})`,
+      appearance,
     },
   })
 
