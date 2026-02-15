@@ -7,7 +7,7 @@ export const sttRouter = Router();
 
 loadEnv();
 
-const ELEVENLABS_STT_TOKEN_URL = 'https://api.elevenlabs.io/v1/speech-to-text/get-realtime-token';
+const ELEVENLABS_STT_TOKEN_URL = 'https://api.elevenlabs.io/v1/single-use-token/realtime_scribe';
 
 const scribeTokenLimiter = new RateLimiter(10_000, 30); // 30 req / 10s per IP
 const scribeTokenInFlight = new Map<string, Promise<{ token: string }>>();
@@ -27,13 +27,8 @@ async function createScribeToken(): Promise<{ token: string }> {
   const response = await fetch(ELEVENLABS_STT_TOKEN_URL, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
       'xi-api-key': process.env.ELEVENLABS_API_KEY!,
     },
-    body: JSON.stringify({
-      model_id: 'scribe_v2_realtime',
-      ttl_secs: 300,
-    }),
   });
 
   if (!response.ok) {
