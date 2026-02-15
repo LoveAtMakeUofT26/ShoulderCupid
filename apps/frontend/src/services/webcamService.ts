@@ -18,12 +18,14 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const inFlightRef = useRef(false)
   const frameCountRef = useRef(0)
+  const disabledRef = useRef(false)
 
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [frameCount, setFrameCount] = useState(0)
 
   const captureAndSend = useCallback(async () => {
+    if (disabledRef.current) return
     // Skip frame if previous request still in-flight (backpressure)
     if (inFlightRef.current) return
 
@@ -42,7 +44,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
 
     inFlightRef.current = true
     try {
-      await fetch('/api/frame', {
+      const res = await fetch('/api/frame', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -53,12 +55,27 @@ export function useWebcamService(options: WebcamServiceOptions) {
           source: 'webcam',
         }),
       })
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}))
+        const msg =
+          (payload && typeof payload.error === 'string' && payload.error) ||
+          `HTTP ${res.status}`
+        setError(`Frame upload failed: ${msg}`)
+        // Stop spamming the backend if we're unauthorized/misconfigured.
+        if (res.status === 401 || res.status === 403 || res.status === 404 || res.status >= 500) {
+          disabledRef.current = true
+        }
+        return
+      }
+
       frameCountRef.current += 1
       if (frameCountRef.current % 100 === 0) {
         logger.log('Frame milestone:', frameCountRef.current, 'frames sent')
       }
       setFrameCount(prev => prev + 1)
     } catch (err) {
+      setError('Frame upload failed: network error')
       logger.error('Failed to send webcam frame:', err)
     } finally {
       inFlightRef.current = false
@@ -68,6 +85,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const start = useCallback(async (deviceId?: string) => {
     try {
       setError(null)
+      disabledRef.current = false
 
       const constraints: MediaStreamConstraints = {
         video: {

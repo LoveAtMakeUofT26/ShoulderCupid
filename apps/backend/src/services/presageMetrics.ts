@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { existsSync } from 'fs'
 import { createInterface } from 'readline'
-import { getFramesDir, endStream } from './frameBuffer.js'
+import { getFramesBaseDir, getFramesDir, endStream } from './frameBuffer.js'
 
 export interface PresageMetrics {
   hr: number         // Heart rate (BPM) - requires API key
@@ -41,7 +41,7 @@ export function getPresageStatus(): PresageStatus {
   return {
     binaryInstalled: existsSync(getProcessorPath()),
     apiKeyConfigured: getApiKey().length > 0,
-    framesDir: process.env.FRAMES_DIR || '/opt/cupid/data/frames',
+    framesDir: getFramesBaseDir(),
     processorPath: getProcessorPath(),
     activeSessions: [...processors.keys()],
     errors: Object.fromEntries(sessionErrors),
@@ -68,6 +68,12 @@ export function startSessionProcessor(sessionId: string): void {
   if (!existsSync(getProcessorPath())) {
     console.warn(`[presage] Processor binary not found at ${getProcessorPath()}`)
     console.warn('[presage] Build it on Vultr: cd /opt/cupid/services/presage-processor && mkdir build && cd build && cmake .. && make')
+    if (!sessionErrors.has(sessionId)) {
+      sessionErrors.set(
+        sessionId,
+        `Presage processor binary not found at ${getProcessorPath()}. Set PRESAGE_PROCESSOR_PATH or build presage-processor.`
+      )
+    }
     return
   }
 
