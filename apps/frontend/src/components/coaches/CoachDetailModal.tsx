@@ -76,11 +76,12 @@ export function CoachDetailModal({
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="fixed inset-x-0 bottom-0 z-40 max-h-[90vh] overflow-y-auto md:inset-0 md:flex md:items-center md:justify-center"
+          onClick={onClose}
           role="dialog"
           aria-modal="true"
           aria-labelledby="coach-detail-title"
         >
-          <div className="bg-white rounded-t-3xl shadow-lg md:rounded-3xl md:max-w-md md:w-full md:max-h-[85vh] md:overflow-y-auto">
+          <div className="bg-white rounded-t-3xl shadow-lg md:rounded-3xl md:max-w-md md:w-full md:max-h-[85vh] md:overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             {/* Close handle */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 bg-marble-300 rounded-full" />

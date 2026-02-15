@@ -77,15 +77,15 @@ export function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
-      <div className="container-mobile md:max-w-xl mx-auto px-5 md:px-8 py-6 md:py-12 min-h-screen flex flex-col">
+    <div className="min-h-screen md:h-screen md:overflow-hidden" style={{ backgroundColor: 'var(--color-bg)' }}>
+      <div className="container-mobile md:max-w-xl mx-auto px-5 md:px-8 py-6 md:py-12 min-h-screen md:h-full flex flex-col">
         {/* Progress bar — hide on welcome step */}
         {currentStep > 1 && (
           <ProgressBar currentStep={currentStep} totalSteps={totalSteps} />
         )}
 
         {/* Steps */}
-        <div className="flex-1">
+        <div className="flex-1 min-h-0 flex flex-col">
           {currentStep === 1 && (
             <WelcomeStep onNext={goNext} onSkip={handleSkip} />
           )}

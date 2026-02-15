@@ -118,7 +118,7 @@ export function CoachSelectStep({
 
   if (!started) {
     return (
-      <div className="pt-8 animate-slide-up text-center">
+      <div className="pt-8 animate-slide-up text-center md:flex md:flex-col md:items-center md:justify-center md:flex-1">
         <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
           Find Your Coach
         </h2>
@@ -143,7 +143,7 @@ export function CoachSelectStep({
 
   if (loading) {
     return (
-      <div className="pt-8 animate-slide-up">
+      <div className="pt-8 animate-slide-up flex flex-col md:flex-1 md:min-h-0">
         <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
           Find Your Coach
         </h2>
@@ -156,7 +156,7 @@ export function CoachSelectStep({
   }
 
   return (
-    <div className="pt-4 animate-slide-up">
+    <div className="pt-4 animate-slide-up flex flex-col md:flex-1 md:min-h-0">
       <div className="text-center mb-4">
         <h2 className="font-display text-2xl font-bold text-gray-900 mb-1">
           Find Your Coach
@@ -172,11 +172,12 @@ export function CoachSelectStep({
       </div>
 
       {/* Card */}
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-[400px] md:min-h-0 md:flex-1">
         {currentCoach ? (
           <AnimatePresence mode="wait">
             <motion.div
               key={cardKey}
+              className="md:max-h-full"
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
