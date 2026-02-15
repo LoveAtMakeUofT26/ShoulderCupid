@@ -158,9 +158,8 @@ export function LiveSessionPage() {
   partialRef.current = partialTranscript
 
   // Start ElevenLabs transcription when session becomes active
-  // Test sessions skip STT — no auth means no token endpoint access
   useEffect(() => {
-    if (phase === 'active' && !transcriptionConnected && !isTestSession) {
+    if (phase === 'active' && !transcriptionConnected) {
       startTranscription()
     }
     return () => {
@@ -168,7 +167,7 @@ export function LiveSessionPage() {
         stopTranscription()
       }
     }
-  }, [phase, transcriptionConnected, startTranscription, stopTranscription, isTestSession])
+  }, [phase, transcriptionConnected, startTranscription, stopTranscription])
 
   useEffect(() => {
     if (!user || isNewSession || !sessionId || resumingSession) return
@@ -176,10 +175,10 @@ export function LiveSessionPage() {
   }, [initializeExistingSession, isNewSession, resumingSession, sessionId, user])
 
   useEffect(() => {
-    if (phase === 'active' && isConnected && activeSessionId && !isTestSession) {
+    if (phase === 'active' && isConnected && activeSessionId) {
       startCoaching()
     }
-  }, [phase, isConnected, activeSessionId, startCoaching, isTestSession])
+  }, [phase, isConnected, activeSessionId, startCoaching])
 
   useEffect(() => {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
@@ -193,7 +192,6 @@ export function LiveSessionPage() {
   }, [phase, cameraSource, webcam])
 
   useEffect(() => {
-    if (isTestSession) return
     // Reset index if transcripts array was cleared/reset
     if (transcriptionTranscripts.length < lastSentIndexRef.current) {
       lastSentIndexRef.current = 0
@@ -207,7 +205,7 @@ export function LiveSessionPage() {
       }
       lastSentIndexRef.current = transcriptionTranscripts.length
     }
-  }, [transcriptionTranscripts, sendTranscript, isTestSession])
+  }, [transcriptionTranscripts, sendTranscript])
 
   // Request advice via socket every 2 seconds when session is active
   useEffect(() => {
