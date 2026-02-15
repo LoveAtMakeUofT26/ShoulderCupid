@@ -16,7 +16,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const inFlightRef = useRef(false)
+  const inFlightRef = useRef(0)
   const frameCountRef = useRef(0)
   const disabledRef = useRef(false)
 
@@ -26,8 +26,9 @@ export function useWebcamService(options: WebcamServiceOptions) {
 
   const captureAndSend = useCallback(async () => {
     if (disabledRef.current) return
-    // Skip frame if previous request still in-flight (backpressure)
-    if (inFlightRef.current) return
+    // Allow up to 3 concurrent requests to improve effective FPS.
+    // At 15 FPS with ~100-200ms round-trip, 3 slots ≈ 10-15 effective FPS.
+    if (inFlightRef.current >= 3) return
 
     const video = videoRef.current
     const canvas = canvasRef.current
@@ -42,7 +43,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
 
     const jpeg = canvas.toDataURL('image/jpeg', quality)
 
-    inFlightRef.current = true
+    inFlightRef.current += 1
     try {
       const res = await fetch('/api/frame', {
         method: 'POST',
@@ -78,7 +79,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
       setError('Frame upload failed: network error')
       logger.error('Failed to send webcam frame:', err)
     } finally {
-      inFlightRef.current = false
+      inFlightRef.current -= 1
     }
   }, [sessionId, width, height, quality])
 

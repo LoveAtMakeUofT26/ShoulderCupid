@@ -1,28 +1,66 @@
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
-import { loadEnv } from '../config/loadEnv.js'
 import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
-import { buildCoachImagePrompt, buildAvatarUrl, type AppearanceSpec } from '../config/imagePrompts.js'
-import { retryWithBackoff } from '../utils/resilience.js'
+import { buildAvatarUrl, type AppearanceSpec } from '../config/imagePrompts.js'
 
-loadEnv()
+// ---------------------------------------------------------------------------
+// Component pools — combined randomly for ~1M+ unique coaches
+// ---------------------------------------------------------------------------
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '')
+const MALE_NAMES = [
+  'Marco', 'Dex', 'Kai', 'Blaze', 'Theo', 'Rio', 'Ash', 'Jax', 'Leo', 'Finn',
+  'Niko', 'Soren', 'Dante', 'Rex', 'Cruz',
+]
 
-interface CoachProfile {
-  name: string
-  gender: string
-  tagline: string
-  personality_tags: string[]
-  personality_tone: string
-  personality_style: string
-  specialty: string
-  sample_quote: string
-  appearance: AppearanceSpec
-  pricing_tier: 'budget' | 'standard' | 'premium'
+const FEMALE_NAMES = [
+  'Luna', 'Mia', 'Zara', 'Nova', 'Sage', 'Ivy', 'Raven', 'Cleo', 'Ruby', 'Willow',
+  'Aria', 'Jade', 'Ember', 'Skye', 'Kira',
+]
+
+interface PersonalityProfile {
+  tone: string
+  style: string
+  tags: string[]
+  quote: string
 }
 
-type TraitMap = Record<string, number>
+const PERSONALITIES: PersonalityProfile[] = [
+  { tone: 'confident', style: 'playful', tags: ['confident', 'smooth', 'witty'], quote: "She glanced twice. That's your green light, go." },
+  { tone: 'energetic', style: 'bold', tags: ['hype', 'bold', 'energetic'], quote: "BRO she's literally right there. GO!" },
+  { tone: 'calm', style: 'supportive', tags: ['calm', 'supportive', 'gentle'], quote: 'Take a breath. Just be present and listen.' },
+  { tone: 'fierce', style: 'direct', tags: ['fierce', 'direct', 'motivational'], quote: 'Stop overthinking. Walk up and say hi. Now.' },
+  { tone: 'witty', style: 'serious', tags: ['analytical', 'witty', 'sophisticated'], quote: 'She mentioned travel — ask which country changed her most.' },
+  { tone: 'calm', style: 'playful', tags: ['chill', 'playful', 'warm'], quote: 'Easy does it. Compliment something specific, not generic.' },
+  { tone: 'gentle', style: 'supportive', tags: ['nerdy', 'empathetic', 'warm'], quote: "You both like that show? Perfect — bond over the finale." },
+  { tone: 'bold', style: 'sarcastic', tags: ['bold', 'sarcastic', 'direct'], quote: "Standing there staring won't work. Trust me, I've done the math." },
+  { tone: 'confident', style: 'supportive', tags: ['confident', 'warm', 'motivational'], quote: "You've got this. Smile, make eye contact, and just say hey." },
+  { tone: 'energetic', style: 'playful', tags: ['playful', 'energetic', 'witty'], quote: "Make her laugh and you're already winning." },
+  { tone: 'fierce', style: 'direct', tags: ['fierce', 'bold', 'direct'], quote: "Shoulders back, chin up. You're a catch — act like it." },
+  { tone: 'gentle', style: 'nurturing', tags: ['empathetic', 'warm', 'supportive'], quote: "You're doing great. Just be genuine — that's attractive." },
+  { tone: 'witty', style: 'sarcastic', tags: ['sarcastic', 'witty', 'direct'], quote: 'Honey, that line was terrible. Try asking about her dog instead.' },
+  { tone: 'energetic', style: 'bold', tags: ['motivational', 'bold', 'energetic'], quote: "The universe put you both here. Don't waste the moment!" },
+  { tone: 'calm', style: 'serious', tags: ['calm', 'analytical', 'gentle'], quote: "Notice her body language — she's leaning in. Good sign." },
+  { tone: 'witty', style: 'playful', tags: ['playful', 'warm', 'witty'], quote: 'Okay that joke landed. Now ask her something real.' },
+  { tone: 'bold', style: 'direct', tags: ['bold', 'fierce', 'sophisticated'], quote: "Mystery is attractive. Don't reveal everything at once." },
+  { tone: 'confident', style: 'serious', tags: ['sophisticated', 'confident', 'analytical'], quote: "Mirror her energy. She's calm, so match that pace." },
+  { tone: 'energetic', style: 'playful', tags: ['hype', 'energetic', 'warm'], quote: 'OMG she smiled at you! Go go go!' },
+  { tone: 'gentle', style: 'nurturing', tags: ['gentle', 'empathetic', 'calm'], quote: "There's no rush. Let the silence be comfortable." },
+]
+
+const TAGLINES = [
+  'Smooth moves only', 'Hype king energy', 'Calm and collected', 'No fear, full send',
+  'Strategize and charm', 'Chill vibes always', 'Nerdy charm expert', 'Bold moves pay off',
+  'Charming and steady', 'Fun first, always', 'Fierce and fabulous', 'Warm and wise',
+  'Sassy truth-teller', 'Cosmic confidence boost', 'Thoughtful and grounded',
+  'Playful matchmaker', 'Dark horse energy', 'Queen of conversation', 'Hype girl supreme',
+  'Gentle confidence builder', 'Vibes on lock', 'Main character energy', 'Quiet confidence',
+  'Zero cringe guaranteed', 'Reads the room perfectly',
+]
+
+const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'silver', 'pink', 'blue', 'white', 'auburn', 'platinum']
+const HAIR_STYLES_M = ['short spiky', 'short', 'curly', 'braided', 'long flowing', 'buzzcut', 'messy']
+const HAIR_STYLES_F = ['long flowing', 'curly', 'bob', 'ponytail', 'braided', 'pixie', 'messy bun']
+const EYE_COLORS = ['brown', 'blue', 'green', 'amber', 'violet', 'hazel', 'grey', 'teal']
+const OUTFIT_COLORS = ['crimson', 'gold', 'teal', 'lavender', 'emerald', 'pink', 'blue', 'silver', 'purple', 'red']
 
 const PRICING_TIERS = {
   budget: { quick_5min: 0.5, standard_15min: 1.5, deep_30min: 3.0 },
@@ -30,151 +68,41 @@ const PRICING_TIERS = {
   premium: { quick_5min: 2.0, standard_15min: 5.0, deep_30min: 8.0 },
 }
 
-const GEMINI_MODELS = ['gemini-2.0-flash'] as const
+// Weighted: 30% budget, 50% standard, 20% premium
+const PRICING_WEIGHTS: Array<'budget' | 'standard' | 'premium'> = [
+  'budget', 'budget', 'budget',
+  'standard', 'standard', 'standard', 'standard', 'standard',
+  'premium', 'premium',
+]
 
-const COACH_PROFILE_SCHEMA = {
-  type: SchemaType.OBJECT,
-  properties: {
-    name: { type: SchemaType.STRING, description: 'A creative, memorable first name' },
-    gender: { type: SchemaType.STRING, description: '"male" or "female"' },
-    tagline: { type: SchemaType.STRING, description: 'A catchy 3-5 word tagline' },
-    personality_tags: {
-      type: SchemaType.ARRAY,
-      items: { type: SchemaType.STRING },
-      description: 'Array of 3 personality tags',
-    },
-    personality_tone: { type: SchemaType.STRING, description: 'One word like confident, calm, energetic, witty, bold, gentle, fierce' },
-    personality_style: { type: SchemaType.STRING, description: 'One word like playful, serious, supportive, direct, nurturing, sarcastic' },
-    specialty: { type: SchemaType.STRING, description: 'Coach specialty' },
-    sample_quote: { type: SchemaType.STRING, description: 'A short example of something this coach would say during a session' },
-    appearance: {
-      type: SchemaType.OBJECT,
-      properties: {
-        hair_color: { type: SchemaType.STRING },
-        hair_style: { type: SchemaType.STRING },
-        eye_color: { type: SchemaType.STRING },
-        outfit_color: { type: SchemaType.STRING },
-        gender: { type: SchemaType.STRING },
-      },
-      required: ['hair_color', 'hair_style', 'eye_color', 'outfit_color', 'gender'],
-    },
-    pricing_tier: { type: SchemaType.STRING, description: '"budget", "standard", or "premium"' },
-  },
-  required: ['name', 'gender', 'tagline', 'personality_tags', 'personality_tone', 'personality_style', 'specialty', 'sample_quote', 'appearance', 'pricing_tier'],
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)]
 }
 
-/**
- * Generate a complete coach profile using Gemini, with retry on rate limit
- * and automatic fallback to alternative models on 503.
- */
-async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
-  let biasInstruction = ''
-  if (preferences) {
-    const liked = Object.entries(preferences)
-      .filter(([, v]) => v > 0)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([k]) => k)
-
-    const disliked = Object.entries(preferences)
-      .filter(([, v]) => v < 0)
-      .sort(([, a], [, b]) => a - b)
-      .slice(0, 3)
-      .map(([k]) => k)
-
-    if (liked.length) biasInstruction += `\nThe user tends to prefer coaches who are: ${liked.join(', ')}.`
-    if (disliked.length) biasInstruction += `\nThe user tends to dislike coaches who are: ${disliked.join(', ')}. Avoid these traits.`
-  }
-
-  const prompt = `Generate a unique AI dating coach character. Be creative and diverse with names, genders, and personalities. Each coach should feel distinct.${biasInstruction}
-
-Return JSON with this exact schema:
-{
-  "name": "A creative, memorable first name",
-  "gender": "male" or "female",
-  "tagline": "A catchy 3-5 word tagline",
-  "personality_tags": ["tag1", "tag2", "tag3"],
-  "personality_tone": "one word like confident, calm, energetic, witty, bold, gentle, fierce",
-  "personality_style": "one word like playful, serious, supportive, direct, nurturing, sarcastic",
-  "specialty": "dating",
-  "sample_quote": "A short example of something this coach would say during a session",
-  "appearance": {
-    "hair_color": "color like black, blonde, pink, blue, silver, red",
-    "hair_style": "style like long flowing, short spiky, curly, braided, ponytail, bob",
-    "eye_color": "color like brown, blue, green, amber, violet, heterochromia",
-    "outfit_color": "main accent color like gold, crimson, teal, lavender, emerald",
-    "gender": "male" or "female"
-  },
-  "pricing_tier": "budget" or "standard" or "premium"
+interface CoachTemplate {
+  name: string
+  gender: 'male' | 'female'
+  tagline: string
+  personality_tags: string[]
+  personality_tone: string
+  personality_style: string
+  sample_quote: string
+  appearance: AppearanceSpec
+  pricing_tier: 'budget' | 'standard' | 'premium'
 }
 
-Personality tags should be simple descriptive words like: hype, chill, direct, witty, tough-love, gentle, bold, empathetic, sarcastic, motivational, analytical, warm, fierce, playful, nerdy, sophisticated.`
-
-  let lastError: Error | undefined
-  for (const modelName of GEMINI_MODELS) {
-    const model = genAI.getGenerativeModel({
-      model: modelName,
-      generationConfig: {
-        temperature: 1.0,
-        maxOutputTokens: 1024,
-        responseMimeType: 'application/json',
-        responseSchema: COACH_PROFILE_SCHEMA,
-      },
-    })
-
-    try {
-      const result = await retryWithBackoff(
-        () => model.generateContent(prompt),
-        { maxRetries: 3, baseDelayMs: 2000 }
-      )
-      const text = result.response.text()
-      const profile = JSON.parse(text) as CoachProfile
-
-      // Validate required fields — model may return incomplete JSON
-      if (!profile.name || !profile.gender) {
-        throw new Error('Model returned incomplete profile: missing name or gender')
-      }
-      if (!Array.isArray(profile.personality_tags) || profile.personality_tags.length === 0) {
-        profile.personality_tags = [profile.personality_tone || 'friendly']
-      }
-      profile.personality_tone ??= 'calm'
-      profile.personality_style ??= 'supportive'
-      profile.pricing_tier ??= 'standard'
-      if (!profile.appearance || typeof profile.appearance !== 'object') {
-        profile.appearance = {
-          hair_color: 'black',
-          hair_style: 'short',
-          eye_color: 'brown',
-          outfit_color: 'teal',
-          gender: profile.gender as 'male' | 'female',
-        }
-      } else {
-        profile.appearance.gender = profile.gender as 'male' | 'female'
-      }
-      if (modelName !== GEMINI_MODELS[0]) {
-        console.warn(`Coach generation fell back to ${modelName}`)
-      }
-      return profile
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error))
-      console.warn(`Model ${modelName} failed: ${lastError.message}, trying next...`)
-    }
-  }
-
-  throw lastError!
-}
-
-/**
- * Generate a system prompt for the coach based on their personality.
- */
-function generateSystemPrompt(profile: CoachProfile): string {
-  return `You are ${profile.name}, a ${profile.personality_tone} and ${profile.personality_style} AI dating coach speaking live into the user's ear through their earpiece.
+function generateSystemPrompt(template: CoachTemplate): string {
+  return `You are ${template.name}, a ${template.personality_tone} and ${template.personality_style} AI dating coach speaking live into the user's ear through their earpiece.
 
 PERSONALITY:
-- ${profile.personality_tags.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}
-- Tone: ${profile.personality_tone}
-- Style: ${profile.personality_style}
-- Your tagline: "${profile.tagline}"
+- ${template.personality_tags.map(t => t.charAt(0).toUpperCase() + t.slice(1)).join(', ')}
+- Tone: ${template.personality_tone}
+- Style: ${template.personality_style}
+- Your tagline: "${template.tagline}"
 
 APPROACH MODE (target detected, distance > 150cm):
 - Encourage the user to approach in your unique style
@@ -193,49 +121,72 @@ RULES:
 - If discomfort detected, advise graceful exit`
 }
 
+// ---------------------------------------------------------------------------
+// Main generator — combinatorial, instant, no AI
+// ---------------------------------------------------------------------------
+
 /**
- * Create a fully generated AI coach and save to database.
+ * Create a coach by randomly combining pools of names, personalities,
+ * appearances, taglines, and pricing tiers.
+ * ~1M+ unique combinations. No AI APIs — instant, can't fail.
  */
-export async function createGeneratedCoach(preferences?: TraitMap) {
-  // 1. Generate profile via Gemini (text - free tier)
-  const profile = await generateCoachProfile(preferences)
+export async function createGeneratedCoach() {
+  const gender: 'male' | 'female' = pickRandom(['male', 'female'])
+  const name = pickRandom(gender === 'male' ? MALE_NAMES : FEMALE_NAMES)
+  const personality = pickRandom(PERSONALITIES)
+  const tagline = pickRandom(TAGLINES)
+  const pricingTier = pickRandom(PRICING_WEIGHTS)
 
-  // 2. Build avatar URL (DiceBear — deterministic, instant, no API key)
-  const avatarUrl = buildAvatarUrl(profile.name, profile.appearance)
-  const imagePrompt = buildCoachImagePrompt(profile.personality_tags, profile.appearance)
+  const appearance: AppearanceSpec = {
+    hair_color: pickRandom(HAIR_COLORS),
+    hair_style: pickRandom(gender === 'male' ? HAIR_STYLES_M : HAIR_STYLES_F),
+    eye_color: pickRandom(EYE_COLORS),
+    outfit_color: pickRandom(OUTFIT_COLORS),
+    gender,
+  }
 
-  // 3. Select matching voice
+  const template: CoachTemplate = {
+    name,
+    gender,
+    tagline,
+    personality_tags: personality.tags,
+    personality_tone: personality.tone,
+    personality_style: personality.style,
+    sample_quote: personality.quote,
+    appearance,
+    pricing_tier: pricingTier,
+  }
+
+  const avatarUrl = buildAvatarUrl(name, appearance)
+
   const voice = selectVoiceByTraits(
-    [profile.personality_tone, profile.personality_style, ...profile.personality_tags],
-    profile.gender
+    [personality.tone, personality.style, ...personality.tags],
+    gender
   )
 
-  // 4. Generate system prompt
-  const systemPrompt = generateSystemPrompt(profile)
+  const systemPrompt = generateSystemPrompt(template)
 
-  // 5. Save to database
   const coach = await Coach.create({
-    name: profile.name,
-    tagline: profile.tagline,
-    description: `AI-generated ${profile.personality_tone} coach with ${profile.personality_style} style.`,
+    name,
+    tagline,
+    description: `${personality.tone.charAt(0).toUpperCase() + personality.tone.slice(1)} coach with ${personality.style} style.`,
     specialty: 'dating',
     personality: {
-      tone: profile.personality_tone,
-      style: profile.personality_style,
+      tone: personality.tone,
+      style: personality.style,
     },
-    personality_tags: profile.personality_tags,
+    personality_tags: personality.tags,
     system_prompt: systemPrompt,
-    sample_phrases: [profile.sample_quote],
+    sample_phrases: [personality.quote],
     voice_id: voice.voice_id,
     avatar_url: avatarUrl,
-    pricing: PRICING_TIERS[profile.pricing_tier],
+    pricing: PRICING_TIERS[pricingTier],
     is_active: true,
     is_generated: true,
     generation_metadata: {
-      traits: [profile.personality_tone, profile.personality_style, ...profile.personality_tags],
-      image_prompt: imagePrompt,
-      voice_mapping_reason: `Matched voice "${voice.name}" (${voice.traits.join(', ')}) to personality (${profile.personality_tone}, ${profile.personality_style})`,
-      appearance: profile.appearance,
+      traits: [personality.tone, personality.style, ...personality.tags],
+      voice_mapping_reason: `Matched voice "${voice.name}" (${voice.traits.join(', ')}) to personality (${personality.tone}, ${personality.style})`,
+      appearance,
     },
   })
 
