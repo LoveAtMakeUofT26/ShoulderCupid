@@ -83,29 +83,16 @@ export function HeroSection() {
               </div>
 
               {/* Marble cupid statue */}
-              <div className="relative animate-float">
-                <div
-                  className="w-64 h-80 md:w-80 md:h-96 mx-auto rounded-3xl border overflow-hidden flex flex-col items-center justify-end"
-                  style={{
-                    background: 'linear-gradient(to bottom, var(--color-surface), var(--color-surface-hover))',
-                    borderColor: 'var(--color-border)',
-                    boxShadow: 'var(--shadow-marble)',
-                  }}
-                >
-                  <img
-                    src="/assets/cupid-statue.png"
-                    alt="Marble cupid statue"
-                    className="w-full h-[85%] object-cover object-top grayscale brightness-110 contrast-90 opacity-90"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-white/80 via-white/50 to-transparent dark:from-gray-900/80 dark:via-gray-900/50">
-                    <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mx-auto mb-2" />
-                    <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
-                  </div>
+              <div className="relative animate-float flex flex-col items-center">
+                <img
+                  src="/assets/cupid-statue.png"
+                  alt="Marble cupid statue"
+                  className="w-64 md:w-80 rounded-3xl object-cover object-top grayscale brightness-110 contrast-90 opacity-90 drop-shadow-2xl"
+                />
+                <div className="mt-4 text-center">
+                  <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mx-auto mb-2" />
+                  <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
                 </div>
-
-                {/* Decorative column accents */}
-                <div className="absolute -left-4 top-12 w-8 h-24 rounded-full bg-gradient-to-b from-gold-200/30 to-transparent" />
-                <div className="absolute -right-4 top-12 w-8 h-24 rounded-full bg-gradient-to-b from-gold-200/30 to-transparent" />
               </div>
             </div>
           </motion.div>
