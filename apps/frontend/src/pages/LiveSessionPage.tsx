@@ -211,7 +211,7 @@ export function LiveSessionPage() {
 
   // Request advice via socket every 2 seconds when session is active
   useEffect(() => {
-    if (phase !== 'active' || isTestSession) return
+    if (phase !== 'active') return
 
     const emitAdvice = () => {
       const transcripts = transcriptRef.current
@@ -231,7 +231,7 @@ export function LiveSessionPage() {
     emitAdvice()
     const interval = setInterval(emitAdvice, 2000)
     return () => clearInterval(interval)
-  }, [phase, requestAdvice, isTestSession])
+  }, [phase, requestAdvice])
 
   // Fetch user on mount
   useEffect(() => {
