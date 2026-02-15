@@ -45,7 +45,7 @@ export function LiveSessionPage() {
   // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
-    partialTranscript,
+    partialTranscript: _partialTranscript,
     isConnected: transcriptionConnected,
     startTranscription,
     stopTranscription,
