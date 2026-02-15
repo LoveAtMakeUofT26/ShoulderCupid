@@ -2,12 +2,11 @@ import { Router } from 'express'
 import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
-import { Payment } from '../models/Payment.js'
+
 import { stopSession as stopSessionProcessor } from '../services/presageService.js'
 import { clearCommandQueue } from './hardware.js'
 import mongoose from 'mongoose'
 
-const FREE_SESSIONS_PER_MONTH = 3
 
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
@@ -134,45 +133,6 @@ sessionsRouter.post('/start', async (req, res) => {
       await User.findByIdAndUpdate(userId, { coach_id: coachId })
     }
 
-    // Check free session quota + payment gate
-    const now = new Date()
-    const resetDate = (user as any).sessions_month_reset
-      ? new Date((user as any).sessions_month_reset)
-      : new Date(0)
-    const isNewMonth =
-      now.getMonth() !== resetDate.getMonth() ||
-      now.getFullYear() !== resetDate.getFullYear()
-
-    let sessionsThisMonth = isNewMonth ? 0 : ((user as any).sessions_this_month || 0)
-
-    let confirmedPayment: any = null
-
-    if (sessionsThisMonth >= FREE_SESSIONS_PER_MONTH) {
-      // Require payment
-      const { paymentId } = req.body
-      if (!paymentId) {
-        return res.status(402).json({
-          error: 'Payment required',
-          sessions_used: sessionsThisMonth,
-          free_limit: FREE_SESSIONS_PER_MONTH,
-        })
-      }
-
-      // Verify payment is confirmed and belongs to this user
-      const payment = await Payment.findOne({
-        _id: paymentId,
-        user_id: userId,
-        status: 'confirmed',
-        session_id: { $exists: false },
-      })
-
-      if (!payment) {
-        return res.status(402).json({ error: 'Valid confirmed payment required' })
-      }
-
-      confirmedPayment = payment
-    }
-
     // Create new session
     const session = await Session.create({
       user_id: userId,
@@ -180,18 +140,6 @@ sessionsRouter.post('/start', async (req, res) => {
       status: 'active',
       mode: 'IDLE',
       started_at: new Date(),
-    })
-
-    // Link payment to session if paid
-    if (confirmedPayment) {
-      confirmedPayment.session_id = session._id
-      await confirmedPayment.save()
-    }
-
-    // Increment session counter
-    await User.findByIdAndUpdate(userId, {
-      sessions_this_month: sessionsThisMonth + 1,
-      sessions_month_reset: isNewMonth ? now : resetDate,
     })
 
     // Track active session

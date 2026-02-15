@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as crypto from 'node:crypto'
@@ -36,7 +36,38 @@ const PRICING_TIERS = {
 // Directory to store downloaded coach images
 const IMAGES_DIR = path.resolve('public/coaches')
 
-const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const
+const GEMINI_MODELS = ['gemini-2.5-flash-lite'] as const
+
+const COACH_PROFILE_SCHEMA = {
+  type: SchemaType.OBJECT,
+  properties: {
+    name: { type: SchemaType.STRING, description: 'A creative, memorable first name' },
+    gender: { type: SchemaType.STRING, description: '"male" or "female"' },
+    tagline: { type: SchemaType.STRING, description: 'A catchy 3-5 word tagline' },
+    personality_tags: {
+      type: SchemaType.ARRAY,
+      items: { type: SchemaType.STRING },
+      description: 'Array of 3 personality tags',
+    },
+    personality_tone: { type: SchemaType.STRING, description: 'One word like confident, calm, energetic, witty, bold, gentle, fierce' },
+    personality_style: { type: SchemaType.STRING, description: 'One word like playful, serious, supportive, direct, nurturing, sarcastic' },
+    specialty: { type: SchemaType.STRING, description: 'Coach specialty' },
+    sample_quote: { type: SchemaType.STRING, description: 'A short example of something this coach would say during a session' },
+    appearance: {
+      type: SchemaType.OBJECT,
+      properties: {
+        hair_color: { type: SchemaType.STRING },
+        hair_style: { type: SchemaType.STRING },
+        eye_color: { type: SchemaType.STRING },
+        outfit_color: { type: SchemaType.STRING },
+        gender: { type: SchemaType.STRING },
+      },
+      required: ['hair_color', 'hair_style', 'eye_color', 'outfit_color', 'gender'],
+    },
+    pricing_tier: { type: SchemaType.STRING, description: '"budget", "standard", or "premium"' },
+  },
+  required: ['name', 'gender', 'tagline', 'personality_tags', 'personality_tone', 'personality_style', 'specialty', 'sample_quote', 'appearance', 'pricing_tier'],
+}
 
 /**
  * Generate a complete coach profile using Gemini, with retry on rate limit
@@ -93,6 +124,7 @@ Personality tags should be simple descriptive words like: hype, chill, direct, w
         temperature: 1.0,
         maxOutputTokens: 1024,
         responseMimeType: 'application/json',
+        responseSchema: COACH_PROFILE_SCHEMA,
       },
     })
 

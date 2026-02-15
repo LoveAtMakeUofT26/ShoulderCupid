@@ -1,19 +1,16 @@
 // Speech-to-Text service for WebSocket audio input
 import { Router } from 'express';
-import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
 import { loadEnv } from '../config/loadEnv.js';
-import { RateLimiter } from '../utils/resilience.js';
+import { RateLimiter, retryWithBackoff } from '../utils/resilience.js';
 
 export const sttRouter = Router();
 
 loadEnv();
 
-const elevenlabs = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
-});
+const ELEVENLABS_STT_TOKEN_URL = 'https://api.elevenlabs.io/v1/single-use-token/realtime_scribe';
 
 const scribeTokenLimiter = new RateLimiter(10_000, 30); // 30 req / 10s per IP
-const scribeTokenInFlight = new Map<string, Promise<unknown>>();
+const scribeTokenInFlight = new Map<string, Promise<{ token: string }>>();
 
 function getClientKey(req: any): string {
   return req.ip || 'anonymous';
@@ -24,6 +21,23 @@ const requireAuth = (req: any, res: any, next: any) => {
     return res.status(401).json({ error: 'Not authenticated' })
   }
   next()
+}
+
+async function createScribeToken(): Promise<{ token: string }> {
+  const response = await fetch(ELEVENLABS_STT_TOKEN_URL, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': process.env.ELEVENLABS_API_KEY!,
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`ElevenLabs token request failed (${response.status}): ${body}`);
+  }
+
+  const data = (await response.json()) as { token: string };
+  return { token: data.token };
 }
 
 sttRouter.get("/health", (_req, res) => {
@@ -49,8 +63,8 @@ sttRouter.get("/scribe-token", requireAuth, async (req, res) => {
 
   if (scribeTokenInFlight.has(key)) {
     try {
-      const token = await scribeTokenInFlight.get(key);
-      res.json(token);
+      const result = await scribeTokenInFlight.get(key);
+      res.json(result);
       return;
     } catch (error) {
       console.error("Failed to create scribe token:", error);
@@ -59,15 +73,16 @@ sttRouter.get("/scribe-token", requireAuth, async (req, res) => {
     }
   }
 
-  const tokenPromise = (async () => {
-    return await elevenlabs.tokens.singleUse.create("realtime_scribe");
-  })();
+  const tokenPromise = retryWithBackoff(createScribeToken, {
+    maxRetries: 2,
+    baseDelayMs: 800,
+  });
 
   scribeTokenInFlight.set(key, tokenPromise);
 
   try {
-    const token = await tokenPromise;
-    res.json(token);
+    const result = await tokenPromise;
+    res.json(result);
   } catch (error) {
     console.error("Failed to create scribe token:", error);
     res.status(500).json({ error: "Failed to create scribe token" });

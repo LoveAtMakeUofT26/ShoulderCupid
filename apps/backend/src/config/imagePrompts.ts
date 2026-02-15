@@ -34,10 +34,18 @@ export function buildCoachImagePrompt(
   ].join(', ')
 }
 
-const CF_IMAGE_MODELS = [
-  '@cf/black-forest-labs/flux-2-klein-4b',
-  '@cf/black-forest-labs/flux-1-schnell',
-] as const
+interface ImageModel {
+  id: string
+  /** flux-2-klein requires multipart form data; flux-1-schnell accepts JSON */
+  format: 'multipart' | 'json'
+  /** Inference steps (flux-2-klein is fixed at 4 internally, flux-1-schnell accepts 1-8) */
+  steps?: number
+}
+
+const CF_IMAGE_MODELS: ImageModel[] = [
+  { id: '@cf/black-forest-labs/flux-2-klein-4b', format: 'multipart' },
+  { id: '@cf/black-forest-labs/flux-1-schnell', format: 'json', steps: 4 },
+]
 
 /**
  * Generate a coach avatar image via Cloudflare Workers AI.
@@ -57,22 +65,34 @@ export async function generateImageBuffer(prompt: string): Promise<Buffer> {
   let lastError: Error | undefined
   for (const model of CF_IMAGE_MODELS) {
     try {
-      const response = await axios.post(
-        `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
-        { prompt, width: 512, height: 512, num_steps: 4 },
-        {
-          headers: { Authorization: `Bearer ${apiToken}` },
-          responseType: 'arraybuffer',
-          timeout: 30000,
-        }
-      )
+      const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model.id}`
+      let data: FormData | Record<string, unknown>
+      let headers: Record<string, string> = { Authorization: `Bearer ${apiToken}` }
+
+      if (model.format === 'multipart') {
+        // flux-2-klein requires multipart form data even for text-only prompts
+        const form = new FormData()
+        form.append('prompt', prompt)
+        form.append('width', '512')
+        form.append('height', '512')
+        data = form
+      } else {
+        data = { prompt, width: 512, height: 512, steps: model.steps }
+        headers['Content-Type'] = 'application/json'
+      }
+
+      const response = await axios.post(url, data, {
+        headers,
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      })
       if (model !== CF_IMAGE_MODELS[0]) {
-        console.warn(`Image generation fell back to ${model}`)
+        console.warn(`Image generation fell back to ${model.id}`)
       }
       return Buffer.from(response.data)
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      console.warn(`Model ${model} failed: ${lastError.message}, trying next...`)
+      console.warn(`Model ${model.id} failed: ${lastError.message}, trying next...`)
     }
   }
 
