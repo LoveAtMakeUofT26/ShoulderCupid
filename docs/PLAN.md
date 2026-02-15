@@ -32,7 +32,7 @@
 - Camera: `getUserMedia({ video })` with live preview
 - Microphone: `getUserMedia({ audio })` with volume meter
 - Speaker: `enumerateDevices()` checking `audiooutput`
-- Backend: `GET /health` with 5s timeout
+- Backend: `GET /api/health` with 5s timeout
 - STT: `GET /api/stt/scribe-token` with 10s timeout
 - AI Coach: `GET /api/gemini/token` with 10s timeout
 - All 6 checks run in parallel, per-check retry on failure
@@ -75,7 +75,8 @@
 │  ├── Edge Impulse API (person detection)                 │
 │  ├── Presage C++ SDK (emotion analysis)                  │
 │  ├── ElevenLabs STT token endpoint (/api/stt)            │
-│  ├── Gemini Live token endpoint (/api/gemini)            │
+│  ├── Gemini 2.0 Flash coaching (server-side chat)        │
+│  ├── Gemini token endpoint (/api/gemini, preflight)      │
 │  ├── ElevenLabs TTS (coaching text -> audio)             │
 │  ├── Command queue (buzz/slap -> ESP32)                  │
 │  └── MongoDB (users, sessions, transcripts)              │
@@ -87,7 +88,7 @@
 │                                                           │
 │  React + Vite + TypeScript + Tailwind                    │
 │  ├── ElevenLabs Scribe SDK (client-side STT)             │
-│  ├── Gemini Live SDK (client-side coaching)              │
+│  ├── Receives coaching text from backend via Socket.io   │
 │  ├── Captures audio from Bluetooth earbuds               │
 │  ├── Receives TTS audio from backend -> plays to earbuds │
 │  ├── Displays live video feed from backend endpoints     │
@@ -173,7 +174,7 @@
 ### Health
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/health` | Server health check (used by preflight) |
+| GET | `/api/health` | Server health check (used by preflight) |
 
 ### ESP32 Hardware
 | Method | Endpoint | Description |
@@ -187,7 +188,7 @@
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/stt/scribe-token` | ElevenLabs Scribe single-use token for client-side STT |
-| GET | `/api/gemini/token` | Gemini token (used by preflight check + backend coaching) |
+| GET | `/api/gemini/token` | Gemini ephemeral token (used by preflight to verify API key) |
 | WS | Socket.io | Real-time session data (transcript-input, coaching-update, coach-audio, target-vitals) |
 
 ### Auth & Users
@@ -211,13 +212,14 @@
 
 ## AI Services
 
-| Service | Purpose | Runs Where |
-|---------|---------|------------|
-| **Edge Impulse** | Person detection (male/female/none) | Backend (API call) |
-| **Presage SDK** | Emotion analysis from face | Backend (C++ native on Ubuntu) |
-| **ElevenLabs Scribe** | Real-time speech-to-text | Frontend (client-side SDK, token from backend) |
-| **ElevenLabs TTS** | Coaching text to speech | Backend (API call) |
-| **Gemini 2.5 Flash** | Real-time coaching from transcript | Backend (via coaching pipeline, triggered by WebSocket) |
+| Service | Package | Model | Purpose | Runs Where |
+|---------|---------|-------|---------|------------|
+| **Edge Impulse** | N/A | TBD | Person detection (male/female/none) | Backend (API call, pending) |
+| **Presage SDK** | C++ native | N/A | Vitals (HR, breathing, HRV, blink/talk) | Backend (C++ on Ubuntu) |
+| **ElevenLabs Scribe** | `@elevenlabs/react` | `scribe_v2_realtime` | Real-time speech-to-text | Frontend (client-side, token from backend) |
+| **ElevenLabs TTS** | axios (REST API) | `eleven_flash_v2_5` | Coaching text to speech | Backend (REST API call) |
+| **Gemini Coaching** | `@google/generative-ai` | `gemini-2.0-flash` | Real-time coaching chat sessions | Backend (server-side, via Socket.io pipeline) |
+| **Gemini Tokens** | `@google/genai` | `gemini-2.5-flash` | Preflight token generation | Backend (REST endpoint) |
 
 ---
 
@@ -249,7 +251,7 @@
 - [x] Onboarding wizard
 - [x] Marketing landing page
 
-### Phase 2: Hardware + Audio Integration (CURRENT)
+### Phase 2: Hardware + Audio Integration (CORE COMPLETE)
 - [x] Frame ingestion endpoint (`POST /api/frame`)
 - [x] Configurable camera source (webcam or ESP32-CAM)
 - [x] Webcam frame capture (2 FPS, JPEG)
@@ -257,25 +259,29 @@
 - [x] Presage C++ SDK integration (HR, breathing, HRV)
 - [x] Target vitals panel in live session UI
 - [x] Browser audio capture (mic permissions via ElevenLabs Scribe SDK)
-- [x] ElevenLabs STT integration (client-side Scribe + backend token)
-- [x] Backend coaching pipeline (transcript -> Gemini -> coach-audio TTS)
-- [x] Real preflight checks (camera, mic, speaker, backend, STT, AI)
+- [x] ElevenLabs STT integration (client-side Scribe v2 realtime + backend token)
+- [x] Backend coaching pipeline (transcript → Gemini 2.0 Flash → coaching-update + coach-audio TTS)
+- [x] Real preflight checks (camera, mic, speaker, backend, STT, Gemini)
 - [ ] ESP32-CAM streaming MJPEG to backend (hardware pending)
 - [ ] Edge Impulse person detection on backend
 
-### Phase 3: AI Coaching Loop
-- [x] Backend coaching pipeline (transcript-input -> Gemini -> coaching-update + coach-audio)
-- [ ] Full coaching context (person detection, emotion, coach personality)
-- [ ] Approach mode (person detected, far away)
-- [ ] Conversation mode (close, STT active)
-- [ ] Coach personality system (prompt variations)
+### Phase 3: AI Coaching Loop (CORE COMPLETE)
+- [x] Backend coaching pipeline (transcript-input → Gemini → coaching-update + coach-audio)
+- [x] Gemini chat sessions with system prompt per coach personality
+- [x] Mode-aware coaching context (IDLE/APPROACH/CONVERSATION + emotion + distance)
+- [x] ElevenLabs TTS with per-coach voice IDs (eleven_flash_v2_5)
+- [x] Coaching error surfacing to frontend
+- [x] Transcript persistence to MongoDB (user, target, coach entries)
+- [x] Conversation mode (STT active, coaching active)
+- [ ] Full coaching context (person detection, emotion)
+- [ ] Approach mode (triggered by person detection + distance sensors)
 - [ ] Comfort check + slap escalation logic
-- [ ] Command queue (buzz/slap -> ESP32)
+- [ ] Command queue (buzz/slap → ESP32)
 
 ### Phase 4: Sessions + Reports
 - [x] Session lifecycle (start/end API)
 - [x] Sessions frontend connected to backend API
-- [ ] Transcript storage in MongoDB
+- [x] Transcript storage in MongoDB (auto-persisted via coaching pipeline)
 - [ ] Emotion timeline tracking
 - [ ] Post-session Gemini report generation
 - [ ] Session detail view with report
@@ -293,7 +299,7 @@
 
 1. **ESP32-CAM is dumb**: It only streams video. All intelligence is on the backend.
 2. **Browser is the audio device**: No ESP32 audio. User's phone/laptop with Bluetooth earbuds handles mic input and coaching audio output.
-3. **STT and Gemini run client-side**: ElevenLabs Scribe and Gemini Live use client-side SDKs with backend-issued tokens. This avoids streaming raw audio through the server and reduces latency.
+3. **STT runs client-side, Gemini runs server-side**: ElevenLabs Scribe uses a client-side SDK with a backend-issued token for real-time STT. Gemini coaching runs entirely server-side via `@google/generative-ai` chat sessions — the frontend sends transcripts to the backend via Socket.io, and the backend calls Gemini and broadcasts coaching text + TTS audio back. A dormant `geminiService.ts` hook exists in the frontend for a future direct Gemini live audio feature but is not currently used.
 4. **Presage needs Ubuntu**: C++ SDK won't run on macOS easily. Vultr Ubuntu VPS is the target.
 5. **Edge Impulse is server-side**: No TinyML on ESP32-CAM. Cloud API keeps firmware simple.
 6. **Two connections to ESP32**: Backend pulls video frames; backend pushes commands (buzz/slap).
