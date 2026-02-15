@@ -1,6 +1,67 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AppShell, FloatingActionButton } from '../components/layout'
 
+interface SessionItem {
+  _id: string
+  status: 'active' | 'ended' | 'cancelled'
+  mode: string
+  started_at: string
+  ended_at?: string
+  duration_seconds?: number
+  coach_id?: {
+    name: string
+    avatar_emoji: string
+  }
+  analytics?: {
+    total_tips: number
+    approach_count: number
+    conversation_count: number
+  }
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`
+  const mins = Math.floor(seconds / 60)
+  const secs = seconds % 60
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
+}
+
+function formatTimeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
+}
+
 export function SessionsPage() {
+  const [sessions, setSessions] = useState<SessionItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchSessions() {
+      try {
+        const response = await fetch('/api/sessions', {
+          credentials: 'include',
+        })
+        if (!response.ok) throw new Error('Failed to fetch sessions')
+        const data = await response.json()
+        setSessions(data)
+      } catch (err) {
+        console.error('Failed to fetch sessions:', err)
+        setError('Failed to load sessions')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSessions()
+  }, [])
+
   return (
     <AppShell>
       <div className="pt-6">
@@ -11,35 +72,69 @@ export function SessionsPage() {
           Review past coaching sessions
         </p>
 
-        {/* Empty state */}
-        <div className="card text-center py-12">
-          <div className="text-5xl mb-4">💝</div>
-          <h3 className="font-semibold text-gray-900 mb-2">No sessions yet</h3>
-          <p className="text-gray-500 text-sm mb-6">
-            Start your first coaching session to see your history here
-          </p>
-          <button className="btn-primary mx-auto">
-            Start First Session
-          </button>
-        </div>
-
-        {/* Session list placeholder - will show when there are sessions
-        <div className="space-y-3">
-          <div className="card flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-cupid-100 flex items-center justify-center">
-              💘
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate">Coffee Shop Approach</p>
-              <p className="text-sm text-gray-500">2 hours ago • 5 min</p>
-            </div>
-            <div className="text-right">
-              <div className="text-sm font-medium text-green-600">8/10</div>
-              <div className="text-xs text-gray-400">Score</div>
-            </div>
+        {loading && (
+          <div className="flex justify-center py-12">
+            <svg className="animate-spin h-8 w-8 text-cupid-500" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
           </div>
-        </div>
-        */}
+        )}
+
+        {error && (
+          <div className="card text-center py-12">
+            <p className="text-red-500 text-sm">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && sessions.length === 0 && (
+          <div className="card text-center py-12">
+            <div className="text-5xl mb-4">💝</div>
+            <h3 className="font-semibold text-gray-900 mb-2">No sessions yet</h3>
+            <p className="text-gray-500 text-sm mb-6">
+              Start your first coaching session to see your history here
+            </p>
+            <Link to="/session/new" className="btn-primary mx-auto">
+              Start First Session
+            </Link>
+          </div>
+        )}
+
+        {!loading && !error && sessions.length > 0 && (
+          <div className="space-y-3">
+            {sessions.map((session) => (
+              <Link
+                key={session._id}
+                to={`/sessions/${session._id}`}
+                className="card flex items-center gap-3 hover:shadow-card-hover transition-shadow"
+              >
+                <div className="w-10 h-10 rounded-full bg-cupid-100 flex items-center justify-center text-lg">
+                  {session.coach_id?.avatar_emoji || '💘'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">
+                    {session.coach_id?.name || 'Coaching Session'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {formatTimeAgo(session.started_at)}
+                    {session.duration_seconds != null && ` · ${formatDuration(session.duration_seconds)}`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    session.status === 'ended'
+                      ? 'bg-green-100 text-green-700'
+                      : session.status === 'active'
+                        ? 'bg-cupid-100 text-cupid-700'
+                        : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    {session.status === 'ended' ? 'Completed' : session.status === 'active' ? 'Active' : 'Cancelled'}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <FloatingActionButton to="/session/new" />
