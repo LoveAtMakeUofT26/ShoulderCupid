@@ -77,7 +77,7 @@ export function DashboardPage() {
         </div>
 
         {/* Desktop: Stats bar at top */}
-        <div className="hidden md:grid md:grid-cols-4 gap-4 mb-8">
+        <div className="hidden md:grid md:grid-cols-3 gap-4 mb-8">
           <div className="card-stat">
             <p className="section-label mb-1">Sessions This Week</p>
             <p className="text-3xl font-bold text-[var(--color-text)] font-display">{stats.sessionsThisWeek}</p>
@@ -85,12 +85,6 @@ export function DashboardPage() {
           <div className="card-stat">
             <p className="section-label mb-1">Avg Score</p>
             <p className="text-3xl font-bold text-[var(--color-text)] font-display">{stats.avgScore ?? '--'}</p>
-          </div>
-          <div className="card-stat">
-            <p className="section-label mb-1">Free Sessions</p>
-            <p className="text-3xl font-bold text-[var(--color-primary-text)] font-display">
-              {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}/{user.free_sessions_limit || 3}
-            </p>
           </div>
           <div className="card-stat">
             <p className="section-label mb-1">Current Coach</p>
@@ -106,7 +100,7 @@ export function DashboardPage() {
             <h2 className="text-sm font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
               This Week
             </h2>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="card text-center py-4">
                 <p className="text-2xl font-bold text-[var(--color-text)]">{stats.sessionsThisWeek}</p>
                 <p className="text-xs text-[var(--color-text-tertiary)]">Sessions</p>
@@ -114,12 +108,6 @@ export function DashboardPage() {
               <div className="card text-center py-4">
                 <p className="text-2xl font-bold text-[var(--color-text)]">{stats.avgScore ?? '-'}</p>
                 <p className="text-xs text-[var(--color-text-tertiary)]">Avg Score</p>
-              </div>
-              <div className="card text-center py-4">
-                <p className="text-2xl font-bold text-[var(--color-text)]">
-                  {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}
-                </p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">Free Left</p>
               </div>
             </div>
           </section>

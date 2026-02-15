@@ -86,7 +86,6 @@ export function SideNav({ user }: SideNavProps) {
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>{displayName}</p>
-              <p className="text-[11px] truncate" style={{ color: 'var(--color-text-faint)' }}>{user.credits} credits</p>
             </div>
           </NavLink>
         </div>
