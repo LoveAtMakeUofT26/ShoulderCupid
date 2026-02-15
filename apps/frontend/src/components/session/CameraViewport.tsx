@@ -13,6 +13,7 @@ interface CameraViewportProps {
   distance: number
   webcamError: string | null
   minHeight?: string
+  onCameraSourceChange?: (source: CameraSource) => void
 }
 
 export function CameraViewport({
@@ -26,6 +27,7 @@ export function CameraViewport({
   distance,
   webcamError,
   minHeight = '200px',
+  onCameraSourceChange,
 }: CameraViewportProps) {
   return (
     <div
@@ -49,6 +51,31 @@ export function CameraViewport({
           {mode === 'IDLE' ? 'Scanning...' : mode}
         </span>
       </div>
+
+      {onCameraSourceChange && (
+        <div className="absolute top-3 right-3 flex rounded-lg overflow-hidden" style={{ backgroundColor: 'var(--color-overlay)' }}>
+          <button
+            onClick={() => onCameraSourceChange('webcam')}
+            className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+              cameraSource === 'webcam'
+                ? 'bg-cupid-500 text-white'
+                : 'text-white/70 hover:text-white'
+            }`}
+          >
+            Webcam
+          </button>
+          <button
+            onClick={() => onCameraSourceChange('esp32')}
+            className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+              cameraSource === 'esp32'
+                ? 'bg-cupid-500 text-white'
+                : 'text-white/70 hover:text-white'
+            }`}
+          >
+            ESP32
+          </button>
+        </div>
+      )}
 
       {distance > 0 && (
         <div className="absolute bottom-3 left-3 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--color-overlay)' }}>
