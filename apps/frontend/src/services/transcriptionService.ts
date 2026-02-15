@@ -22,7 +22,7 @@ export function useTranscriptionService() {
     onCommittedTranscript: (data) => {
       console.log("Committed:", data.text);
       const newEntry: TranscriptEntry = {
-        id: `elevenlabs-${Date.now()}`,
+        id: `elevenlabs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         timestamp: Date.now(),
         speaker: 'user',
         text: data.text,

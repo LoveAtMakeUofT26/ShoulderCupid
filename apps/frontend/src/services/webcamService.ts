@@ -41,7 +41,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
         body: JSON.stringify({
           session_id: sessionId,
           jpeg,
-          detection: { person: true, confidence: 0.9 },
+          detection: null,
           timestamp: Date.now(),
           source: 'webcam',
         }),
