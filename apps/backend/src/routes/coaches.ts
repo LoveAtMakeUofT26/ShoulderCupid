@@ -3,8 +3,15 @@ import { Coach } from '../models/Coach.js'
 import { createGeneratedCoach } from '../services/coachGenerationService.js'
 import { getGenerationBias } from '../services/preferenceService.js'
 import { generateSpeech } from '../services/ttsService.js'
+import { RateLimiter, TTLCache } from '../utils/resilience.js'
 
 export const coachesRouter = Router()
+
+// Max 1 coach generation request per 5 seconds per user
+const generateLimiter = new RateLimiter(5000, 1)
+
+// Cache voice previews: key = `${coachId}:${text}`, value = base64 audio (10min TTL, max 50)
+const voicePreviewCache = new TTLCache<string, string>(10 * 60 * 1000, 50)
 
 // Middleware to require authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -40,7 +47,12 @@ coachesRouter.get('/:id', async (req, res) => {
 // Generate a new AI coach
 coachesRouter.post('/generate', requireAuth, async (req, res) => {
   try {
-    const userId = (req.user as any)._id
+    const userId = (req.user as any)._id.toString()
+
+    if (!generateLimiter.allow(userId)) {
+      return res.status(429).json({ error: 'Please wait a few seconds before generating another coach' })
+    }
+
     const { useBias = true } = req.body
 
     // Get user preference bias if requested
@@ -70,8 +82,18 @@ coachesRouter.post('/:id/voice-preview', requireAuth, async (req, res) => {
     }
 
     const text = req.body.text || (coach.sample_phrases?.[0]) || `Hi, I'm ${coach.name}. Let me help you out.`
+    const cacheKey = `${req.params.id}:${text}`
+
+    // Return cached audio if available
+    const cached = voicePreviewCache.get(cacheKey)
+    if (cached) {
+      return res.json({ audio: cached, format: 'mp3' })
+    }
+
     const audioBuffer = await generateSpeech(text, coach.voice_id)
     const base64Audio = audioBuffer.toString('base64')
+
+    voicePreviewCache.set(cacheKey, base64Audio)
 
     res.json({ audio: base64Audio, format: 'mp3' })
   } catch (error) {

@@ -7,6 +7,7 @@ import dotenv from 'dotenv'
 import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
 import { buildCoachImagePrompt, buildPollinationsUrl, type AppearanceSpec } from '../config/imagePrompts.js'
+import { retryWithBackoff } from '../utils/resilience.js'
 
 dotenv.config()
 
@@ -91,7 +92,10 @@ Return JSON with this exact schema:
 
 Personality tags should be simple descriptive words like: hype, chill, direct, witty, tough-love, gentle, bold, empathetic, sarcastic, motivational, analytical, warm, fierce, playful, nerdy, sophisticated.`
 
-  const result = await model.generateContent(prompt)
+  const result = await retryWithBackoff(
+    () => model.generateContent(prompt),
+    { maxRetries: 2, baseDelayMs: 1500 }
+  )
   const text = result.response.text()
   const profile = JSON.parse(text) as CoachProfile
   profile.appearance.gender = profile.gender
@@ -111,10 +115,13 @@ async function generateCoachImage(
   const pollinationsUrl = buildPollinationsUrl(prompt, seed)
 
   // Download the image from Pollinations
-  const response = await axios.get(pollinationsUrl, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-  })
+  const response = await retryWithBackoff(
+    () => axios.get(pollinationsUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    }),
+    { maxRetries: 2, baseDelayMs: 2000 }
+  )
 
   // Save to public/coaches/ directory
   fs.mkdirSync(IMAGES_DIR, { recursive: true })

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI, type ChatSession } from '@google/generative-ai'
 import dotenv from 'dotenv'
+import { retryWithBackoff } from '../utils/resilience.js'
 
 dotenv.config()
 
@@ -59,7 +60,12 @@ export async function getCoachingResponse(
     prompt += ` | Distance: ${Math.round(context.distance)}cm`
   }
 
-  const result = await session.chat.sendMessage(prompt)
+  const result = await retryWithBackoff(
+    () => session.chat.sendMessage(prompt),
+    { maxRetries: 2, baseDelayMs: 1000, onRetry: (attempt, err) => {
+      console.warn(`Gemini retry ${attempt} for session ${sessionId}:`, err.message)
+    }}
+  )
   const response = result.response.text()
 
   console.log(`Coach ${session.coachName}: "${response}"`)
@@ -73,8 +79,11 @@ export function updateCoachingMode(sessionId: string, newMode: string): void {
   session.mode = newMode
 
   // Send a mode-change context message to Gemini so it adapts
-  session.chat.sendMessage(
-    `[SYSTEM] Mode changed to ${newMode}. Adjust your coaching style accordingly.`
+  retryWithBackoff(
+    () => session.chat.sendMessage(
+      `[SYSTEM] Mode changed to ${newMode}. Adjust your coaching style accordingly.`
+    ),
+    { maxRetries: 1, baseDelayMs: 500 }
   ).catch(err => console.error('Failed to update coaching mode:', err))
 
   console.log(`Coaching mode updated to ${newMode} for session ${sessionId}`)

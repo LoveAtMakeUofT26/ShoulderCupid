@@ -22,8 +22,13 @@ export function CoachDiscoveryPage() {
     try {
       const coach = await generateCoach()
       setNextCoach(coach)
-    } catch (err) {
-      console.error('Failed to preload next coach:', err)
+    } catch (err: any) {
+      if (err.message?.includes('wait') || err.message?.includes('Too many')) {
+        // Rate limited — auto-retry after delay
+        setTimeout(preloadNext, 5000)
+      } else {
+        console.error('Failed to preload next coach:', err)
+      }
     }
   }, [])
 

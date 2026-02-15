@@ -2,6 +2,7 @@ import { Server, Socket } from 'socket.io'
 import { Session } from '../models/Session.js'
 import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
 import { generateSpeech } from '../services/ttsService.js'
+import { ConcurrencyGuard } from '../utils/resilience.js'
 
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
@@ -9,6 +10,7 @@ interface SessionState {
   distance: number
   heartRate: number
   personDetected: boolean
+  voiceId?: string
 }
 
 // Distance threshold (in cm) - switch to CONVERSATION when closer than this
@@ -16,6 +18,9 @@ const CONVERSATION_THRESHOLD = 150
 
 // In-memory session states for real-time updates
 const sessionStates = new Map<string, SessionState>()
+
+// Per-session concurrency guards for the coaching pipeline
+const coachingGuards = new Map<string, ConcurrencyGuard>()
 
 export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
@@ -65,8 +70,13 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
       await initCoachingSession(sessionId, coach.system_prompt, session.mode, coach.name)
 
-      // If no hardware connected, default to CONVERSATION so coaching works without ESP32
+      // Cache voice_id and check hardware state
       const state = sessionStates.get(sessionId)
+      if (state) {
+        state.voiceId = coach.voice_id
+      }
+
+      // If no hardware connected, default to CONVERSATION so coaching works without ESP32
       if (state && state.mode === 'IDLE') {
         state.mode = 'CONVERSATION'
         broadcastToSession(io, sessionId, 'mode-change', { mode: 'CONVERSATION', prevMode: 'IDLE' })
@@ -93,51 +103,58 @@ export function setupClientHandler(socket: Socket, io: Server) {
     // Only process final transcripts with actual text
     if (!isFinal || !text.trim()) return
 
-    // Persist user/target transcript
+    // Persist user/target transcript immediately (not guarded)
     await addTranscriptEntry(io, sessionId, speaker, text)
 
     // Get current session state for context
     const state = sessionStates.get(sessionId)
     if (!state || state.mode === 'IDLE') return // No coaching in IDLE mode
 
-    try {
-      // Get coaching response from Gemini
-      const coachingText = await getCoachingResponse(sessionId, text, {
-        mode: state.mode,
-        emotion: state.targetEmotion,
-        distance: state.distance,
-      })
-
-      if (!coachingText.trim()) return
-
-      // Send coaching text immediately for UI display
-      sendCoachingUpdate(io, sessionId, coachingText)
-
-      // Persist coach transcript
-      await addTranscriptEntry(io, sessionId, 'coach', coachingText)
-
-      // Generate TTS audio (don't block text delivery)
-      const session = await Session.findById(sessionId).populate('coach_id')
-      const coach = session?.coach_id as unknown as { voice_id: string } | undefined
-
-      if (coach?.voice_id) {
-        try {
-          const audioBuffer = await generateSpeech(coachingText, coach.voice_id)
-          broadcastToSession(io, sessionId, 'coach-audio', {
-            audio: audioBuffer.toString('base64'),
-            format: 'mp3',
-            text: coachingText,
-          })
-        } catch (ttsErr) {
-          console.error('TTS failed (text still delivered):', ttsErr)
-        }
-      }
-    } catch (err) {
-      console.error('Coaching pipeline error:', err)
-      broadcastToSession(io, sessionId, 'coaching-error', {
-        error: err instanceof Error ? err.message : 'Coaching pipeline failed',
-      })
+    // Get or create concurrency guard for this session
+    if (!coachingGuards.has(sessionId)) {
+      coachingGuards.set(sessionId, new ConcurrencyGuard())
     }
+    const guard = coachingGuards.get(sessionId)!
+
+    // Only one Gemini call per session at a time; rapid transcripts coalesce to the latest
+    await guard.run(async () => {
+      try {
+        // Get coaching response from Gemini
+        const coachingText = await getCoachingResponse(sessionId, text, {
+          mode: state.mode,
+          emotion: state.targetEmotion,
+          distance: state.distance,
+        })
+
+        if (!coachingText.trim()) return
+
+        // Send coaching text immediately for UI display
+        sendCoachingUpdate(io, sessionId, coachingText)
+
+        // Persist coach transcript
+        await addTranscriptEntry(io, sessionId, 'coach', coachingText)
+
+        // Generate TTS audio using cached voiceId (no DB re-query)
+        const voiceId = state.voiceId
+        if (voiceId) {
+          try {
+            const audioBuffer = await generateSpeech(coachingText, voiceId)
+            broadcastToSession(io, sessionId, 'coach-audio', {
+              audio: audioBuffer.toString('base64'),
+              format: 'mp3',
+              text: coachingText,
+            })
+          } catch (ttsErr) {
+            console.error('TTS failed (text still delivered):', ttsErr)
+          }
+        }
+      } catch (err) {
+        console.error('Coaching pipeline error:', err)
+        broadcastToSession(io, sessionId, 'coaching-error', {
+          error: err instanceof Error ? err.message : 'Coaching pipeline failed',
+        })
+      }
+    })
   })
 
   // End session
@@ -146,6 +163,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
     console.log(`Client ${socket.id} ending session ${sessionId}`)
     socket.leave(`session-${sessionId}`)
     sessionStates.delete(sessionId)
+    coachingGuards.delete(sessionId)
     endCoachingSession(sessionId)
   })
 
