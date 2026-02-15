@@ -18,6 +18,8 @@ export interface User {
   email: string
   name: string | null
   picture: string | null
+  age?: number
+  pronouns?: string
   coach: Coach | null
   preferences: {
     target_gender: string

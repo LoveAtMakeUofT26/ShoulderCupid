@@ -101,20 +101,36 @@ userRouter.patch('/coach', requireAuth, async (req, res) => {
 })
 
 // Complete onboarding
-userRouter.post('/onboarding/complete', requireAuth, async (req, res) => {
+userRouter.patch('/onboarding', requireAuth, async (req, res) => {
   try {
-    const { preferences, coachId } = req.body
+    const { name, age, pronouns, preferences, coachId, quizResults } = req.body
 
     const updateData: any = {
       onboarding_completed: true,
     }
 
+    if (name) updateData.name = name
+    if (age) updateData.age = age
+    if (pronouns) updateData.pronouns = pronouns
     if (preferences) updateData.preferences = preferences
     if (coachId) updateData.coach_id = coachId
+    if (quizResults) updateData.quiz_results = quizResults
 
-    await User.findByIdAndUpdate((req.user as any)._id, updateData)
+    const user = await User.findByIdAndUpdate(
+      (req.user as any)._id,
+      updateData,
+      { new: true }
+    ).populate('coach_id').lean()
 
-    res.json({ success: true })
+    res.json({
+      success: true,
+      user: {
+        id: user?._id,
+        name: user?.name,
+        coach: user?.coach_id,
+        onboarding_completed: user?.onboarding_completed,
+      },
+    })
   } catch (error) {
     console.error('Error completing onboarding:', error)
     res.status(500).json({ error: 'Failed to complete onboarding' })

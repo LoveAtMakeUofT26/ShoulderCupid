@@ -5,6 +5,8 @@ import { CoachesPage } from './pages/CoachesPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LiveSessionPage } from './pages/LiveSessionPage'
+import { SessionReportPage } from './pages/SessionReportPage'
+import { OnboardingPage } from './pages/OnboardingPage'
 
 function App() {
   return (
@@ -19,7 +21,11 @@ function App() {
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
 
+        {/* Onboarding (full-screen, no nav) */}
+        <Route path="/onboarding" element={<OnboardingPage />} />
+
         {/* Full-screen routes (no bottom nav) */}
+        <Route path="/sessions/:id" element={<SessionReportPage />} />
         <Route path="/session/:sessionId" element={<LiveSessionPage />} />
 
         {/* Fallback */}

@@ -1,0 +1,120 @@
+import type { ProfileData } from '../../hooks/useOnboarding'
+
+interface ProfileStepProps {
+  data: ProfileData
+  onUpdate: (data: Partial<ProfileData>) => void
+  onNext: () => void
+  onBack: () => void
+}
+
+const PRONOUN_OPTIONS = ['he/him', 'she/her', 'they/them', 'other'] as const
+const INTEREST_OPTIONS = [
+  { value: 'men' as const, label: 'Men' },
+  { value: 'women' as const, label: 'Women' },
+  { value: 'everyone' as const, label: 'Everyone' },
+]
+
+export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps) {
+  return (
+    <div className="pt-8 animate-slide-up">
+      <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+        About You
+      </h2>
+      <p className="text-gray-500 mb-8">
+        Help us personalize your experience
+      </p>
+
+      <div className="space-y-6">
+        {/* Display Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Display Name
+          </label>
+          <input
+            type="text"
+            value={data.name}
+            onChange={(e) => onUpdate({ name: e.target.value })}
+            placeholder="What should we call you?"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* Age */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Age <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <input
+            type="number"
+            value={data.age}
+            onChange={(e) => onUpdate({ age: e.target.value })}
+            placeholder="Your age"
+            min="18"
+            max="99"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* Pronouns */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {PRONOUN_OPTIONS.map((pronoun) => (
+              <button
+                key={pronoun}
+                onClick={() => onUpdate({ pronouns: data.pronouns === pronoun ? '' : pronoun })}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                  data.pronouns === pronoun
+                    ? 'bg-cupid-500 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {pronoun}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Interested In */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            Interested In
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {INTEREST_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => onUpdate({ interestedIn: option.value })}
+                className={`py-3 rounded-xl text-sm font-medium transition-all ${
+                  data.interestedIn === option.value
+                    ? 'bg-cupid-500 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex gap-3 mt-10">
+        <button
+          onClick={onBack}
+          className="btn-ghost flex-1 py-3"
+        >
+          Back
+        </button>
+        <button
+          onClick={onNext}
+          className="btn-primary flex-1 py-3"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  )
+}

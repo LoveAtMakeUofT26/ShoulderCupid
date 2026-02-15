@@ -8,6 +8,11 @@ const userSchema = new mongoose.Schema({
   },
   name: String,
   picture: String, // Profile picture URL
+  age: Number,
+  pronouns: {
+    type: String,
+    enum: ['he/him', 'she/her', 'they/them', 'other'],
+  },
   oauth_provider: {
     type: String,
     required: true,
@@ -36,6 +41,16 @@ const userSchema = new mongoose.Schema({
       type: String,
       enum: ['aggressive', 'balanced', 'gentle'],
       default: 'balanced',
+    },
+  },
+  quiz_results: {
+    confidence_level: String,
+    biggest_challenge: String,
+    directness_preference: String,
+    goals: String,
+    recommended_coach_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
     },
   },
   onboarding_completed: {
