@@ -34,6 +34,8 @@ export function WarningAlert({ level, message }: WarningAlertProps) {
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={`${config.bg} ${config.border} border-2 rounded-2xl p-4 animate-pulse shadow-lg`}
     >
       <div className="flex items-start gap-3">

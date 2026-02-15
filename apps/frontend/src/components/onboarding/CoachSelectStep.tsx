@@ -1,16 +1,5 @@
 import { useEffect, useState } from 'react'
-
-interface Coach {
-  _id: string
-  name: string
-  tagline: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-  rating: number
-  session_count: number
-  sample_phrases: string[]
-}
+import type { Coach } from '../../services/auth'
 
 interface CoachSelectStepProps {
   selectedCoachId: string | null

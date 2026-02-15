@@ -40,20 +40,23 @@
   .btn-primary {
     @apply bg-cupid-500 text-white font-semibold rounded-2xl px-6 py-3.5
            hover:bg-cupid-600 active:scale-[0.98] transition-all duration-200
-           shadow-sm hover:shadow-md;
+           shadow-sm hover:shadow-md
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
 
   /* Secondary button */
   .btn-secondary {
     @apply bg-transparent border-2 border-cupid-500 text-cupid-500
            font-semibold rounded-2xl px-6 py-3
-           hover:bg-cupid-50 active:scale-[0.98] transition-all duration-200;
+           hover:bg-cupid-50 active:scale-[0.98] transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
 
   /* Ghost button */
   .btn-ghost {
     @apply bg-cupid-50 text-cupid-500 font-semibold rounded-2xl px-6 py-3.5
-           hover:bg-cupid-100 active:scale-[0.98] transition-all duration-200;
+           hover:bg-cupid-100 active:scale-[0.98] transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
 
   /* Card styles */
