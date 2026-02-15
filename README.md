@@ -96,9 +96,9 @@ cp apps/backend/.env.example apps/backend/.env
 # Edit with your API keys
 
 # Seed database
-cd apps/backend && npm run seed
+npm run --workspace=@shoulder-cupid/backend seed
 
-# Run development
+# Run development (starts both frontend and backend)
 npm run dev
 ```
 

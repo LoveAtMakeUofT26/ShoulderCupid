@@ -16,6 +16,10 @@ export function DashboardPage() {
           navigate('/')
           return
         }
+        if (!currentUser.onboarding_completed) {
+          navigate('/onboarding')
+          return
+        }
         setUser(currentUser)
       } catch (error) {
         console.error('Failed to fetch user:', error)
