@@ -35,8 +35,8 @@ export function HowItWorksSection() {
             <FadeInView key={step.number} delay={i * 0.15}>
               <div className="marble-card p-8 text-center h-full">
                 {/* Step number */}
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 dark:from-gold-800/40 dark:to-gold-700/40 mb-6">
-                  <span className="font-display font-bold text-gold-600 dark:text-gold-400 text-sm">{step.number}</span>
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 mb-6">
+                  <span className="font-display font-bold text-gold-600 text-sm">{step.number}</span>
                 </div>
 
                 {/* Icon */}

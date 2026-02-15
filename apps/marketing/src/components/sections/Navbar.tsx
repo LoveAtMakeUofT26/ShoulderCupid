@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ThemeToggle } from '../ui/ThemeToggle'
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
@@ -49,7 +48,6 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
-          <ThemeToggle />
           <a
             href={APP_URL}
             className="text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
@@ -96,10 +94,6 @@ export function Navbar() {
               {link.label}
             </a>
           ))}
-          <div className="flex items-center justify-between py-2">
-            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Theme</span>
-            <ThemeToggle />
-          </div>
           <a
             href={APP_URL}
             className="block text-center text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"

@@ -40,37 +40,6 @@
   --color-overlay: rgba(0, 0, 0, 0.5);
 }
 
-/* ============================================
-   Theme Tokens — Dark
-   ============================================ */
-.dark {
-  --color-bg: #0F0F11;
-  --color-surface: #1A1A1F;
-  --color-surface-elevated: #222228;
-  --color-surface-hover: #2A2A32;
-
-  --color-text: #F5F0EC;
-  --color-text-secondary: #B0AAA4;
-  --color-text-tertiary: #8A8480;
-  --color-text-faint: #5A5550;
-
-  --color-border: #2A2A32;
-  --color-border-strong: #3A3A44;
-
-  --color-primary: #F07A8C;
-  --color-primary-hover: #E8566C;
-  --color-primary-surface: rgba(232, 86, 108, 0.15);
-  --color-primary-text: #F07A8C;
-
-  --color-accent: #C9A962;
-  --color-accent-surface: rgba(201, 169, 98, 0.15);
-
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
-
-  --color-overlay: rgba(0, 0, 0, 0.7);
-}
-
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -90,10 +59,6 @@
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
-  html.dark body {
-    background-image: none;
-  }
-
   h1, h2, h3, h4 {
     font-family: 'Playfair Display', serif;
   }
@@ -109,14 +74,6 @@
 
   .gold-foil-text {
     background: linear-gradient(135deg, #9A7A3D 0%, #C9A962 40%, #7C602E 100%);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .dark .gold-foil-text {
-    background: linear-gradient(135deg, #C9A962 0%, #E0CDA0 40%, #C9A962 100%);
     background-size: 200% auto;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;

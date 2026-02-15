@@ -99,7 +99,7 @@ export function PreflightPage({
                 <p className="font-semibold text-[var(--color-text)]">{coach.name}</p>
               </div>
               {allPassed && (
-                <span className="ml-auto text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400 px-2 py-1 rounded-lg">
+                <span className="ml-auto text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg">
                   Ready
                 </span>
               )}
@@ -225,8 +225,8 @@ export function PreflightPage({
       <div className="fixed bottom-0 left-0 right-0 border-t p-4 pb-safe" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
           {startError && (
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-              <p className="text-sm text-red-600 dark:text-red-400 text-center">{startError}</p>
+            <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-sm text-red-600 text-center">{startError}</p>
             </div>
           )}
           {anyFailed && !anyChecking && (
@@ -277,9 +277,9 @@ function CheckRow({
     <div
       className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
         state === 'passed'
-          ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
+          ? 'border-green-200 bg-green-50'
           : state === 'failed'
-          ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+          ? 'border-red-200 bg-red-50'
           : 'border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)]'
       }`}
     >

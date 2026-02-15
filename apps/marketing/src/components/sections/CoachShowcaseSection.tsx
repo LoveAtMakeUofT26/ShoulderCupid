@@ -9,7 +9,7 @@ const COACHES = [
     tagline: 'The Suave Strategist',
     quote: "She's leaning in, king. Time to ask about her weekend.",
     gradient: 'from-cupid-400 to-cupid-300',
-    borderColor: 'border-cupid-200/50 dark:border-cupid-700/30',
+    borderColor: 'border-cupid-200/50',
   },
   {
     name: 'Wingman Chad',
@@ -17,7 +17,7 @@ const COACHES = [
     tagline: 'Your Hype Man',
     quote: "BRO she's DEFINITELY feeling the vibe! Let's GO!",
     gradient: 'from-indigo-400 to-purple-400',
-    borderColor: 'border-indigo-200/50 dark:border-indigo-700/30',
+    borderColor: 'border-indigo-200/50',
   },
   {
     name: 'Gentle Guide',
@@ -25,7 +25,7 @@ const COACHES = [
     tagline: 'The Calm Companion',
     quote: "Take a breath. You're doing wonderfully. Just be yourself.",
     gradient: 'from-gold-300 to-gold-200',
-    borderColor: 'border-gold-200/50 dark:border-gold-700/30',
+    borderColor: 'border-gold-200/50',
   },
 ]
 
@@ -34,7 +34,7 @@ export function CoachShowcaseSection() {
     <section id="coaches" className="py-24 md:py-32 relative">
       {/* Background accent */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 dark:bg-cupid-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 rounded-full blur-3xl" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">
@@ -66,7 +66,7 @@ export function CoachShowcaseSection() {
 
                 {/* Quote */}
                 <div className="relative">
-                  <div className="absolute -top-2 left-2 text-3xl text-gold-200/60 dark:text-gold-600/40 font-display">&ldquo;</div>
+                  <div className="absolute -top-2 left-2 text-3xl text-gold-200/60 font-display">&ldquo;</div>
                   <blockquote className="text-sm italic leading-relaxed pl-4" style={{ color: 'var(--color-text-secondary)' }}>
                     {coach.quote}
                   </blockquote>

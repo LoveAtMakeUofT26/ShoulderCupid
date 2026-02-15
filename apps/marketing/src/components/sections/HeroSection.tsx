@@ -8,8 +8,8 @@ export function HeroSection() {
     <section id="home" className="relative min-h-screen flex items-center overflow-hidden">
       {/* Background decorative elements */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cupid-200/20 rounded-full blur-3xl dark:bg-cupid-500/10" />
-        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gold-200/15 rounded-full blur-3xl dark:bg-gold-400/10" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cupid-200/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-gold-200/15 rounded-full blur-3xl" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 pt-24 pb-16 w-full">
@@ -75,7 +75,7 @@ export function HeroSection() {
             <div className="relative">
               {/* Glow behind statue */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-72 h-72 md:w-96 md:h-96 rounded-full bg-gradient-to-br from-cupid-200/30 via-gold-100/20 to-cupid-100/30 blur-2xl dark:from-cupid-500/15 dark:via-gold-400/10 dark:to-cupid-400/15" />
+                <div className="w-72 h-72 md:w-96 md:h-96 rounded-full bg-gradient-to-br from-cupid-200/30 via-gold-100/20 to-cupid-100/30 blur-2xl" />
               </div>
 
               {/* Marble pedestal + statue */}
@@ -91,7 +91,7 @@ export function HeroSection() {
                 >
                   <span className="text-8xl md:text-9xl mb-4">💘</span>
                   <div className="w-16 h-px bg-gradient-to-r from-transparent via-gold-400 to-transparent mb-3" />
-                  <p className="font-display text-sm text-gold-600 dark:text-gold-400 italic">Amor Vincit Omnia</p>
+                  <p className="font-display text-sm text-gold-600 italic">Amor Vincit Omnia</p>
                 </div>
 
                 {/* Decorative column accents */}

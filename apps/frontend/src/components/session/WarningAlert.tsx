@@ -8,19 +8,19 @@ interface WarningAlertProps {
 const WARNING_CONFIG: Record<WarningLevel, { bg: string; border: string; icon: string; label: string } | null> = {
   0: null,
   1: {
-    bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+    bg: 'bg-yellow-50',
     border: 'border-yellow-400',
     icon: '📳',
     label: 'Gentle Reminder',
   },
   2: {
-    bg: 'bg-orange-50 dark:bg-orange-900/20',
+    bg: 'bg-orange-50',
     border: 'border-orange-500',
     icon: '👋',
     label: 'Comfort Check',
   },
   3: {
-    bg: 'bg-red-50 dark:bg-red-900/20',
+    bg: 'bg-red-50',
     border: 'border-red-500',
     icon: '🛑',
     label: 'Time to Step Back',

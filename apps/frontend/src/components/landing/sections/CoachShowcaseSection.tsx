@@ -33,7 +33,7 @@ export function CoachShowcaseSection() {
   return (
     <section id="coaches" className="py-24 md:py-32 relative">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 dark:bg-cupid-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 rounded-full blur-3xl" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">

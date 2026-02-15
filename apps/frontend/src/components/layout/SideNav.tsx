@@ -1,36 +1,16 @@
 import { NavLink } from 'react-router-dom'
 import { navItems } from './navItems'
-import { useThemeStore } from '../../hooks'
 import type { User } from '../../services/auth'
 
 const SIDEBAR_WIDTH = 260
 
 export { SIDEBAR_WIDTH }
 
-const THEME_ICONS = [
-  { value: 'light' as const, label: 'Light', icon: (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-    </svg>
-  )},
-  { value: 'dark' as const, icon: (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-    </svg>
-  ), label: 'Dark' },
-  { value: 'system' as const, icon: (
-    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
-  ), label: 'System' },
-] as const
-
 interface SideNavProps {
   user?: User | null
 }
 
 export function SideNav({ user }: SideNavProps) {
-  const { theme, setTheme } = useThemeStore()
   const displayName = user?.name || user?.email?.split('@')[0] || 'Friend'
 
   return (
@@ -111,26 +91,6 @@ export function SideNav({ user }: SideNavProps) {
           </NavLink>
         </div>
       )}
-
-      {/* Theme Toggle */}
-      <div className="px-4 pb-2">
-        <div className="flex rounded-xl overflow-hidden border border-[var(--color-border-strong)]">
-          {THEME_ICONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => setTheme(opt.value)}
-              title={opt.label}
-              className={`flex-1 flex items-center justify-center py-2 transition-all duration-200 ${
-                theme === opt.value
-                  ? 'bg-[var(--color-primary)] text-white'
-                  : 'bg-[var(--color-surface)] text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-hover)]'
-              }`}
-            >
-              {opt.icon}
-            </button>
-          ))}
-        </div>
-      </div>
 
       {/* Start Session CTA */}
       <div className="p-4" style={{ borderTop: '1px solid var(--color-border)' }}>
