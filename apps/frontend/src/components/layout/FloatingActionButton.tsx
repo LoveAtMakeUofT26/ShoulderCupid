@@ -28,19 +28,19 @@ export function FloatingActionButton({ to, onClick, label = 'Start Session' }: F
     shadow-fab
     hover:bg-cupid-600 active:scale-95
     transition-all duration-200
-    animate-pulse-slow
+    focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2
   `
 
   if (to) {
     return (
-      <Link to={to} className={className} title={label}>
+      <Link to={to} className={className} title={label} aria-label={label}>
         {buttonContent}
       </Link>
     )
   }
 
   return (
-    <button onClick={onClick} className={className} title={label}>
+    <button onClick={onClick} className={className} title={label} aria-label={label}>
       {buttonContent}
     </button>
   )

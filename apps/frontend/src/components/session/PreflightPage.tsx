@@ -3,14 +3,9 @@ import { Link } from 'react-router-dom'
 import { usePreflightChecks, type CheckId, type CheckState } from '../../hooks/usePreflightChecks'
 import { CameraSourceSelector, type CameraSource } from './CameraSourceSelector'
 import { AudioSettings } from './AudioSettings'
-
-interface Coach {
-  _id: string
-  name: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-}
+import { Spinner } from '../ui/Spinner'
+import { useIsDesktop } from '../../hooks/useIsDesktop'
+import type { Coach } from '../../services/auth'
 
 interface PreflightPageProps {
   coach: Coach | null
@@ -47,6 +42,7 @@ export function PreflightPage({
     micAnalyser,
   } = usePreflightChecks({ cameraSource })
 
+  const isDesktop = useIsDesktop()
   const videoRef = useRef<HTMLVideoElement>(null)
 
   // Auto-run checks on mount
@@ -73,7 +69,7 @@ export function PreflightPage({
     <div className="min-h-screen bg-marble-50 flex flex-col">
       {/* Header */}
       <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-        <Link to="/dashboard" onClick={e => { e.preventDefault(); onBack() }} className="text-gray-500">
+        <Link to="/dashboard" onClick={e => { e.preventDefault(); onBack() }} className="text-gray-500" aria-label="Go back">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
@@ -84,10 +80,10 @@ export function PreflightPage({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-[428px] mx-auto p-4 space-y-4 pb-32">
+        <div className={`mx-auto p-4 pb-32 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
           {/* Coach Card */}
           {coach && (
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-cupid-50 to-white rounded-2xl shadow-card">
+            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-cupid-50 to-white rounded-2xl shadow-card mb-4">
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-md flex-shrink-0"
                 style={{
@@ -108,98 +104,105 @@ export function PreflightPage({
             </div>
           )}
 
-          {/* Camera Section */}
-          <div className="card">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span>📷</span> Camera Source
-              <CheckIndicator state={checks.camera.state} />
-            </h3>
-            <CameraSourceSelector
-              value={cameraSource}
-              onChange={onCameraSourceChange}
-            />
-            {/* Camera Preview */}
-            <div className="mt-3 aspect-video rounded-xl bg-gray-100 overflow-hidden relative">
-              {cameraSource === 'webcam' && checks.camera.state === 'passed' ? (
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  className="w-full h-full object-cover"
-                  style={{ transform: 'scaleX(-1)' }}
+          <div className={isDesktop ? 'grid grid-cols-2 gap-4' : 'space-y-4'}>
+            {/* Left column: Camera + Audio */}
+            <div className="space-y-4">
+              {/* Camera Section */}
+              <div className="card">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span>📷</span> Camera Source
+                  <CheckIndicator state={checks.camera.state} />
+                </h3>
+                <CameraSourceSelector
+                  value={cameraSource}
+                  onChange={onCameraSourceChange}
                 />
-              ) : cameraSource === 'webcam' && checks.camera.state === 'checking' ? (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">
-                  <Spinner /> <span className="ml-2 text-sm">Accessing camera...</span>
+                {/* Camera Preview */}
+                <div className="mt-3 aspect-video rounded-xl bg-gray-100 overflow-hidden relative">
+                  {cameraSource === 'webcam' && checks.camera.state === 'passed' ? (
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'scaleX(-1)' }}
+                    />
+                  ) : cameraSource === 'webcam' && checks.camera.state === 'checking' ? (
+                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <Spinner /> <span className="ml-2 text-sm">Accessing camera...</span>
+                    </div>
+                  ) : cameraSource === 'esp32' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                      <span className="text-3xl mb-1">📷</span>
+                      <span className="text-xs">ESP32-CAM feed</span>
+                    </div>
+                  ) : checks.camera.state === 'failed' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-red-400">
+                      <span className="text-3xl mb-1">📷</span>
+                      <span className="text-xs">{checks.camera.error}</span>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <span className="text-3xl">📷</span>
+                    </div>
+                  )}
                 </div>
-              ) : cameraSource === 'esp32' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                  <span className="text-3xl mb-1">📷</span>
-                  <span className="text-xs">ESP32-CAM feed</span>
-                </div>
-              ) : checks.camera.state === 'failed' ? (
-                <div className="w-full h-full flex flex-col items-center justify-center text-red-400">
-                  <span className="text-3xl mb-1">📷</span>
-                  <span className="text-xs">{checks.camera.error}</span>
-                </div>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-300">
-                  <span className="text-3xl">📷</span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Audio Section */}
-          <div className="card">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span>🎧</span> Audio Devices
-            </h3>
-            <AudioSettings />
-
-            {/* Mic Level Meter */}
-            {checks.microphone.state === 'passed' && micAnalyser && (
-              <div className="mt-3">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-gray-500">Mic Level</span>
-                  <CheckIndicator state="passed" />
-                </div>
-                <MicMeter analyser={micAnalyser} />
               </div>
-            )}
-            {checks.microphone.state === 'failed' && (
-              <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
-                <span>✗</span> {checks.microphone.error}
+
+              {/* Audio Section */}
+              <div className="card">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span>🎧</span> Audio Devices
+                </h3>
+                <AudioSettings />
+
+                {/* Mic Level Meter */}
+                {checks.microphone.state === 'passed' && micAnalyser && (
+                  <div className="mt-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs text-gray-500">Mic Level</span>
+                      <CheckIndicator state="passed" />
+                    </div>
+                    <MicMeter analyser={micAnalyser} />
+                  </div>
+                )}
+                {checks.microphone.state === 'failed' && (
+                  <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
+                    <span>✗</span> {checks.microphone.error}
+                  </div>
+                )}
+
+                {/* Speaker Check */}
+                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                  <span>🔊 Speaker</span>
+                  <CheckIndicator state={checks.speaker.state} />
+                  {checks.speaker.state === 'failed' && (
+                    <span className="text-red-500">{checks.speaker.error}</span>
+                  )}
+                </div>
               </div>
-            )}
-
-            {/* Speaker Check */}
-            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-              <span>🔊 Speaker</span>
-              <CheckIndicator state={checks.speaker.state} />
-              {checks.speaker.state === 'failed' && (
-                <span className="text-red-500">{checks.speaker.error}</span>
-              )}
             </div>
-          </div>
 
-          {/* Service Checks */}
-          <div className="card">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-              <span>🔗</span> Service Connections
-            </h3>
-            <div className="space-y-2">
-              {(['backend', 'stt', 'gemini'] as CheckId[]).map(id => (
-                <CheckRow
-                  key={id}
-                  icon={CHECK_META[id].icon}
-                  label={CHECK_META[id].label}
-                  state={checks[id].state}
-                  error={checks[id].error}
-                  onRetry={() => retryCheck(id)}
-                />
-              ))}
+            {/* Right column (on desktop): Service Checks */}
+            <div className="space-y-4">
+              <div className="card">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <span>🔗</span> Service Connections
+                </h3>
+                <div className="space-y-2">
+                  {(['backend', 'stt', 'gemini'] as CheckId[]).map(id => (
+                    <CheckRow
+                      key={id}
+                      icon={CHECK_META[id].icon}
+                      label={CHECK_META[id].label}
+                      state={checks[id].state}
+                      error={checks[id].error}
+                      onRetry={() => retryCheck(id)}
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -207,7 +210,7 @@ export function PreflightPage({
 
       {/* Bottom Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-safe">
-        <div className="max-w-[428px] mx-auto space-y-2">
+        <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
           {anyFailed && !anyChecking && (
             <button
               onClick={retryFailed}
@@ -219,7 +222,7 @@ export function PreflightPage({
           <button
             onClick={onStart}
             disabled={!allPassed}
-            className="btn-primary w-full disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`btn-primary disabled:opacity-40 disabled:cursor-not-allowed ${isDesktop ? 'px-16' : 'w-full'}`}
           >
             {anyChecking ? 'Checking...' : allPassed ? 'Start Session' : 'Complete Checks First'}
           </button>
@@ -238,15 +241,6 @@ function CheckIndicator({ state }: { state: CheckState }) {
   return <span className="text-red-500 text-xs font-bold">✗</span>
 }
 
-function Spinner({ size = 'md' }: { size?: 'sm' | 'md' }) {
-  const cls = size === 'sm' ? 'w-3 h-3' : 'w-5 h-5'
-  return (
-    <svg className={`${cls} animate-spin text-cupid-500 inline-block`} viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-    </svg>
-  )
-}
 
 function CheckRow({
   icon,

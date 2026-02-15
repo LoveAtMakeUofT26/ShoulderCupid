@@ -4,6 +4,7 @@ export interface Coach {
   _id: string
   name: string
   tagline: string
+  description: string
   personality: string
   avatar_emoji: string
   color_from: string

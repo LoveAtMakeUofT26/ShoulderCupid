@@ -12,9 +12,12 @@ import {
   EndSessionModal,
   TargetVitalsPanel,
   PreflightPage,
+  CameraViewport,
+  TranscriptionStatus,
 } from '../components/session'
-import { CameraSourceSelector, CameraFeed, type CameraSource } from '../components/session/CameraSourceSelector'
+import { CameraSourceSelector, type CameraSource } from '../components/session/CameraSourceSelector'
 import { useIsDesktop } from '../hooks/useIsDesktop'
+import { Spinner } from '../components/ui/Spinner'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -205,12 +208,7 @@ export function LiveSessionPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-marble-50 flex items-center justify-center">
-        <div className="text-cupid-500">
-          <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        </div>
+        <Spinner size="lg" />
       </div>
     )
   }
@@ -258,41 +256,18 @@ export function LiveSessionPage() {
               onChange={handleCameraSourceChange}
               esp32Connected={isConnected}
             />
-
-            <div className="flex-1 min-h-[300px] rounded-2xl bg-gray-800 relative overflow-hidden">
-              <CameraFeed
-                source={cameraSource}
-                videoRef={webcam.videoRef}
-                esp32StreamUrl={isConnected ? '/api/stream' : undefined}
-                isActive={webcam.isActive}
-                frameCount={webcam.frameCount}
-              />
-              <canvas ref={webcam.canvasRef} className="hidden" />
-
-              <div className="absolute top-3 left-3">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                  mode === 'CONVERSATION' ? 'bg-cupid-500' :
-                  mode === 'APPROACH' ? 'bg-gold-500' : 'bg-gray-600'
-                }`}>
-                  {mode === 'IDLE' ? 'Scanning...' : mode}
-                </span>
-              </div>
-
-              {distance > 0 && (
-                <div className="absolute bottom-3 left-3 bg-black/60 rounded-lg px-3 py-1">
-                  <span className="text-white text-sm font-medium">
-                    {Math.round(distance)}cm away
-                  </span>
-                </div>
-              )}
-
-              {webcam.error && (
-                <div className="absolute bottom-3 right-3 bg-red-500/80 rounded-lg px-3 py-1">
-                  <span className="text-white text-xs">{webcam.error}</span>
-                </div>
-              )}
-            </div>
-
+            <CameraViewport
+              cameraSource={cameraSource}
+              videoRef={webcam.videoRef}
+              canvasRef={webcam.canvasRef}
+              isConnected={isConnected}
+              isActive={webcam.isActive}
+              frameCount={webcam.frameCount}
+              mode={mode}
+              distance={distance}
+              webcamError={webcam.error}
+              minHeight="300px"
+            />
             <TargetVitalsPanel vitals={targetVitals} />
           </div>
 
@@ -306,70 +281,35 @@ export function LiveSessionPage() {
               distance={distance}
               heartRate={heartRate}
             />
-
             <div className="flex-1 min-h-[200px]">
               <TranscriptStream entries={allTranscripts} />
             </div>
-
-            <div className="flex items-center gap-2 px-1">
-              <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-                transcriptionConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
-              }`} />
-              {partialTranscript ? (
-                <p className="text-xs text-gray-400 italic truncate">"{partialTranscript}"</p>
-              ) : (
-                <p className="text-xs text-gray-500">
-                  {transcriptionConnected ? 'Listening...' : 'Mic off'}
-                </p>
-              )}
-            </div>
+            <TranscriptionStatus
+              isConnected={transcriptionConnected}
+              partialTranscript={partialTranscript}
+            />
           </div>
         </div>
       ) : (
-        /* Mobile: vertical stack (unchanged) */
+        /* Mobile: vertical stack */
         <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
           <CameraSourceSelector
             value={cameraSource}
             onChange={handleCameraSourceChange}
             esp32Connected={isConnected}
           />
-
-          <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 relative overflow-hidden">
-            <CameraFeed
-              source={cameraSource}
-              videoRef={webcam.videoRef}
-              esp32StreamUrl={isConnected ? '/api/stream' : undefined}
-              isActive={webcam.isActive}
-              frameCount={webcam.frameCount}
-            />
-            <canvas ref={webcam.canvasRef} className="hidden" />
-
-            <div className="absolute top-3 left-3">
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-                mode === 'CONVERSATION' ? 'bg-cupid-500' :
-                mode === 'APPROACH' ? 'bg-gold-500' : 'bg-gray-600'
-              }`}>
-                {mode === 'IDLE' ? 'Scanning...' : mode}
-              </span>
-            </div>
-
-            {distance > 0 && (
-              <div className="absolute bottom-3 left-3 bg-black/60 rounded-lg px-3 py-1">
-                <span className="text-white text-sm font-medium">
-                  {Math.round(distance)}cm away
-                </span>
-              </div>
-            )}
-
-            {webcam.error && (
-              <div className="absolute bottom-3 right-3 bg-red-500/80 rounded-lg px-3 py-1">
-                <span className="text-white text-xs">{webcam.error}</span>
-              </div>
-            )}
-          </div>
-
+          <CameraViewport
+            cameraSource={cameraSource}
+            videoRef={webcam.videoRef}
+            canvasRef={webcam.canvasRef}
+            isConnected={isConnected}
+            isActive={webcam.isActive}
+            frameCount={webcam.frameCount}
+            mode={mode}
+            distance={distance}
+            webcamError={webcam.error}
+          />
           <TargetVitalsPanel vitals={targetVitals} />
-
           <CoachingPanel
             coach={user.coach || null}
             mode={mode}
@@ -378,31 +318,21 @@ export function LiveSessionPage() {
             distance={distance}
             heartRate={heartRate}
           />
-
-          <div className="h-[180px] min-h-[180px]">
+          <div className="flex-1 min-h-[200px]">
             <TranscriptStream entries={allTranscripts} />
           </div>
-
-          <div className="flex items-center gap-2 px-1">
-            <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-              transcriptionConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
-            }`} />
-            {partialTranscript ? (
-              <p className="text-xs text-gray-400 italic truncate">"{partialTranscript}"</p>
-            ) : (
-              <p className="text-xs text-gray-500">
-                {transcriptionConnected ? 'Listening...' : 'Mic off'}
-              </p>
-            )}
-          </div>
+          <TranscriptionStatus
+            isConnected={transcriptionConnected}
+            partialTranscript={partialTranscript}
+          />
         </div>
       )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-white border-t border-gray-100 pb-safe">
+      <div className="p-4 bg-gray-800 border-t border-gray-700 pb-safe">
         <button
           onClick={() => setShowEndModal(true)}
-          className="w-full md:w-auto md:px-12 py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-2xl transition-colors"
+          className="w-full md:w-auto md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
         >
           End Session
         </button>

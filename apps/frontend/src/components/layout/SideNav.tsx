@@ -8,6 +8,7 @@ export { SIDEBAR_WIDTH }
 export function SideNav() {
   return (
     <nav
+      aria-label="Main navigation"
       className="fixed top-0 left-0 h-screen bg-white border-r border-gray-100 flex flex-col z-40"
       style={{ width: SIDEBAR_WIDTH }}
     >
