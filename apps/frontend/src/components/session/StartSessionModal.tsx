@@ -3,9 +3,10 @@ import { useState } from 'react'
 interface Coach {
   _id: string
   name: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
+  avatar_emoji?: string
+  avatar_url?: string
+  color_from?: string
+  color_to?: string
 }
 
 interface StartSessionModalProps {

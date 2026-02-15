@@ -26,6 +26,25 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Coach',
   },
+  coach_roster: [{
+    coach_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true,
+    },
+    added_at: { type: Date, default: Date.now },
+    is_default: { type: Boolean, default: false },
+  }],
+  coach_preferences: {
+    liked_traits: { type: Map, of: Number, default: new Map() },
+    disliked_traits: { type: Map, of: Number, default: new Map() },
+    last_updated: Date,
+  },
+  tier: {
+    type: String,
+    enum: ['free', 'premium'],
+    default: 'free',
+  },
   preferences: {
     target_gender: {
       type: String,

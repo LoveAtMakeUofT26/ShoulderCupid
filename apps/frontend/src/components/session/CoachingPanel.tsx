@@ -2,9 +2,10 @@ import { CoachingMode } from '../../hooks/useSessionSocket'
 
 interface Coach {
   name: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
+  avatar_emoji?: string
+  avatar_url?: string
+  color_from?: string
+  color_to?: string
 }
 
 interface CoachingPanelProps {

@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react'
-
-interface Coach {
-  _id: string
-  name: string
-  tagline: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-  rating: number
-  session_count: number
-  sample_phrases: string[]
-}
+import { useEffect, useState, useCallback } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { SwipeCard } from '../coaches/SwipeCard'
+import { SwipeCardSkeleton } from '../coaches/SwipeCardSkeleton'
+import { generateCoach, addToRoster, recordSwipe } from '../../services/coachService'
+import type { Coach } from '../../services/auth'
 
 interface CoachSelectStepProps {
   selectedCoachId: string | null
@@ -23,121 +16,174 @@ interface CoachSelectStepProps {
 
 export function CoachSelectStep({
   selectedCoachId,
-  recommendedCoachId,
   onSelect,
   onSubmit,
   onBack,
   submitting,
 }: CoachSelectStepProps) {
-  const [coaches, setCoaches] = useState<Coach[]>([])
+  const [currentCoach, setCurrentCoach] = useState<Coach | null>(null)
+  const [nextCoach, setNextCoach] = useState<Coach | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savedCount, setSavedCount] = useState(0)
+  const [cardKey, setCardKey] = useState(0)
 
+  const preloadNext = useCallback(async () => {
+    try {
+      const coach = await generateCoach()
+      setNextCoach(coach)
+    } catch (err) {
+      console.error('Failed to preload next coach:', err)
+    }
+  }, [])
+
+  // Load first coach on mount
   useEffect(() => {
-    fetch('/api/coaches')
-      .then((r) => r.json())
-      .then((data) => {
-        setCoaches(data)
-        // Auto-select recommended coach if nothing selected yet
-        if (!selectedCoachId && recommendedCoachId) {
-          onSelect(recommendedCoachId)
-        } else if (!selectedCoachId && data.length > 0) {
-          onSelect(data[0]._id)
-        }
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    async function loadFirst() {
+      try {
+        const coach = await generateCoach()
+        setCurrentCoach(coach)
+        preloadNext()
+      } catch (err) {
+        console.error('Failed to generate initial coach:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadFirst()
+  }, [preloadNext])
+
+  function advanceToNext() {
+    if (nextCoach) {
+      setCurrentCoach(nextCoach)
+      setNextCoach(null)
+      setCardKey(prev => prev + 1)
+      preloadNext()
+    } else {
+      setCurrentCoach(null)
+      setCardKey(prev => prev + 1)
+      const interval = setInterval(() => {
+        setNextCoach(prev => {
+          if (prev) {
+            setCurrentCoach(prev)
+            clearInterval(interval)
+            preloadNext()
+            return null
+          }
+          return prev
+        })
+      }, 200)
+    }
+  }
+
+  async function handleSwipeRight() {
+    if (!currentCoach) return
+
+    try {
+      await Promise.all([
+        addToRoster(currentCoach._id),
+        recordSwipe(currentCoach._id, true),
+      ])
+      setSavedCount(prev => prev + 1)
+      // Select the first saved coach for onboarding submission
+      if (!selectedCoachId) {
+        onSelect(currentCoach._id)
+      }
+    } catch (err) {
+      console.error('Failed to save coach:', err)
+    }
+
+    advanceToNext()
+  }
+
+  async function handleSwipeLeft() {
+    if (!currentCoach) return
+
+    try {
+      await recordSwipe(currentCoach._id, false)
+    } catch (err) {
+      console.error('Failed to record swipe:', err)
+    }
+
+    advanceToNext()
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="text-cupid-500">
-          <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        </div>
+      <div className="pt-8 animate-slide-up">
+        <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+          Find Your Coach
+        </h2>
+        <p className="text-gray-500 mb-6">
+          Swipe right to save, left to skip
+        </p>
+        <SwipeCardSkeleton />
       </div>
     )
   }
 
   return (
-    <div className="pt-8 animate-slide-up">
-      <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
-        Choose Your Coach
-      </h2>
-      <p className="text-gray-500 mb-6">
-        Pick the AI wingman that matches your style
-      </p>
-
-      <div className="space-y-3">
-        {coaches.map((coach) => {
-          const isRecommended = coach._id === recommendedCoachId
-          const isSelected = coach._id === selectedCoachId
-
-          return (
-            <button
-              key={coach._id}
-              onClick={() => onSelect(coach._id)}
-              className={`w-full card-elevated p-4 text-left transition-all ${
-                isSelected
-                  ? 'ring-2 ring-cupid-500 bg-cupid-50/30'
-                  : 'hover:shadow-card-hover'
-              }`}
-            >
-              <div className="flex items-center gap-4">
-                {/* Avatar */}
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center text-2xl flex-shrink-0 shadow-md"
-                  style={{
-                    background: `linear-gradient(135deg, ${coach.color_from}, ${coach.color_to})`,
-                  }}
-                >
-                  {coach.avatar_emoji}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-semibold text-gray-900">{coach.name}</span>
-                    {isRecommended && (
-                      <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full font-medium">
-                        Recommended
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">{coach.tagline}</p>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
-                    <span className="text-yellow-500">★</span>
-                    <span>{coach.rating.toFixed(1)}</span>
-                    <span>·</span>
-                    <span>{coach.session_count.toLocaleString()} sessions</span>
-                  </div>
-                </div>
-
-                {/* Check */}
-                {isSelected && (
-                  <div className="w-6 h-6 rounded-full bg-cupid-500 flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-
-              {/* Sample phrase */}
-              {coach.sample_phrases?.[0] && (
-                <p className="mt-3 pt-3 border-t border-gray-100 text-sm text-gray-500 italic">
-                  "{coach.sample_phrases[0]}"
-                </p>
-              )}
-            </button>
-          )
-        })}
+    <div className="pt-4 animate-slide-up">
+      <div className="text-center mb-4">
+        <h2 className="font-display text-2xl font-bold text-gray-900 mb-1">
+          Find Your Coach
+        </h2>
+        <p className="text-gray-500 text-sm">
+          Swipe right to save, left to skip
+        </p>
+        {savedCount > 0 && (
+          <p className="text-cupid-500 text-sm font-medium mt-1">
+            {savedCount} coach{savedCount > 1 ? 'es' : ''} saved
+          </p>
+        )}
       </div>
 
+      {/* Card */}
+      <div className="flex items-center justify-center min-h-[400px]">
+        {currentCoach ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={cardKey}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SwipeCard
+                coach={currentCoach}
+                onSwipeLeft={handleSwipeLeft}
+                onSwipeRight={handleSwipeRight}
+              />
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <SwipeCardSkeleton />
+        )}
+      </div>
+
+      {/* Swipe buttons */}
+      {currentCoach && (
+        <div className="flex items-center justify-center gap-8 mt-4">
+          <button
+            onClick={handleSwipeLeft}
+            className="w-12 h-12 rounded-full bg-white shadow-card flex items-center justify-center text-gray-400 hover:text-red-400 active:scale-90 transition-all"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            onClick={handleSwipeRight}
+            className="w-14 h-14 rounded-full bg-cupid-500 shadow-pink-glow flex items-center justify-center text-white hover:bg-cupid-600 active:scale-90 transition-all"
+          >
+            <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Navigation */}
-      <div className="flex gap-3 mt-10">
+      <div className="flex gap-3 mt-8">
         <button
           onClick={onBack}
           className="btn-ghost flex-1 py-3"
@@ -147,10 +193,14 @@ export function CoachSelectStep({
         </button>
         <button
           onClick={onSubmit}
-          disabled={!selectedCoachId || submitting}
+          disabled={savedCount === 0 || submitting}
           className="btn-primary flex-1 py-3 disabled:opacity-50"
         >
-          {submitting ? 'Setting up...' : 'Finish Setup'}
+          {submitting
+            ? 'Setting up...'
+            : savedCount > 0
+              ? 'Finish Setup'
+              : 'Save a coach first'}
         </button>
       </div>
     </div>

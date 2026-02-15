@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LandingPage } from './pages/LandingPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoachesPage } from './pages/CoachesPage'
+import { CoachDiscoveryPage } from './pages/CoachDiscoveryPage'
 import { SessionsPage } from './pages/SessionsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LiveSessionPage } from './pages/LiveSessionPage'
@@ -20,6 +21,9 @@ function App() {
         <Route path="/coaches" element={<CoachesPage />} />
         <Route path="/sessions" element={<SessionsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+
+        {/* Full-screen coach discovery (no bottom nav) */}
+        <Route path="/coaches/discover" element={<CoachDiscoveryPage />} />
 
         {/* Onboarding (full-screen, no nav) */}
         <Route path="/onboarding" element={<OnboardingPage />} />

@@ -32,6 +32,7 @@ app.use(cors({
   credentials: true,
 }))
 app.use(express.json({ limit: '5mb' })) // Allow larger payloads for JPEG frames
+app.use(express.static('public')) // Serve generated coach images from /coaches/
 
 // Connect to MongoDB
 await connectDB()

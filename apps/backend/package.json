@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/scripts/seed.ts",
+    "migrate:roster": "tsx src/scripts/migrateToRoster.ts",
     "lint": "eslint . --ext ts --report-unused-disable-directives --max-warnings 0",
     "type-check": "tsc --noEmit"
   },

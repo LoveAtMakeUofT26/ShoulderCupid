@@ -5,27 +5,36 @@ const coachSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  tagline: String, // Short personality description
-  description: String, // Longer description
+  tagline: String,
+  description: String,
   specialty: {
     type: String,
     enum: ['dating', 'interview', 'sales', 'public-speaking', 'general'],
     default: 'dating',
   },
   personality: {
-    tone: String, // e.g., "confident", "calm", "energetic"
-    style: String, // e.g., "playful", "serious", "supportive"
+    tone: String,
+    style: String,
+  },
+  personality_tags: {
+    type: [String],
+    default: [],
   },
   system_prompt: {
     type: String,
     required: true,
   },
-  sample_phrases: [String], // Example things this coach might say
-  voice_id: String, // ElevenLabs voice ID
+  sample_phrases: [String],
+  voice_id: String,
   avatar_url: String,
-  avatar_emoji: String, // Fallback emoji for avatar
-  color_from: String, // Gradient start color (hex)
-  color_to: String, // Gradient end color (hex)
+  avatar_emoji: String, // Legacy - used by seeded coaches
+  color_from: String, // Legacy
+  color_to: String, // Legacy
+  pricing: {
+    quick_5min: { type: Number, default: 1.0 },
+    standard_15min: { type: Number, default: 3.0 },
+    deep_30min: { type: Number, default: 5.0 },
+  },
   rating: {
     type: Number,
     default: 0,
@@ -45,6 +54,22 @@ const coachSchema = new mongoose.Schema({
   is_human: {
     type: Boolean,
     default: false,
+  },
+  is_generated: {
+    type: Boolean,
+    default: false,
+  },
+  generation_metadata: {
+    traits: [String],
+    image_prompt: String,
+    voice_mapping_reason: String,
+    appearance: {
+      hair_color: String,
+      hair_style: String,
+      eye_color: String,
+      outfit_color: String,
+      gender: String,
+    },
   },
   created_at: {
     type: Date,
