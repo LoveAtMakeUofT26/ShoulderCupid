@@ -18,17 +18,27 @@ function getSocketUserId(socket: Socket): string | null {
   return null
 }
 
-async function assertSessionOwner(socket: Socket, sessionId: string): Promise<string | null> {
-  if (!isValidObjectId(sessionId)) return null
+type SessionAuthResult =
+  | { ok: true; userId: string }
+  | { ok: false; error: string; code: 'invalid_session_id' | 'not_authenticated' | 'session_not_found' | 'forbidden' }
+
+async function authorizeSession(socket: Socket, sessionId: string | null | undefined): Promise<SessionAuthResult> {
+  if (!sessionId || typeof sessionId !== 'string' || !isValidObjectId(sessionId)) {
+    return { ok: false, code: 'invalid_session_id', error: 'Invalid session ID' }
+  }
   const userId = getSocketUserId(socket)
-  if (!userId) return null
+  if (!userId) return { ok: false, code: 'not_authenticated', error: 'Not authenticated' }
 
   const sessionRecord = await Session.findById(sessionId).select('user_id').lean()
-  if (!sessionRecord || sessionRecord.user_id?.toString() !== userId) {
-    return null
+  if (!sessionRecord) {
+    return { ok: false, code: 'session_not_found', error: 'Session not found' }
   }
 
-  return userId
+  if (sessionRecord.user_id?.toString() !== userId) {
+    return { ok: false, code: 'forbidden', error: 'Forbidden' }
+  }
+
+  return { ok: true, userId }
 }
 
 interface SessionState {
@@ -51,13 +61,26 @@ const coachingGuards = new Map<string, ConcurrencyGuard>()
 
 export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
-  const unauthorized = () => socket.emit('coaching-error', { error: 'Not authenticated' })
+  const socketDebug = process.env.SOCKET_DEBUG === 'true'
+  const debug = (...args: unknown[]) => {
+    if (socketDebug) console.log('[socket]', ...args)
+  }
+  const emitError = (error: string) => socket.emit('coaching-error', { error })
 
   // Join a session room
-  socket.on('join-session', async (data: { sessionId: string }) => {
-    const { sessionId } = data
+  socket.on('join-session', async (data: { sessionId: string }, ack?: (resp: any) => void) => {
+    const sessionId = data?.sessionId
+    debug('join-session', { socketId: socket.id, sessionId })
+
+    const auth = await authorizeSession(socket, sessionId)
+    if (!auth.ok) {
+      debug('join-session denied', { socketId: socket.id, sessionId, code: auth.code })
+      emitError(auth.error)
+      ack?.({ ok: false, code: auth.code, error: auth.error })
+      return
+    }
+
     console.log(`Client ${socket.id} joining session ${sessionId}`)
-    if (!(await assertSessionOwner(socket, sessionId))) return unauthorized()
 
     socket.join(`session-${sessionId}`)
 
@@ -80,27 +103,32 @@ export function setupClientHandler(socket: Socket, io: Server) {
       distance: state.distance,
       heartRate: state.heartRate,
     })
+
+    ack?.({ ok: true, sessionId })
   })
 
   // Initialize coaching with the user's selected coach
-  socket.on('start-coaching', async (data: { sessionId: string }) => {
-    const { sessionId } = data
-    const userId = await assertSessionOwner(socket, sessionId)
-    if (!userId) return unauthorized()
-    if (!isValidObjectId(sessionId)) {
-      socket.emit('coaching-error', { error: 'Invalid session ID' })
+  socket.on('start-coaching', async (data: { sessionId: string }, ack?: (resp: any) => void) => {
+    const sessionId = data?.sessionId
+    const auth = await authorizeSession(socket, sessionId)
+    if (!auth.ok) {
+      debug('start-coaching denied', { socketId: socket.id, sessionId, code: auth.code })
+      emitError(auth.error)
+      ack?.({ ok: false, code: auth.code, error: auth.error })
       return
     }
     try {
       const session = await Session.findById(sessionId).populate('coach_id')
-      if (!session || session.user_id.toString() !== userId) {
-        socket.emit('coaching-error', { error: 'Session not found' })
+      if (!session || session.user_id.toString() !== auth.userId) {
+        emitError('Session not found')
+        ack?.({ ok: false, code: 'session_not_found', error: 'Session not found' })
         return
       }
 
       const coach = session.coach_id as unknown as { name: string; system_prompt: string; voice_id: string }
       if (!coach?.system_prompt) {
-        socket.emit('coaching-error', { error: 'No coach assigned' })
+        emitError('No coach assigned')
+        ack?.({ ok: false, code: 'no_coach', error: 'No coach assigned' })
         return
       }
 
@@ -121,9 +149,11 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
       socket.emit('coaching-ready', { sessionId, coachName: coach.name, voiceId: coach.voice_id })
       console.log(`Coaching started: ${coach.name} for session ${sessionId}`)
+      ack?.({ ok: true, sessionId })
     } catch (err) {
       console.error('Failed to start coaching:', err)
-      socket.emit('coaching-error', { error: 'Failed to initialize coaching' })
+      emitError('Failed to initialize coaching')
+      ack?.({ ok: false, code: 'init_failed', error: 'Failed to initialize coaching' })
     }
   })
 
@@ -135,7 +165,11 @@ export function setupClientHandler(socket: Socket, io: Server) {
     isFinal: boolean
   }) => {
     const { sessionId, text, speaker, isFinal } = data
-    if (!(await assertSessionOwner(socket, sessionId))) return
+    const auth = await authorizeSession(socket, sessionId)
+    if (!auth.ok) {
+      debug('transcript-input denied', { socketId: socket.id, sessionId, code: auth.code })
+      return
+    }
 
     // Only process final transcripts with actual text
     if (!isFinal || !text.trim()) return
@@ -197,8 +231,8 @@ export function setupClientHandler(socket: Socket, io: Server) {
   // End session
   socket.on('end-session', (data: { sessionId: string }) => {
     const { sessionId } = data
-    assertSessionOwner(socket, sessionId).then((userId) => {
-      if (!userId) return
+    authorizeSession(socket, sessionId).then((auth) => {
+      if (!auth.ok) return
 
       console.log(`Client ${socket.id} ending session ${sessionId}`)
       socket.leave(`session-${sessionId}`)
@@ -210,7 +244,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
   socket.on('watch-device', (deviceId: string) => {
     if (!getSocketUserId(socket)) {
-      unauthorized()
+      emitError('Not authenticated')
       return
     }
 
@@ -220,7 +254,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
   socket.on('stop-watching', (deviceId: string) => {
     if (!getSocketUserId(socket)) {
-      unauthorized()
+      emitError('Not authenticated')
       return
     }
 

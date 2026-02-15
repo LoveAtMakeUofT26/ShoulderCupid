@@ -39,6 +39,7 @@ export interface SessionState {
 
 // Socket connects directly to the backend (not through Vite proxy).
 // Vite proxy works for REST but is unreliable for socket.io WebSocket upgrades.
+const SOCKET_TRACE = import.meta.env.VITE_SOCKET_TRACE === 'true'
 const SOCKET_URL = (() => {
   const explicitSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim()
   if (explicitSocketUrl) return explicitSocketUrl
@@ -90,21 +91,57 @@ export function useSessionSocket(sessionId: string | null) {
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
+      withCredentials: true,
     })
     socketRef.current = socket
 
+    logger.log('Socket initializing:', { socketUrl: SOCKET_URL, sessionId })
+
+    if (SOCKET_TRACE) {
+      socket.onAny((event, ...args) => {
+        // Avoid logging huge payloads (e.g. base64 audio).
+        if (event === 'coach-audio') return
+
+        const preview = args.map((arg) => {
+          if (typeof arg === 'string') return arg.slice(0, 300)
+          if (typeof arg === 'number' || typeof arg === 'boolean' || arg == null) return arg
+          try {
+            const json = JSON.stringify(arg)
+            return json.length > 600 ? `${json.slice(0, 600)}...` : json
+          } catch {
+            return '[unserializable]'
+          }
+        })
+
+        logger.debug('Socket <-', event, preview)
+      })
+    }
+
     socket.on('connect', () => {
-      logger.log('Socket connected, sessionId:', sessionId)
+      const transport = (socket.io as any)?.engine?.transport?.name
+      logger.log('Socket connected:', { socketId: socket.id, transport, sessionId })
       updateState({ isConnected: true, coachingMessage: 'Connected! Waiting for session to start...' })
 
       // Identify as web client and join session
-      socket.emit('identify', { type: 'web-client' })
-      socket.emit('join-session', { sessionId })
+      socket.emit('identify', { type: 'web-client' }, (resp: any) => {
+        if (SOCKET_TRACE) logger.debug('Identify ack:', resp)
+      })
+
+      socket.emit('join-session', { sessionId }, (resp: any) => {
+        if (resp?.ok) {
+          if (SOCKET_TRACE) logger.debug('Join session ack:', resp)
+          return
+        }
+        const msg = resp?.error || 'Failed to join session'
+        logger.warn('Join session failed:', resp)
+        updateState({ coachingMessage: msg })
+      })
     })
 
     socket.on('connect_error', (err) => {
-      logger.error('Socket connection error:', err.message)
-      updateState({ coachingMessage: `Connection failed: ${err.message}` })
+      const msg = err?.message || 'Unknown connection error'
+      logger.error('Socket connection error:', msg)
+      updateState({ coachingMessage: `Connection failed: ${msg}` })
     })
 
     socket.on('disconnect', () => {
@@ -206,17 +243,25 @@ export function useSessionSocket(sessionId: string | null) {
   }, [sessionId, updateState])
 
   const endSession = useCallback(() => {
+    if (SOCKET_TRACE) logger.debug('Socket -> end-session', { sessionId })
     socketRef.current?.emit('end-session', { sessionId })
   }, [sessionId])
 
   const startCoaching = useCallback(() => {
     if (sessionId) {
-      socketRef.current?.emit('start-coaching', { sessionId })
+      if (SOCKET_TRACE) logger.debug('Socket -> start-coaching', { sessionId })
+      socketRef.current?.emit('start-coaching', { sessionId }, (resp: any) => {
+        if (resp?.ok) return
+        logger.warn('Start coaching failed:', resp)
+        const msg = resp?.error || 'Failed to start coaching'
+        updateState({ coachingMessage: msg })
+      })
     }
-  }, [sessionId])
+  }, [sessionId, updateState])
 
   const sendTranscript = useCallback((text: string, speaker: 'user' | 'target', isFinal: boolean) => {
     if (sessionId) {
+      if (SOCKET_TRACE && isFinal) logger.debug('Socket -> transcript-input', { sessionId, speaker, chars: text.length })
       socketRef.current?.emit('transcript-input', { sessionId, text, speaker, isFinal })
     }
   }, [sessionId])
