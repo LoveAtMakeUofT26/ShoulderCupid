@@ -7,9 +7,10 @@ import { SideNav, SIDEBAR_WIDTH } from './SideNav'
 interface AppShellProps {
   children: ReactNode
   showNav?: boolean
+  fullWidth?: boolean
 }
 
-export function AppShell({ children, showNav = true }: AppShellProps) {
+export function AppShell({ children, showNav = true, fullWidth = false }: AppShellProps) {
   const isDesktop = useIsDesktop()
   const [user, setUser] = useState<User | null>(null)
 
@@ -26,7 +27,7 @@ export function AppShell({ children, showNav = true }: AppShellProps) {
           className="min-h-screen"
           style={showNav ? { marginLeft: SIDEBAR_WIDTH } : undefined}
         >
-          <div className="max-w-[1400px] mx-auto px-8 lg:px-12 py-8">
+          <div className={`mx-auto px-8 lg:px-12 py-8 ${fullWidth ? '' : 'max-w-[1400px]'}`}>
             {children}
           </div>
         </main>
