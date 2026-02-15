@@ -78,8 +78,8 @@ export function CoachesPage() {
 
   return (
     <AppShell>
-      <div className="pt-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="pt-6 md:pt-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
           Choose Your Coach
         </h1>
         <p className="text-gray-500 mb-6">
@@ -87,7 +87,7 @@ export function CoachesPage() {
         </p>
 
         {/* Coach list */}
-        <div className="space-y-4">
+        <div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           {coaches.map((coach) => (
             <div
               key={coach._id}
