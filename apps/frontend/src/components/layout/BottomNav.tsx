@@ -3,7 +3,7 @@ import { navItems } from './navItems'
 
 export function BottomNav() {
   return (
-    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 border-t pb-safe z-50" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+    <nav aria-label="Main navigation" className="fixed bottom-0 left-0 right-0 border-t pb-safe z-40" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
       <div className="max-w-[428px] mx-auto flex justify-around items-center h-16">
         {navItems.map((item) => (
           <NavLink

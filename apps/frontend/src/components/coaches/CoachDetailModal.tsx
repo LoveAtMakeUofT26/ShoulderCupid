@@ -76,6 +76,9 @@ export function CoachDetailModal({
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="fixed inset-x-0 bottom-0 z-40 max-h-[90vh] overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="coach-detail-title"
         >
           <div className="bg-white rounded-t-3xl shadow-lg">
             {/* Close handle */}
@@ -86,6 +89,7 @@ export function CoachDetailModal({
             {/* Close button */}
             <button
               onClick={onClose}
+              aria-label="Close"
               className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 z-10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -100,6 +104,11 @@ export function CoachDetailModal({
                   src={coach.avatar_url}
                   alt={coach.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.currentTarget
+                    target.style.display = 'none'
+                    target.parentElement!.innerHTML = `<span style="font-size:6rem;display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:linear-gradient(135deg,${coach.color_from || '#E8566C'},${coach.color_to || '#F5A3B1'})">${coach.avatar_emoji || '💘'}</span>`
+                  }}
                 />
               </div>
             ) : (
@@ -116,7 +125,7 @@ export function CoachDetailModal({
             {/* Content */}
             <div className="p-5 pb-8">
               <div className="flex items-center gap-2 mb-2">
-                <h2 className="font-display text-2xl font-bold text-gray-900">
+                <h2 id="coach-detail-title" className="font-display text-2xl font-bold text-gray-900">
                   {coach.name}
                 </h2>
                 {isDefault && (
@@ -181,7 +190,7 @@ export function CoachDetailModal({
               <div className="space-y-3">
                 <button
                   onClick={() => navigate('/session/new')}
-                  className="btn-primary w-full py-3"
+                  className="btn-primary w-full"
                 >
                   Start Session
                 </button>

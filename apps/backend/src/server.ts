@@ -31,6 +31,49 @@ const io = new Server(httpServer, {
     credentials: true,
   },
 })
+const createSocketResponseStub = () => {
+  const headers: Record<string, string> = {}
+  return {
+    getHeader: () => undefined,
+    setHeader: (name: string, value: string) => {
+      headers[name] = value
+    },
+    getHeaders: () => headers,
+    getHeaderNames: () => Object.keys(headers),
+    getHeaderValues: () => Object.values(headers),
+    writeHead: () => {},
+    writeContinue: () => {},
+    write: () => false,
+    end: () => {},
+    on: () => {},
+    once: () => {},
+    emit: () => false,
+  } as any
+}
+
+const applyAuthMiddlewareToSockets = (appSocket: Server, authMiddlewares: ReturnType<typeof setupAuth>) => {
+  const middlewareChain = Object.values(authMiddlewares)
+
+  appSocket.use((socket, next) => {
+    const req = socket.request
+    const res = createSocketResponseStub()
+
+    let index = 0
+    const run = (err?: any) => {
+      if (err) return next(err)
+      const middleware = middlewareChain[index++]
+      if (!middleware) return next()
+      middleware(req as any, res, run)
+    }
+
+    run()
+  })
+
+  return authMiddlewares
+}
+
+const authMiddlewares = setupAuth(app)
+applyAuthMiddlewareToSockets(io, authMiddlewares)
 
 // Middleware
 app.use(cors({
@@ -42,9 +85,6 @@ app.use(express.static('public')) // Serve generated coach images from /coaches/
 
 // Connect to MongoDB
 await connectDB()
-
-// Setup authentication
-setupAuth(app)
 
 // Routes
 app.get('/api/health', (_req, res) => {

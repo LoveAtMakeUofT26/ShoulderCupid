@@ -62,6 +62,7 @@ const SOCKET_URL = (() => {
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [state, setState] = useState<SessionState>({
     isConnected: false,
@@ -85,7 +86,6 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
-    console.log(`Socket connecting to: ${SOCKET_URL}`)
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -93,7 +93,6 @@ export function useSessionSocket(sessionId: string | null) {
     socketRef.current = socket
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id)
       updateState({ isConnected: true, coachingMessage: 'Connected! Waiting for session to start...' })
 
       // Identify as web client and join session
@@ -106,8 +105,7 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ coachingMessage: `Connection failed: ${err.message}` })
     })
 
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason)
+    socket.on('disconnect', () => {
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
     })
 
@@ -181,7 +179,8 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ warningLevel: data.level, warningMessage: data.message })
 
       // Auto-clear warning after 5 seconds
-      setTimeout(() => {
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
+      warningTimerRef.current = setTimeout(() => {
         updateState({ warningLevel: 0, warningMessage: '' })
       }, 5000)
     })
@@ -189,6 +188,7 @@ export function useSessionSocket(sessionId: string | null) {
     return () => {
       socket.disconnect()
       socketRef.current = null
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
     }
   }, [sessionId, updateState])
 
