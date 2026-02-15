@@ -2,18 +2,7 @@ import { useState } from 'react'
 import { useWallet } from '@solana/wallet-adapter-react'
 import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { createPaymentRequest, verifyPayment, type PaymentRequest } from '../../services/paymentService'
-
-interface Coach {
-  _id: string
-  name: string
-  avatar_emoji?: string
-  avatar_url?: string
-  color_from?: string
-  color_to?: string
-  pricing?: {
-    standard_15min: number
-  }
-}
+import type { Coach } from '../../services/auth'
 
 interface StartSessionModalProps {
   isOpen: boolean

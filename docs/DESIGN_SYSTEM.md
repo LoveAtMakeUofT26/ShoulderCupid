@@ -41,20 +41,37 @@
 --color-error: #E53935;
 ```
 
-### Dark Theme (Toggle-able)
+### Dark Theme (Toggle-able via `.dark` class)
 ```css
-/* Primary stays same */
---color-primary: #E8566C;
---color-primary-dark: #F06B7F;
-
 /* Backgrounds */
---color-bg-primary: #1A1721;     /* Deep purple-black */
---color-bg-card: #252231;
---color-bg-elevated: #2D2A38;
+--color-bg: #0F0F11;              /* Deep dark */
+--color-surface: #1A1A1F;         /* Cards */
+--color-surface-elevated: #222228; /* Elevated surfaces */
+--color-surface-hover: #2A2A32;   /* Hover state */
 
 /* Text */
---color-text-primary: #F5F3F7;
---color-text-secondary: #9B95A3;
+--color-text: #F5F0EC;            /* Warm off-white */
+--color-text-secondary: #B0AAA4;
+--color-text-tertiary: #8A8480;
+--color-text-faint: #5A5550;
+
+/* Borders */
+--color-border: #2A2A32;
+--color-border-strong: #3A3A44;
+
+/* Primary — lighter pink for dark bg contrast */
+--color-primary: #F07A8C;
+--color-primary-hover: #E8566C;
+--color-primary-surface: rgba(232, 86, 108, 0.15);
+--color-primary-text: #F07A8C;
+
+/* Accent */
+--color-accent: #C9A962;
+--color-accent-surface: rgba(201, 169, 98, 0.15);
+
+/* Shadows — higher opacity for dark backgrounds */
+--shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+--shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
 ```
 
 ### Gender-Adaptive Accents (Post-MVP)
@@ -193,26 +210,38 @@ box-shadow: 0 4px 12px rgba(232, 86, 108, 0.4);
 - AI-generated with style prompts
 
 ### Coach Color Mapping
+AI-generated coaches receive dynamic `color_from` / `color_to` gradient attributes from the generation pipeline. Example seed coaches:
 ```
 Smooth Operator: Rose gold gradient (#E8566C → #F5A3B1)
 Wingman Chad:    Blue/purple gradient (#5C6BC0 → #7E57C2)
 Gentle Guide:    Warm cream gradient (#C9A962 → #E8D5A9)
 ```
+New coaches generated via Gemini receive unique color palettes based on personality traits.
 
 ---
 
 ## Navigation Structure
 
-### Bottom Tab Bar
+### Desktop Sidebar (>= 768px)
+- Fixed left sidebar (260px width)
+- Warm gradient background
+- User profile section at top
+- Navigation links with icons and active accent bar
+- Theme toggle (light/dark/system) at bottom
+- "Start Session" CTA button with glow
+- Component: `SideNav.tsx`
+
+### Mobile Bottom Tab Bar (< 768px)
 ```
 [Dashboard] [Coaches] [Sessions] [Settings]
     🏠         💘         📝         ⚙️
 ```
+- Component: `BottomNav.tsx`
+- Responsive hook: `useIsDesktop()` at 768px breakpoint
 
-### Floating Action Button
+### Floating Action Button (Mobile only)
 - Shows on Dashboard and Sessions tabs
 - "Start Session" primary action
-- Pulses subtly to draw attention
 
 ---
 
@@ -352,20 +381,29 @@ module.exports = {
 ```
 apps/frontend/src/
 ├── components/
-│   ├── ui/              # Base components (Button, Card, Input)
-│   ├── layout/          # AppShell, BottomNav, Header
-│   ├── coach/           # CoachCard, CoachAvatar, CoachList
-│   └── session/         # SessionCard, LiveSession
+│   ├── ui/              # Base components (Button, Card, Spinner)
+│   ├── layout/          # AppShell, BottomNav, SideNav
+│   ├── coaches/         # SwipeCard, CoachDetailModal, VoicePreviewButton, DeleteCoachModal
+│   ├── session/         # CameraViewport, TranscriptionStatus
+│   └── onboarding/      # CoachSelectStep (swipe-integrated)
 ├── pages/
-│   ├── HomePage.tsx     # Landing/login
+│   ├── LandingPage.tsx  # Public landing/login
 │   ├── DashboardPage.tsx
 │   ├── CoachesPage.tsx
+│   ├── CoachDiscoveryPage.tsx  # Tinder-style swipe discovery
 │   ├── SessionsPage.tsx
+│   ├── SessionReportPage.tsx
+│   ├── LiveSessionPage.tsx
 │   ├── SettingsPage.tsx
-│   └── LiveSessionPage.tsx
+│   └── PreflightPage.tsx
 ├── hooks/
+│   ├── useThemeStore.ts    # Light/dark/system theme state
+│   ├── useIsDesktop.ts     # Responsive breakpoint (768px)
+│   ├── useSessionSocket.ts
+│   └── usePreflightChecks.ts
 ├── services/
-├── stores/
-└── styles/
-    └── globals.css      # CSS variables + base styles
+│   ├── coachService.ts     # Coach generation + roster API
+│   ├── transcriptionService.ts
+│   └── auth.ts
+└── index.css               # CSS custom properties (light + dark tokens)
 ```

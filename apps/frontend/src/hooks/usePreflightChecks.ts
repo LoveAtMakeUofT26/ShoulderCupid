@@ -151,15 +151,10 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), 10000)
       const effectiveSignal = signal || ctrl.signal
-      const res = await fetch('/api/stt/scribe-token', { signal: effectiveSignal })
+      const res = await fetch('/api/stt/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
-        const data = await res.json()
-        if (data.token) {
-          updateCheck('stt', { state: 'passed' })
-        } else {
-          updateCheck('stt', { state: 'failed', error: 'No token returned — check ELEVENLABS_API_KEY' })
-        }
+        updateCheck('stt', { state: 'passed' })
       } else if (res.status === 502 || res.status === 503) {
         updateCheck('stt', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
       } else {
