@@ -87,24 +87,47 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
-    logger.log('Connecting to socket:', SOCKET_URL)
+    let cancelled = false
+    let connectTimeout: ReturnType<typeof setTimeout>
 
-    const socket = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'],
-      autoConnect: true,
-      withCredentials: true,
-      reconnectionAttempts: 5,
-      timeout: 10000,
-    })
-    socketRef.current = socket
-
-    // Detect if we never connect within 10s
-    const connectTimeout = setTimeout(() => {
-      if (!socket.connected) {
-        logger.error('Socket connection timed out after 10s. Target:', SOCKET_URL)
-        updateState({ coachingMessage: `Connection timed out. Is the backend running at ${SOCKET_URL}?` })
+    // Fetch a one-time socket auth token via the REST API (goes through
+    // Vercel proxy so session cookies are included), then open the socket.
+    async function connect() {
+      logger.log('Fetching socket auth token...')
+      let token: string | undefined
+      try {
+        const res = await fetch('/api/auth/socket-token', { credentials: 'include' })
+        if (res.ok) {
+          const data = await res.json()
+          token = data.token
+        } else {
+          logger.warn('Socket token fetch failed, falling back to cookie auth')
+        }
+      } catch {
+        logger.warn('Socket token fetch error, falling back to cookie auth')
       }
-    }, 10_000)
+
+      if (cancelled) return
+
+      logger.log('Connecting to socket:', SOCKET_URL, token ? '(token auth)' : '(cookie auth)')
+
+      const socket = io(SOCKET_URL, {
+        transports: ['polling', 'websocket'],
+        autoConnect: true,
+        withCredentials: true,
+        reconnectionAttempts: 5,
+        timeout: 10000,
+        auth: token ? { token } : undefined,
+      })
+      socketRef.current = socket
+
+      // Detect if we never connect within 10s
+      connectTimeout = setTimeout(() => {
+        if (!socket.connected) {
+          logger.error('Socket connection timed out after 10s. Target:', SOCKET_URL)
+          updateState({ coachingMessage: `Connection timed out. Is the backend running at ${SOCKET_URL}?` })
+        }
+      }, 10_000)
 
     socket.on('connect', () => {
       clearTimeout(connectTimeout)
@@ -230,9 +253,14 @@ export function useSessionSocket(sessionId: string | null) {
       }, 5000)
     })
 
+    } // end connect()
+
+    connect()
+
     return () => {
+      cancelled = true
       clearTimeout(connectTimeout)
-      socket.disconnect()
+      socketRef.current?.disconnect()
       socketRef.current = null
       if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
     }
