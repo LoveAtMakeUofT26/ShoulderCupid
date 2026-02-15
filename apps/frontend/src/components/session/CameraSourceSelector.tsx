@@ -19,8 +19,8 @@ export function CameraSourceSelector({ value, onChange, esp32Connected = false }
             : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
         }`}
       >
-        <span>💻</span>
-        <span>Webcam</span>
+        <span>📷</span>
+        <span>ESP32-CAM</span>
       </button>
       <button
         onClick={() => onChange('esp32')}
@@ -30,8 +30,8 @@ export function CameraSourceSelector({ value, onChange, esp32Connected = false }
             : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-hover)]'
         }`}
       >
-        <span>📷</span>
-        <span>ESP32-CAM</span>
+        <span>💻</span>
+        <span>Webcam</span>
         {!esp32Connected && value === 'esp32' && (
           <span className="w-2 h-2 rounded-full bg-red-500" />
         )}
