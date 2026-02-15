@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   Theme Tokens — Light (default)
+   ============================================ */
+:root {
+  /* Backgrounds */
+  --color-bg: #FAF7F5;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: #F5F0EC;
+
+  /* Text */
+  --color-text: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #6B7280;
+  --color-text-faint: #9CA3AF;
+
+  /* Borders */
+  --color-border: #F3F4F6;
+  --color-border-strong: #E5E7EB;
+
+  /* Brand — Primary (Cupid) */
+  --color-primary: #E8566C;
+  --color-primary-hover: #D14459;
+  --color-primary-surface: #FFEAED;
+  --color-primary-text: #E8566C;
+
+  /* Brand — Accent (Gold) */
+  --color-accent: #B8944D;
+  --color-accent-surface: #EDE0C0;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+
+  /* Overlay */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    margin: 0;
+    padding: 0;
+    background-image: url('/assets/marble-texture.svg');
+    background-size: 1200px 1200px;
+    background-attachment: fixed;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .marble-card {
+    background-color: var(--color-surface);
+    @apply backdrop-blur-sm rounded-3xl;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-marble);
+  }
+
+  .gold-foil-text {
+    background: linear-gradient(135deg, #9A7A3D 0%, #C9A962 40%, #7C602E 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-glow {
+    background-color: var(--color-primary);
+    @apply relative text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
+    box-shadow: 0 0 40px rgba(232, 86, 108, 0.4);
+  }
+
+  .btn-glow:hover {
+    background-color: var(--color-primary-hover);
+    box-shadow: 0 0 60px rgba(232, 86, 108, 0.6);
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    @apply bg-transparent font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary-text);
+    opacity: 0.8;
+  }
+
+  .btn-ghost:hover {
+    background-color: var(--color-primary-surface);
+    opacity: 1;
+  }
+}

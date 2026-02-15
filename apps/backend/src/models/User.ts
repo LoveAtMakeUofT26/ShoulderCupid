@@ -8,6 +8,11 @@ const userSchema = new mongoose.Schema({
   },
   name: String,
   picture: String, // Profile picture URL
+  age: Number,
+  pronouns: {
+    type: String,
+    enum: ['he/him', 'she/her', 'they/them', 'other'],
+  },
   oauth_provider: {
     type: String,
     required: true,
@@ -20,6 +25,25 @@ const userSchema = new mongoose.Schema({
   coach_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Coach',
+  },
+  coach_roster: [{
+    coach_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+      required: true,
+    },
+    added_at: { type: Date, default: Date.now },
+    is_default: { type: Boolean, default: false },
+  }],
+  coach_preferences: {
+    liked_traits: { type: Map, of: Number, default: new Map() },
+    disliked_traits: { type: Map, of: Number, default: new Map() },
+    last_updated: Date,
+  },
+  tier: {
+    type: String,
+    enum: ['free', 'premium'],
+    default: 'free',
   },
   preferences: {
     target_gender: {
@@ -38,13 +62,32 @@ const userSchema = new mongoose.Schema({
       default: 'balanced',
     },
   },
+  quiz_results: {
+    confidence_level: String,
+    biggest_challenge: String,
+    directness_preference: String,
+    goals: String,
+    recommended_coach_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Coach',
+    },
+  },
   onboarding_completed: {
     type: Boolean,
     default: false,
   },
+  wallet_address: String, // Solana public key
   credits: {
     type: Number,
     default: 100,
+  },
+  sessions_this_month: {
+    type: Number,
+    default: 0,
+  },
+  sessions_month_reset: {
+    type: Date,
+    default: Date.now,
   },
   devices: [{
     device_id: String,

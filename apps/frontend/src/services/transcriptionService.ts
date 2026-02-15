@@ -12,17 +12,16 @@ export interface TranscriptEntry {
 export function useTranscriptionService() {
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [partialTranscript, setPartialTranscript] = useState<string>("");
-  
+  const [error, setError] = useState<string | null>(null);
+
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     onPartialTranscript: (data) => {
-      console.log("Partial:", data.text);
       setPartialTranscript(data.text);
     },
     onCommittedTranscript: (data) => {
-      console.log("Committed:", data.text);
       const newEntry: TranscriptEntry = {
-        id: `elevenlabs-${Date.now()}`,
+        id: `elevenlabs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
         timestamp: Date.now(),
         speaker: 'user',
         text: data.text,
@@ -32,18 +31,25 @@ export function useTranscriptionService() {
         const updated = [...prev, newEntry];
         return updated.length > 50 ? updated.slice(-50) : updated;
       });
-      setPartialTranscript(""); // Clear partial when committed
+      setPartialTranscript("");
     },
-    onCommittedTranscriptWithTimestamps: (data) => {
-      console.log("Committed with timestamps:", data.text);
-      console.log("Timestamps:", data.words);
+    onCommittedTranscriptWithTimestamps: () => {},
+    onError: (err) => {
+      console.error('[Scribe] WebSocket error:', err);
+      setError('Transcription error — check console for details');
+    },
+    onDisconnect: () => {
+      console.warn('[Scribe] WebSocket disconnected');
     },
   });
 
   const fetchTokenFromServer = async () => {
-    const response = await fetch('/api/stt/scribe-token');
+    const response = await fetch('/api/stt/scribe-token', {
+      credentials: 'include',
+    });
     if (!response.ok) {
-      throw new Error('Failed to fetch token');
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.error || `Token fetch failed (${response.status})`);
     }
     const data = await response.json();
     return data.token;
@@ -52,10 +58,9 @@ export function useTranscriptionService() {
   const startTranscription = useCallback(async () => {
     if (!scribe.isConnected) {
       try {
+        setError(null);
         const token = await fetchTokenFromServer();
-        console.log("🎤 ElevenLabs token:", token);
 
-        // Start ElevenLabs transcription
         await scribe.connect({
           token,
           microphone: {
@@ -63,21 +68,22 @@ export function useTranscriptionService() {
             noiseSuppression: true,
           },
         });
-        console.log("🎤 Transcription started");
-        
+
         return token;
-      } catch (error) {
-        console.error('Failed to start transcription:', error);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to start transcription';
+        console.error('[Scribe] Failed to start transcription:', err);
+        setError(msg);
       }
     }
-  }, [scribe.isConnected]);
+  }, [scribe]);
 
   const stopTranscription = useCallback(() => {
     if (scribe.isConnected) {
       scribe.disconnect();
-      console.log("🎤 Transcription stopped");
     }
-  }, [scribe.isConnected]);
+    setError(null);
+  }, [scribe]);
 
   return {
     transcripts,
@@ -85,5 +91,6 @@ export function useTranscriptionService() {
     isConnected: scribe.isConnected,
     startTranscription,
     stopTranscription,
+    error,
   };
 }

@@ -1,5 +1,35 @@
 import { Server, Socket } from 'socket.io'
+import mongoose from 'mongoose'
 import { Session } from '../models/Session.js'
+import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
+import { generateSpeech } from '../services/ttsService.js'
+import { ConcurrencyGuard } from '../utils/resilience.js'
+
+function isValidObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
+function getSocketUserId(socket: Socket): string | null {
+  const directUser = (socket.request as any).user
+  const sessionUser = (socket.request as any).session?.passport?.user
+  if (sessionUser && typeof sessionUser === 'string') return sessionUser
+  if (directUser?._id) return directUser._id.toString()
+  if (directUser?.toString) return directUser.toString()
+  return null
+}
+
+async function assertSessionOwner(socket: Socket, sessionId: string): Promise<string | null> {
+  if (!isValidObjectId(sessionId)) return null
+  const userId = getSocketUserId(socket)
+  if (!userId) return null
+
+  const sessionRecord = await Session.findById(sessionId).select('user_id').lean()
+  if (!sessionRecord || sessionRecord.user_id?.toString() !== userId) {
+    return null
+  }
+
+  return userId
+}
 
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
@@ -7,6 +37,7 @@ interface SessionState {
   distance: number
   heartRate: number
   personDetected: boolean
+  voiceId?: string
 }
 
 // Distance threshold (in cm) - switch to CONVERSATION when closer than this
@@ -15,13 +46,19 @@ const CONVERSATION_THRESHOLD = 150
 // In-memory session states for real-time updates
 const sessionStates = new Map<string, SessionState>()
 
-export function setupClientHandler(socket: Socket, _io: Server) {
+// Per-session concurrency guards for the coaching pipeline
+const coachingGuards = new Map<string, ConcurrencyGuard>()
+
+export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
+  const unauthorized = () => socket.emit('coaching-error', { error: 'Not authenticated' })
 
   // Join a session room
-  socket.on('join-session', (data: { sessionId: string }) => {
+  socket.on('join-session', async (data: { sessionId: string }) => {
     const { sessionId } = data
     console.log(`Client ${socket.id} joining session ${sessionId}`)
+    if (!(await assertSessionOwner(socket, sessionId))) return unauthorized()
+
     socket.join(`session-${sessionId}`)
 
     // Initialize session state if not exists
@@ -45,22 +82,148 @@ export function setupClientHandler(socket: Socket, _io: Server) {
     })
   })
 
+  // Initialize coaching with the user's selected coach
+  socket.on('start-coaching', async (data: { sessionId: string }) => {
+    const { sessionId } = data
+    const userId = await assertSessionOwner(socket, sessionId)
+    if (!userId) return unauthorized()
+    if (!isValidObjectId(sessionId)) {
+      socket.emit('coaching-error', { error: 'Invalid session ID' })
+      return
+    }
+    try {
+      const session = await Session.findById(sessionId).populate('coach_id')
+      if (!session || session.user_id.toString() !== userId) {
+        socket.emit('coaching-error', { error: 'Session not found' })
+        return
+      }
+
+      const coach = session.coach_id as unknown as { name: string; system_prompt: string; voice_id: string }
+      if (!coach?.system_prompt) {
+        socket.emit('coaching-error', { error: 'No coach assigned' })
+        return
+      }
+
+      await initCoachingSession(sessionId, coach.system_prompt, session.mode, coach.name)
+
+      // Cache voice_id and check hardware state
+      const state = sessionStates.get(sessionId)
+      if (state) {
+        state.voiceId = coach.voice_id
+      }
+
+      // If no hardware connected, default to CONVERSATION so coaching works without ESP32
+      if (state && state.mode === 'IDLE') {
+        state.mode = 'CONVERSATION'
+        broadcastToSession(io, sessionId, 'mode-change', { mode: 'CONVERSATION', prevMode: 'IDLE' })
+        console.log(`No hardware detected — defaulting session ${sessionId} to CONVERSATION mode`)
+      }
+
+      socket.emit('coaching-ready', { sessionId, coachName: coach.name, voiceId: coach.voice_id })
+      console.log(`Coaching started: ${coach.name} for session ${sessionId}`)
+    } catch (err) {
+      console.error('Failed to start coaching:', err)
+      socket.emit('coaching-error', { error: 'Failed to initialize coaching' })
+    }
+  })
+
+  // Receive transcript from frontend, orchestrate Gemini + TTS
+  socket.on('transcript-input', async (data: {
+    sessionId: string
+    text: string
+    speaker: 'user' | 'target'
+    isFinal: boolean
+  }) => {
+    const { sessionId, text, speaker, isFinal } = data
+    if (!(await assertSessionOwner(socket, sessionId))) return
+
+    // Only process final transcripts with actual text
+    if (!isFinal || !text.trim()) return
+
+    // Persist user/target transcript immediately (not guarded)
+    await addTranscriptEntry(io, sessionId, speaker, text)
+
+    // Get current session state for context
+    const state = sessionStates.get(sessionId)
+    if (!state || state.mode === 'IDLE') return // No coaching in IDLE mode
+
+    // Get or create concurrency guard for this session
+    if (!coachingGuards.has(sessionId)) {
+      coachingGuards.set(sessionId, new ConcurrencyGuard())
+    }
+    const guard = coachingGuards.get(sessionId)!
+
+    // Only one Gemini call per session at a time; rapid transcripts coalesce to the latest
+    await guard.run(async () => {
+      try {
+        // Get coaching response from Gemini
+        const coachingText = await getCoachingResponse(sessionId, text, {
+          mode: state.mode,
+          emotion: state.targetEmotion,
+          distance: state.distance,
+        })
+
+        if (!coachingText.trim()) return
+
+        // Send coaching text immediately for UI display
+        sendCoachingUpdate(io, sessionId, coachingText)
+
+        // Persist coach transcript
+        await addTranscriptEntry(io, sessionId, 'coach', coachingText)
+
+        // Generate TTS audio using cached voiceId (no DB re-query)
+        const voiceId = state.voiceId
+        if (voiceId) {
+          try {
+            const audioBuffer = await generateSpeech(coachingText, voiceId)
+            broadcastToSession(io, sessionId, 'coach-audio', {
+              audio: audioBuffer.toString('base64'),
+              format: 'mp3',
+              text: coachingText,
+            })
+          } catch (ttsErr) {
+            console.error('TTS failed (text still delivered):', ttsErr)
+          }
+        }
+      } catch (err) {
+        console.error('Coaching pipeline error:', err)
+        broadcastToSession(io, sessionId, 'coaching-error', {
+          error: err instanceof Error ? err.message : 'Coaching pipeline failed',
+        })
+      }
+    })
+  })
+
   // End session
   socket.on('end-session', (data: { sessionId: string }) => {
     const { sessionId } = data
-    console.log(`Client ${socket.id} ending session ${sessionId}`)
-    socket.leave(`session-${sessionId}`)
-    sessionStates.delete(sessionId)
+    assertSessionOwner(socket, sessionId).then((userId) => {
+      if (!userId) return
+
+      console.log(`Client ${socket.id} ending session ${sessionId}`)
+      socket.leave(`session-${sessionId}`)
+      sessionStates.delete(sessionId)
+      coachingGuards.delete(sessionId)
+      endCoachingSession(sessionId)
+    })
   })
 
-  // Client requests to watch a specific ESP32 device
   socket.on('watch-device', (deviceId: string) => {
+    if (!getSocketUserId(socket)) {
+      unauthorized()
+      return
+    }
+
     console.log(`Client ${socket.id} watching device ${deviceId}`)
     socket.join(`device-${deviceId}`)
   })
 
-  // Client stops watching
   socket.on('stop-watching', (deviceId: string) => {
+    if (!getSocketUserId(socket)) {
+      unauthorized()
+      return
+    }
+
     socket.leave(`device-${deviceId}`)
   })
 
@@ -124,7 +287,9 @@ export async function addTranscriptEntry(
       updateData.$inc = { 'analytics.total_tips': 1 }
     }
 
-    await Session.findByIdAndUpdate(sessionId, updateData)
+    if (isValidObjectId(sessionId)) {
+      await Session.findByIdAndUpdate(sessionId, updateData)
+    }
   } catch (err) {
     console.error('Failed to persist transcript:', err)
   }
@@ -165,17 +330,22 @@ export async function updateSensors(
     state.mode = newMode
     broadcastToSession(io, sessionId, 'mode-change', { mode: newMode, prevMode })
 
+    // Update Gemini coaching context
+    updateCoachingMode(sessionId, newMode)
+
     // Persist to DB
-    try {
-      await Session.findByIdAndUpdate(sessionId, {
-        mode: newMode,
-        $inc: {
-          'analytics.approach_count': newMode === 'APPROACH' ? 1 : 0,
-          'analytics.conversation_count': newMode === 'CONVERSATION' ? 1 : 0,
-        }
-      })
-    } catch (err) {
-      console.error('Failed to update session mode in DB:', err)
+    if (isValidObjectId(sessionId)) {
+      try {
+        await Session.findByIdAndUpdate(sessionId, {
+          mode: newMode,
+          $inc: {
+            'analytics.approach_count': newMode === 'APPROACH' ? 1 : 0,
+            'analytics.conversation_count': newMode === 'CONVERSATION' ? 1 : 0,
+          }
+        })
+      } catch (err) {
+        console.error('Failed to update session mode in DB:', err)
+      }
     }
   }
 
@@ -194,18 +364,20 @@ export async function updateEmotion(io: Server, sessionId: string, emotion: stri
     broadcastToSession(io, sessionId, 'emotion-update', { emotion, confidence })
 
     // Persist to DB
-    try {
-      await Session.findByIdAndUpdate(sessionId, {
-        $push: {
-          emotions: {
-            timestamp: new Date(),
-            emotion,
-            confidence,
+    if (isValidObjectId(sessionId)) {
+      try {
+        await Session.findByIdAndUpdate(sessionId, {
+          $push: {
+            emotions: {
+              timestamp: new Date(),
+              emotion,
+              confidence,
+            }
           }
-        }
-      })
-    } catch (err) {
-      console.error('Failed to persist emotion:', err)
+        })
+      } catch (err) {
+        console.error('Failed to persist emotion:', err)
+      }
     }
   }
 }
@@ -215,11 +387,13 @@ export async function triggerWarning(io: Server, sessionId: string, level: 1 | 2
   broadcastToSession(io, sessionId, 'warning-triggered', { level, message })
 
   // Persist warning count to DB
-  try {
-    await Session.findByIdAndUpdate(sessionId, {
-      $inc: { 'analytics.warnings_triggered': 1 }
-    })
-  } catch (err) {
-    console.error('Failed to persist warning:', err)
+  if (isValidObjectId(sessionId)) {
+    try {
+      await Session.findByIdAndUpdate(sessionId, {
+        $inc: { 'analytics.warnings_triggered': 1 }
+      })
+    } catch (err) {
+      console.error('Failed to persist warning:', err)
+    }
   }
 }

@@ -43,6 +43,11 @@ const sessionSchema = new mongoose.Schema({
     timestamp: { type: Date, default: Date.now },
     emotion: String,
     confidence: Number,
+    target_heart_rate: Number,
+    target_hrv: Number,
+    target_breathing_rate: Number,
+    target_blinking: Boolean,
+    target_talking: Boolean,
   }],
   analytics: {
     total_tips: { type: Number, default: 0 },

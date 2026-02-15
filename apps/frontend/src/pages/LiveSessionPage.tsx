@@ -1,18 +1,38 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
+import { useWebcamService } from '../services/webcamService'
 import {
   CoachingPanel,
   TranscriptStream,
   WarningAlert,
   StatsBar,
-  StartSessionModal,
   EndSessionModal,
+  TargetVitalsPanel,
+  PreflightPage,
+  CameraViewport,
 } from '../components/session'
+import { type CameraSource } from '../components/session/CameraSourceSelector'
+import { useIsDesktop } from '../hooks/useIsDesktop'
+import { Spinner } from '../components/ui/Spinner'
+import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
+import { logger } from '../utils/logger'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
+type ExistingSession = {
+  _id: string
+  status: 'active' | 'ended' | 'cancelled' | string
+  started_at?: string
+}
+
+function elapsedSeconds(startedAt?: string): number {
+  if (!startedAt) return 0
+  const startedMs = Date.parse(startedAt)
+  if (!Number.isFinite(startedMs)) return 0
+  return Math.max(0, Math.floor((Date.now() - startedMs) / 1000))
+}
 
 export function LiveSessionPage() {
   const { sessionId } = useParams()
@@ -25,9 +45,14 @@ export function LiveSessionPage() {
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const [adviceMessage, setAdviceMessage] = useState<string>('')
+  const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
+  const [startError, setStartError] = useState<string | null>(null)
+  const [resumingSession, setResumingSession] = useState(false)
 
+  const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
-  const activeSessionId = isNewSession ? null : sessionId || null
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
+  const activeSessionId = createdSessionId || (isNewSession ? null : sessionId || null)
 
   const {
     isConnected,
@@ -39,21 +64,89 @@ export function LiveSessionPage() {
     heartRate,
     warningLevel,
     warningMessage,
+    targetVitals,
+    presageError,
     endSession,
+    startCoaching,
+    sendTranscript,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
-  // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
     partialTranscript,
     isConnected: transcriptionConnected,
     startTranscription,
     stopTranscription,
+    error: transcriptionError,
   } = useTranscriptionService()
 
+  const webcam = useWebcamService({
+    sessionId: activeSessionId || 'test',
+    fps: 2,
+    quality: 0.7,
+  })
+
+  const lastSentIndexRef = useRef(0)
+
+  const initializeExistingSession = useCallback(async (id: string) => {
+    setResumingSession(true)
+    setLoading(true)
+    try {
+      const response = await fetch(`/api/sessions/${id}`, {
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}))
+
+        if (response.status === 403 || response.status === 401) {
+          navigate('/')
+          return
+        }
+
+        if (response.status === 404) {
+          setStartError('Session not found.')
+          return
+        }
+
+        if (response.status === 400 && error.error) {
+          setStartError(error.error)
+          return
+        }
+
+        setStartError('Unable to load this session.')
+        return
+      }
+
+      const session = (await response.json()) as ExistingSession
+
+      if (session.status !== 'active') {
+        if (session.status === 'ended') {
+          navigate(`/sessions/${id}`, { replace: true })
+          return
+        }
+        navigate('/sessions', { replace: true })
+        return
+      }
+
+      setCreatedSessionId(session._id || id)
+      setDuration(elapsedSeconds(session.started_at))
+      setPhase('active')
+      setStartError(null)
+      logger.log('Resumed existing session:', id)
+    } catch (error) {
+      logger.error('Failed to load existing session:', error)
+      setStartError('Unable to load this session. Please try again.')
+    } finally {
+      setLoading(false)
+      setResumingSession(false)
+    }
+  }, [navigate, setDuration, setCreatedSessionId, setPhase, setStartError])
 
   // Combine socket and transcription transcripts
-  const allTranscripts = [...transcript, ...transcriptionTranscripts]
+  // Use socket transcripts only (backend broadcasts both user + coach entries).
+  // transcriptionTranscripts is only used for sending to backend, not for display.
+  const allTranscripts = transcript
 
   const transcriptRef = useRef(allTranscripts)
   const partialRef = useRef(partialTranscript)
@@ -63,17 +156,52 @@ export function LiveSessionPage() {
   // Start ElevenLabs transcription when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
-      startTranscription();
+      startTranscription()
     }
-
-  
-    // Cleanup when session ends
     return () => {
       if (transcriptionConnected && phase !== 'active') {
-        stopTranscription();
+        stopTranscription()
       }
-    };
+    }
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
+
+  useEffect(() => {
+    if (!user || isNewSession || !sessionId || resumingSession) return
+    initializeExistingSession(sessionId)
+  }, [initializeExistingSession, isNewSession, resumingSession, sessionId, user])
+
+  useEffect(() => {
+    if (phase === 'active' && isConnected && activeSessionId) {
+      startCoaching()
+    }
+  }, [phase, isConnected, activeSessionId, startCoaching])
+
+  useEffect(() => {
+    if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
+      webcam.start()
+    }
+    return () => {
+      if (webcam.isActive && phase !== 'active') {
+        webcam.stop()
+      }
+    }
+  }, [phase, cameraSource, webcam])
+
+  useEffect(() => {
+    // Reset index if transcripts array was cleared/reset
+    if (transcriptionTranscripts.length < lastSentIndexRef.current) {
+      lastSentIndexRef.current = 0
+    }
+    if (transcriptionTranscripts.length > lastSentIndexRef.current) {
+      for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
+        const entry = transcriptionTranscripts[i]
+        if (entry) {
+          sendTranscript(entry.text, 'user', true)
+        }
+      }
+      lastSentIndexRef.current = transcriptionTranscripts.length
+    }
+  }, [transcriptionTranscripts, sendTranscript])
 
   // Poll relationship advice API every 2 seconds when session is active
   useEffect(() => {
@@ -126,7 +254,7 @@ export function LiveSessionPage() {
         }
         setUser(currentUser)
       } catch (error) {
-        console.error('Failed to fetch user:', error)
+        logger.error('Failed to fetch user:', error)
         navigate('/')
       } finally {
         setLoading(false)
@@ -135,151 +263,204 @@ export function LiveSessionPage() {
     fetchUser()
   }, [navigate])
 
-  // Duration timer
   useEffect(() => {
     if (phase !== 'active') return
-
     const interval = setInterval(() => {
       setDuration(prev => prev + 1)
     }, 1000)
-
     return () => clearInterval(interval)
   }, [phase])
 
-  const handleStartSession = useCallback(async () => {
-    // TODO: Call POST /api/sessions/start to create session
-    // For now, just transition to active state
-    setPhase('active')
-    setDuration(0)
+  const handleStartSession = useCallback(async (paymentId?: string) => {
+    // Unlock browser audio during user gesture so coach TTS can play later
+    unlockAudio()
+    setStartError(null)
+
+    try {
+      const response = await fetch('/api/sessions/start', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentId ? { paymentId } : {}),
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        logger.error('Failed to start session:', err)
+
+        if (err.error === 'Active session exists' && err.sessionId) {
+          // Resume the existing active session instead of blocking
+          setCreatedSessionId(err.sessionId)
+          setPhase('active')
+          setDuration(0)
+          return
+        }
+
+        if (err.error === 'No coach selected') {
+          setStartError('No coach selected. Pick a coach first.')
+          return
+        }
+
+        setStartError(err.error || 'Failed to start session. Please try again.')
+        return
+      }
+      const session = await response.json()
+      setCreatedSessionId(session._id)
+      setPhase('active')
+      setDuration(0)
+      logger.log('Phase: preflight -> active, sessionId:', session._id)
+    } catch (error) {
+      logger.error('Failed to start session:', error)
+      setStartError('Connection error. Check your internet and try again.')
+    }
   }, [])
 
   const handleEndSession = useCallback(async () => {
+    logger.log('Phase: active -> ending')
     setIsEnding(true)
     endSession()
+    webcam.stop()
+    stopTranscription()
+    clearAudioQueue()
 
-    // TODO: Call POST /api/sessions/:id/end
-    // Simulate report generation
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    if (activeSessionId) {
+      try {
+        await fetch(`/api/sessions/${activeSessionId}/end`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+      } catch (error) {
+        logger.error('Failed to end session:', error)
+      }
+    }
 
-    // Navigate to session report
-    navigate('/sessions')
-  }, [endSession, navigate])
+    navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
+  }, [endSession, navigate, activeSessionId, webcam, stopTranscription])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-marble-50 flex items-center justify-center">
-        <div className="text-cupid-500">
-          <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-          </svg>
-        </div>
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
+        <Spinner size="lg" />
       </div>
     )
   }
 
   if (!user) return null
 
-  // Pre-flight phase - show modal
+  // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
-      <div className="min-h-screen bg-marble-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-          <Link to="/dashboard" className="text-gray-500">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="flex-1 text-center font-semibold text-gray-900">New Session</h1>
-          <div className="w-6" /> {/* Spacer for centering */}
-        </div>
-
-        <StartSessionModal
-          isOpen={true}
-          coach={user.coach || null}
-          onClose={() => navigate('/dashboard')}
-          onStart={handleStartSession}
-        />
-      </div>
+      <PreflightPage
+        coach={user.coach || null}
+        cameraSource={cameraSource}
+        onCameraSourceChange={setCameraSource}
+        onStart={handleStartSession}
+        onBack={() => navigate('/dashboard')}
+        startError={startError}
+      />
     )
   }
 
-  // Active session layout
+  // Active session layout — intentionally dark bg for video context
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Stats Bar */}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <StatsBar
         mode={mode}
         duration={duration}
         isConnected={isConnected}
+        cameraSource={cameraSource}
       />
 
-      {/* Warning Alert (overlays at top) */}
       {warningLevel > 0 && (
-        <div className="absolute top-14 left-4 right-4 z-40">
+        <div className="absolute top-14 left-4 right-4 z-40 md:left-auto md:right-8 md:max-w-md">
           <WarningAlert level={warningLevel} message={warningMessage} />
         </div>
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
-        {/* Video Feed Area (placeholder) */}
-        <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 flex items-center justify-center relative overflow-hidden">
-          {/* Placeholder for video feed */}
-          <div className="text-center text-gray-500">
-            <p className="text-4xl mb-2">📷</p>
-            <p className="text-sm">Camera feed will appear here</p>
-            <p className="text-xs mt-1 text-gray-600">ESP32-CAM connection required</p>
+      {isDesktop ? (
+        /* Desktop: side-by-side layout */
+        <div className="flex-1 flex p-4 gap-4 overflow-hidden">
+          {/* Left panel: Camera + Vitals */}
+          <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
+            <CameraViewport
+              cameraSource={cameraSource}
+              videoRef={webcam.videoRef}
+              canvasRef={webcam.canvasRef}
+              isConnected={isConnected}
+              isActive={webcam.isActive}
+              frameCount={webcam.frameCount}
+              mode={mode}
+              distance={distance}
+              webcamError={webcam.error}
+              minHeight="300px"
+            />
+            <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           </div>
 
-          {/* Mode Badge Overlay */}
-          <div className="absolute top-3 left-3">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
-              mode === 'CONVERSATION' ? 'bg-cupid-500' :
-              mode === 'APPROACH' ? 'bg-gold-500' : 'bg-gray-600'
-            }`}>
-              {mode === 'IDLE' ? 'Scanning...' : mode}
-            </span>
-          </div>
-
-          {/* Distance Overlay */}
-          {distance > 0 && (
-            <div className="absolute bottom-3 left-3 bg-black/60 rounded-lg px-3 py-1">
-              <span className="text-white text-sm font-medium">
-                {Math.round(distance)}cm away
-              </span>
+          {/* Right panel: Coaching + Transcript */}
+          <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
+            <CoachingPanel
+              coach={user.coach || null}
+              mode={mode}
+              message={adviceMessage || coachingMessage}
+              targetEmotion={targetEmotion}
+              distance={distance}
+              heartRate={heartRate}
+            />
+            <div className="flex-1 min-h-[200px]">
+              <TranscriptStream
+                entries={allTranscripts}
+                partialTranscript={partialTranscript}
+                isListening={transcriptionConnected}
+                error={transcriptionError}
+              />
             </div>
-          )}
+          </div>
         </div>
-
-        {/* Coaching Panel */}
-        <CoachingPanel
-          coach={user.coach || null}
-          mode={mode}
-          message={adviceMessage || coachingMessage}
-          targetEmotion={targetEmotion}
-          distance={distance}
-          heartRate={heartRate}
-        />
-
-        {/* Transcript */}
-        <div className="h-[180px] min-h-[180px]">
-          <TranscriptStream entries={allTranscripts} />
+      ) : (
+        /* Mobile: vertical stack */
+        <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
+          <CameraViewport
+            cameraSource={cameraSource}
+            videoRef={webcam.videoRef}
+            canvasRef={webcam.canvasRef}
+            isConnected={isConnected}
+            isActive={webcam.isActive}
+            frameCount={webcam.frameCount}
+            mode={mode}
+            distance={distance}
+            webcamError={webcam.error}
+          />
+          <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
+          <CoachingPanel
+            coach={user.coach || null}
+            mode={mode}
+            message={adviceMessage || coachingMessage}
+            targetEmotion={targetEmotion}
+            distance={distance}
+            heartRate={heartRate}
+          />
+          <div className="flex-1 min-h-[200px]">
+            <TranscriptStream
+              entries={allTranscripts}
+              partialTranscript={partialTranscript}
+              isListening={transcriptionConnected}
+              error={transcriptionError}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-white border-t border-gray-100 pb-safe">
+      <div className="p-4 border-t pb-safe md:flex md:justify-center" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <button
           onClick={() => setShowEndModal(true)}
-          className="w-full py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-2xl transition-colors"
+          className="w-full md:w-auto md:min-w-[200px] md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
         >
           End Session
         </button>
       </div>
 
-      {/* End Session Modal */}
       <EndSessionModal
         isOpen={showEndModal}
         duration={duration}

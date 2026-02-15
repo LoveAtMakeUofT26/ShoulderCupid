@@ -1,16 +1,35 @@
 const API_BASE_URL = '/api';
 
+export interface CoachPricing {
+  quick_5min: number
+  standard_15min: number
+  deep_30min: number
+}
+
 export interface Coach {
   _id: string
   name: string
   tagline: string
-  personality: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
+  description?: string
+  specialty: string
+  personality: { tone: string; style: string }
+  personality_tags: string[]
   sample_phrases: string[]
+  voice_id?: string
+  avatar_url?: string
+  avatar_emoji?: string
+  color_from?: string
+  color_to?: string
+  pricing: CoachPricing
   rating: number
   session_count: number
+  is_generated: boolean
+}
+
+export interface RosterEntry {
+  coach_id: Coach
+  added_at: string
+  is_default: boolean
 }
 
 export interface User {
@@ -18,7 +37,12 @@ export interface User {
   email: string
   name: string | null
   picture: string | null
+  age?: number
+  pronouns?: string
   coach: Coach | null
+  roster: RosterEntry[]
+  rosterLimit: number
+  tier: 'free' | 'premium'
   preferences: {
     target_gender: string
     comfort_sensitivity: string
@@ -26,6 +50,9 @@ export interface User {
   }
   onboarding_completed: boolean
   credits: number
+  sessions_this_month: number
+  free_sessions_limit: number
+  wallet_address: string | null
 }
 
 export async function getCurrentUser(): Promise<User | null> {

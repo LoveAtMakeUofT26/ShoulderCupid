@@ -4,6 +4,7 @@ interface StatsBarProps {
   mode: CoachingMode
   duration: number // seconds
   isConnected: boolean
+  cameraSource?: 'webcam' | 'esp32'
 }
 
 function formatDuration(seconds: number): string {
@@ -13,27 +14,32 @@ function formatDuration(seconds: number): string {
 }
 
 const MODE_COLORS: Record<CoachingMode, string> = {
-  IDLE: 'text-gray-500',
+  IDLE: 'text-[var(--color-text-tertiary)]',
   APPROACH: 'text-gold-500',
   CONVERSATION: 'text-cupid-500',
 }
 
-export function StatsBar({ mode, duration, isConnected }: StatsBarProps) {
+export function StatsBar({ mode, duration, isConnected, cameraSource }: StatsBarProps) {
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-white/90 backdrop-blur border-b border-gray-100">
+    <div className="flex items-center justify-between px-4 py-2 backdrop-blur border-b" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
       {/* Connection Status */}
       <div className="flex items-center gap-2">
         <div
           className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}
         />
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-[var(--color-text-tertiary)]">
           {isConnected ? 'Live' : 'Reconnecting...'}
         </span>
+        {cameraSource && (
+          <span className="text-xs text-[var(--color-text-faint)] border border-[var(--color-border)] px-1.5 py-0.5 rounded">
+            {cameraSource === 'webcam' ? '💻 Webcam' : '📷 ESP32'}
+          </span>
+        )}
       </div>
 
       {/* Session Timer */}
       <div className="text-center">
-        <span className="font-mono text-lg font-semibold text-gray-900">
+        <span className="font-mono text-lg font-semibold text-[var(--color-text)]">
           {formatDuration(duration)}
         </span>
       </div>

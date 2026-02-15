@@ -34,13 +34,15 @@ export function WarningAlert({ level, message }: WarningAlertProps) {
 
   return (
     <div
+      role="alert"
+      aria-live="assertive"
       className={`${config.bg} ${config.border} border-2 rounded-2xl p-4 animate-pulse shadow-lg`}
     >
       <div className="flex items-start gap-3">
         <span className="text-2xl">{config.icon}</span>
         <div className="flex-1">
-          <p className="font-semibold text-gray-900">{config.label}</p>
-          <p className="text-sm text-gray-600 mt-1">
+          <p className="font-semibold text-[var(--color-text)]">{config.label}</p>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
             {message || 'Comfort system activated'}
           </p>
         </div>

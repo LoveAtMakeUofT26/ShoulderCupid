@@ -1,8 +1,25 @@
 import { Router } from 'express'
+import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
 
+import { stopSession as stopSessionProcessor } from '../services/presageService.js'
+import { clearCommandQueue } from './hardware.js'
+import mongoose from 'mongoose'
+
+
+function isValidObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
+}
+
 export const sessionsRouter = Router()
+
+// Store io instance for emitting socket events
+let ioInstance: Server | null = null
+
+export function setSessionsIoInstance(io: Server) {
+  ioInstance = io
+}
 
 // Store active sessions in memory for quick lookup
 export const activeSessions = new Map<string, string>() // odId -> sessionId
@@ -23,6 +40,37 @@ sessionsRouter.get('/', async (req, res) => {
   }
 })
 
+// Get dashboard stats for current user
+sessionsRouter.get('/stats', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+
+  const userId = (req.user as any)._id
+
+  try {
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+
+    const sessionsThisWeek = await Session.countDocuments({
+      user_id: userId,
+      started_at: { $gte: weekAgo },
+    })
+
+    const avgResult = await Session.aggregate([
+      { $match: { user_id: userId, 'analytics.avg_emotion_score': { $exists: true, $ne: null } } },
+      { $group: { _id: null, avgScore: { $avg: '$analytics.avg_emotion_score' } } },
+    ])
+
+    const avgScore = avgResult.length > 0 ? Math.round(avgResult[0].avgScore) : null
+
+    res.json({ sessionsThisWeek, avgScore })
+  } catch (error) {
+    console.error('Failed to fetch stats:', error)
+    res.status(500).json({ error: 'Failed to fetch stats' })
+  }
+})
+
 // Get session by ID
 sessionsRouter.get('/:id', async (req, res) => {
   if (!req.isAuthenticated()) {
@@ -30,10 +78,19 @@ sessionsRouter.get('/:id', async (req, res) => {
   }
 
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid session ID' })
+    }
+
     const session = await Session.findById(req.params.id).populate('coach_id')
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
+
+    if (session.user_id.toString() !== (req.user as any)._id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
     res.json(session)
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch session' })
@@ -61,16 +118,25 @@ sessionsRouter.post('/start', async (req, res) => {
       })
     }
 
-    // Get user's selected coach
+    // Get user's selected coach (roster is primary, legacy coach_id as fallback)
     const user = await User.findById(userId)
-    if (!user?.coach_id) {
+    const roster = (user as any)?.coach_roster || []
+    const defaultRosterEntry = roster.find((r: any) => r.is_default) || roster[0]
+    const coachId = defaultRosterEntry?.coach_id || user?.coach_id
+
+    if (!coachId) {
       return res.status(400).json({ error: 'No coach selected' })
+    }
+
+    // Sync coach_id if it was only in roster
+    if (!user?.coach_id && coachId) {
+      await User.findByIdAndUpdate(userId, { coach_id: coachId })
     }
 
     // Create new session
     const session = await Session.create({
       user_id: userId,
-      coach_id: user.coach_id,
+      coach_id: coachId,
       status: 'active',
       mode: 'IDLE',
       started_at: new Date(),
@@ -78,6 +144,15 @@ sessionsRouter.post('/start', async (req, res) => {
 
     // Track active session
     activeSessions.set(userId.toString(), session._id.toString())
+
+    // Emit session-started event so frontend listeners pick it up even if listeners
+    // join the socket room a few milliseconds later.
+    if (ioInstance) {
+      ioInstance.emit('session-started', {
+        sessionId: session._id.toString(),
+        userId: userId.toString(),
+      })
+    }
 
     // Populate coach info for response
     await session.populate('coach_id')
@@ -119,6 +194,12 @@ sessionsRouter.post('/:id/end', async (req, res) => {
     session.ended_at = endedAt
     session.duration_seconds = durationSeconds
     await session.save()
+
+    // Stop Presage processor for this session
+    await stopSessionProcessor(req.params.id)
+
+    // Clean up hardware command queue
+    clearCommandQueue(req.params.id)
 
     // Remove from active sessions
     activeSessions.delete(userId.toString())
