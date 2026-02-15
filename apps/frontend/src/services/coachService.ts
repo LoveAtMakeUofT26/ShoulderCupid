@@ -6,6 +6,9 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, { credentials: 'include', ...options })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
+    if (res.status === 429) {
+      throw new Error(body.error || 'Too many requests. Please wait a moment.')
+    }
     throw new Error(body.error || `Request failed: ${res.status}`)
   }
   return res.json()

@@ -15,12 +15,16 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const inFlightRef = useRef(false)
 
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [frameCount, setFrameCount] = useState(0)
 
   const captureAndSend = useCallback(async () => {
+    // Skip frame if previous request still in-flight (backpressure)
+    if (inFlightRef.current) return
+
     const video = videoRef.current
     const canvas = canvasRef.current
     if (!video || !canvas || video.readyState < 2) return
@@ -34,6 +38,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
 
     const jpeg = canvas.toDataURL('image/jpeg', quality)
 
+    inFlightRef.current = true
     try {
       await fetch('/api/frame', {
         method: 'POST',
@@ -49,6 +54,8 @@ export function useWebcamService(options: WebcamServiceOptions) {
       setFrameCount(prev => prev + 1)
     } catch (err) {
       console.error('Failed to send webcam frame:', err)
+    } finally {
+      inFlightRef.current = false
     }
   }, [sessionId, width, height, quality])
 
