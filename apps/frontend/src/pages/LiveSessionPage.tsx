@@ -50,6 +50,7 @@ export function LiveSessionPage() {
     warningLevel,
     warningMessage,
     targetVitals,
+    presageError,
     endSession,
     startCoaching,
     sendTranscript,
@@ -257,7 +258,7 @@ export function LiveSessionPage() {
               webcamError={webcam.error}
               minHeight="300px"
             />
-            <TargetVitalsPanel vitals={targetVitals} />
+            <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           </div>
 
           {/* Right panel: Coaching + Transcript */}
@@ -298,7 +299,7 @@ export function LiveSessionPage() {
             distance={distance}
             webcamError={webcam.error}
           />
-          <TargetVitalsPanel vitals={targetVitals} />
+          <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           <CoachingPanel
             coach={user.coach || null}
             mode={mode}
