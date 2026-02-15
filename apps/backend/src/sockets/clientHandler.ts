@@ -47,10 +47,43 @@ interface SessionState {
   personDetected: boolean
   voiceId?: string
   lastAdvice?: string
+  recentAdvice: string[]
 }
 
 // Distance threshold (in cm) - switch to CONVERSATION when closer than this
 const CONVERSATION_THRESHOLD = 150
+
+// Max recent advice entries to keep for dedup
+const RECENT_ADVICE_LIMIT = 8
+
+// Simple word-overlap dedup for short advice strings
+function isSemanticallyDuplicate(newAdvice: string, recentAdvice: string[]): boolean {
+  const stopwords = new Set(['a', 'the', 'you', 'your', 'its', 'it', 'is', 'are', 'that', 'this', 'to', 'and', 'or', 'in', 'on', 'got', 'keep', 'be', 'do', 'can', 'just', 'so'])
+  const stem = (w: string) => w.replace(/(ing|ly|ed|er|est|s)$/, '')
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/)
+      .filter(Boolean)
+      .map(stem)
+      .filter(w => !stopwords.has(w) && w.length > 1)
+
+  const newWords = new Set(normalize(newAdvice))
+  if (newWords.size === 0) return false
+
+  for (const past of recentAdvice) {
+    const pastWords = new Set(normalize(past))
+    if (pastWords.size === 0) continue
+
+    let overlap = 0
+    for (const w of newWords) {
+      if (pastWords.has(w)) overlap++
+    }
+
+    const overlapRatio = overlap / Math.min(newWords.size, pastWords.size)
+    if (overlapRatio >= 0.5) return true
+  }
+
+  return false
+}
 
 // In-memory session states for real-time updates
 const sessionStates = new Map<string, SessionState>()
@@ -79,6 +112,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
         distance: -1,
         heartRate: -1,
         personDetected: false,
+        recentAdvice: [],
       })
     }
 
@@ -239,12 +273,24 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
     await guard.run(async () => {
       try {
-        const advice = (await getAdvice(sessionId, transcript)).trim()
+        const state = sessionStates.get(sessionId)
+        const recentAdvice = state?.recentAdvice || []
+
+        const advice = (await getAdvice(sessionId, transcript, recentAdvice)).trim()
         if (!advice) return
 
-        const state = sessionStates.get(sessionId)
+        // Exact match dedup
         if (state?.lastAdvice === advice) return
-        if (state) state.lastAdvice = advice
+        // Semantic dedup — catch paraphrases like "Keep smiling" vs "Smile, you got this"
+        if (isSemanticallyDuplicate(advice, recentAdvice)) return
+
+        if (state) {
+          state.lastAdvice = advice
+          state.recentAdvice.push(advice)
+          if (state.recentAdvice.length > RECENT_ADVICE_LIMIT) {
+            state.recentAdvice.shift()
+          }
+        }
 
         broadcastToSession(io, sessionId, 'advice-update', { advice })
 

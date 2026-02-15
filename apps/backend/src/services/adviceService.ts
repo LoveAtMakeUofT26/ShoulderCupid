@@ -38,7 +38,8 @@ export function initAdviceSession(sessionId: string): void {
 
 export async function getAdvice(
   sessionId: string,
-  transcript: TranscriptEntry[]
+  transcript: TranscriptEntry[],
+  recentAdvice: string[] = []
 ): Promise<string> {
   if (!transcript.length) {
     return 'Listen, then share a bit about yourself.'
@@ -46,7 +47,7 @@ export async function getAdvice(
 
   // OpenAI first — already proven and working
   try {
-    return await getRelationshipAdvice(transcript)
+    return await getRelationshipAdvice(transcript, recentAdvice)
   } catch (err) {
     console.warn('OpenAI advice failed, trying Gemini fallback:', (err as Error).message)
   }
@@ -58,7 +59,10 @@ export async function getAdvice(
   }
 
   const formatted = formatTranscriptForPrompt(transcript)
-  const prompt = `Conversation:\n\n${formatted}\n\nOne short hint (1-5 words or one sentence):`
+  const recentBlock = recentAdvice.length > 0
+    ? `\n\nDO NOT repeat or paraphrase any of these recent tips:\n${recentAdvice.map(a => `- "${a}"`).join('\n')}\n\nGive a DIFFERENT type of advice.`
+    : ''
+  const prompt = `Conversation:\n\n${formatted}${recentBlock}\n\nOne short hint (1-5 words or one sentence):`
 
   try {
     const result = await retryWithBackoff(
@@ -72,7 +76,7 @@ export async function getAdvice(
       }
     )
     const text = result.response.text().trim()
-    if (!text) throw new Error('Empty Gemini response')
+    if (!text || text === '---') throw new Error('Empty Gemini response')
     return text
   } catch (geminiErr) {
     console.error('Both OpenAI and Gemini advice failed:', (geminiErr as Error).message)

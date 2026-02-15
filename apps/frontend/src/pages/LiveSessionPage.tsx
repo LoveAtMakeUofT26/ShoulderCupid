@@ -182,6 +182,8 @@ export function LiveSessionPage() {
 
   const transcriptRef = useRef(allTranscripts)
   const partialRef = useRef(partialTranscript)
+  const lastAdviceTranscriptLenRef = useRef(0)
+  const lastAdvicePartialRef = useRef('')
   transcriptRef.current = allTranscripts
   partialRef.current = partialTranscript
 
@@ -238,20 +240,35 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
-  // Request advice via socket every 2 seconds when session is active
+  // Request advice via socket every 4 seconds when session is active and transcript changed
   useEffect(() => {
     if (phase !== 'active') return
 
+    lastAdviceTranscriptLenRef.current = 0
+    lastAdvicePartialRef.current = ''
+
     const emitAdvice = () => {
       const transcripts = transcriptRef.current
-      const partial = partialRef.current
+      const partial = partialRef.current.trim()
+
+      // Skip if nothing new was said since last request
+      if (
+        transcripts.length === lastAdviceTranscriptLenRef.current &&
+        partial === lastAdvicePartialRef.current
+      ) {
+        return
+      }
+
+      lastAdviceTranscriptLenRef.current = transcripts.length
+      lastAdvicePartialRef.current = partial
+
       const transcriptForSocket = [...transcripts]
-      if (partial.trim()) {
+      if (partial) {
         transcriptForSocket.push({
           id: 'partial',
           timestamp: Date.now(),
           speaker: 'user',
-          text: partial.trim(),
+          text: partial,
         })
       }
       requestAdvice(transcriptForSocket)
