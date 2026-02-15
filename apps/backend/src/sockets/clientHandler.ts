@@ -99,7 +99,7 @@ export function setupClientHandler(socket: Socket, io: Server) {
     }
     try {
       const session = await Session.findById(sessionId).populate('coach_id')
-      if (!session || session.user_id.toString() !== userId) {
+      if (!session || session.user_id?.toString() !== userId) {
         socket.emit('coaching-error', { error: 'Session not found' })
         return
       }
