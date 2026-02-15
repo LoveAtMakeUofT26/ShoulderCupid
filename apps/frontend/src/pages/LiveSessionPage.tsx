@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
-import { useGeminiService } from '../services/geminiService'
 import {
   CoachingPanel,
   TranscriptStream,
@@ -51,14 +50,6 @@ export function LiveSessionPage() {
     stopTranscription,
   } = useTranscriptionService()
 
-  // Gemini AI service
-  const {
-    isConnected: geminiConnected,
-    responses: geminiResponses,
-    connectToGemini,
-    sendTranscriptToGemini,
-    disconnectFromGemini,
-  } = useGeminiService()
 
   // Combine socket and transcription transcripts
   const allTranscripts = [...transcript, ...transcriptionTranscripts]
@@ -69,37 +60,14 @@ export function LiveSessionPage() {
       startTranscription();
     }
 
-    // Start Gemini when session becomes active
-    if (phase === 'active' && !geminiConnected) {
-      connectToGemini();
-    }
-
+  
     // Cleanup when session ends
     return () => {
       if (transcriptionConnected && phase !== 'active') {
         stopTranscription();
       }
-      if (geminiConnected && phase !== 'active') {
-        disconnectFromGemini();
-      }
     };
-  }, [phase, transcriptionConnected, startTranscription, stopTranscription, geminiConnected, connectToGemini, disconnectFromGemini])
-
-  // Stream partial transcripts to Gemini (real-time)
-  useEffect(() => {
-    if (partialTranscript && partialTranscript.length > 0 && geminiConnected) {
-      console.log("📤 Streaming partial to Gemini:", partialTranscript);
-      sendTranscriptToGemini(partialTranscript);
-    }
-  }, [partialTranscript, geminiConnected, sendTranscriptToGemini]);
-
-  // Log Gemini responses
-  useEffect(() => {
-    if (geminiResponses.length > 0) {
-      const latestResponse = geminiResponses[geminiResponses.length - 1];
-      console.log("🤖 Latest Gemini Response in LiveSessionPage:", latestResponse);
-    }
-  }, [geminiResponses]);
+  }, [phase, transcriptionConnected, startTranscription, stopTranscription])
 
   // Fetch user on mount
   useEffect(() => {
