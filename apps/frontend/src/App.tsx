@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { SolanaProvider } from './providers/SolanaProvider'
 import { LandingPage } from './pages/LandingPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoachesPage } from './pages/CoachesPage'
@@ -11,6 +12,7 @@ import { OnboardingPage } from './pages/OnboardingPage'
 
 function App() {
   return (
+    <SolanaProvider>
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
@@ -36,6 +38,7 @@ function App() {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
+    </SolanaProvider>
   )
 }
 
