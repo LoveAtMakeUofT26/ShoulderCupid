@@ -7,7 +7,7 @@ import { createInterface } from 'readline'
 // ═══════════════════════════════════════════════════════════
 
 export interface PresageMetrics {
-  hr: number         // Heart rate (BPM) - requires API key
+  hr: number         // Heart rate (BPM) - requires 15+ FPS webcam
   br: number         // Breathing rate (breaths/min)
   hrv: number        // Heart rate variability (ms)
   blinking: boolean  // Target is blinking
@@ -39,10 +39,10 @@ const latestMetrics = new Map<string, PresageMetrics>()
 const sessionErrors = new Map<string, string>()
 
 const getProcessorPath = () =>
-  process.env.PRESAGE_PROCESSOR_PATH ||
-  '/opt/cupid/services/presage-processor/build/presage-processor'
+  process.env.VITALS_PROCESSOR_PATH ||
+  '/opt/cupid/services/vitals-processor/main.py'
 
-const getApiKey = () => process.env.PRESAGE_API_KEY || ''
+const getPythonPath = () => process.env.PYTHON_PATH || 'python3'
 
 // Minimum time between process spawns (prevents crash loops)
 const MIN_RESPAWN_INTERVAL_MS = 5000
@@ -52,9 +52,9 @@ const MIN_RESPAWN_INTERVAL_MS = 5000
 // ═══════════════════════════════════════════════════════════
 
 /**
- * Feed a JPEG frame to the Presage processor for a session.
+ * Feed a JPEG frame to the vitals processor for a session.
  *
- * Spawns the C++ processor on first call for a session.
+ * Spawns the Python processor on first call for a session.
  * Writes a JSON line to the process's stdin.
  */
 export function feedFrame(
@@ -87,14 +87,14 @@ export function feedFrame(
     handle.process.stdin?.write(line)
     handle.framesWritten++
   } catch (err) {
-    console.error(`[presage] stdin write error for ${sessionId}:`, err)
+    console.error(`[vitals] stdin write error for ${sessionId}:`, err)
     sessionErrors.set(sessionId, `stdin write error: ${(err as Error).message}`)
   }
 }
 
 /**
- * Stop the Presage processor for a session.
- * Closes stdin, which causes the C++ process to exit gracefully.
+ * Stop the vitals processor for a session.
+ * Closes stdin, which causes the Python process to exit gracefully.
  */
 export async function stopSession(sessionId: string): Promise<void> {
   const handle = processors.get(sessionId)
@@ -106,7 +106,7 @@ export async function stopSession(sessionId: string): Promise<void> {
   // Give it 5 seconds to finish, then force kill
   const killTimer = setTimeout(() => {
     if (!handle.process.killed) {
-      console.warn(`[presage] Force killing processor for ${sessionId}`)
+      console.warn(`[vitals] Force killing processor for ${sessionId}`)
       handle.process.kill('SIGKILL')
     }
   }, 5000)
@@ -149,7 +149,7 @@ export function deriveEmotion(metrics: PresageMetrics): string {
 export function getPresageStatus(): PresageStatus {
   return {
     binaryInstalled: existsSync(getProcessorPath()),
-    apiKeyConfigured: getApiKey().length > 0,
+    apiKeyConfigured: true, // No API key needed for Python processor
     processorPath: getProcessorPath(),
     activeSessions: [...processors.keys()],
     errors: Object.fromEntries(sessionErrors),
@@ -183,7 +183,7 @@ export async function stopAllProcessors(): Promise<void> {
  * Legacy compatibility: no-op (processors auto-start on first feedFrame).
  */
 export function startPresageProcessor(): void {
-  console.log('[presage] stdin-pipe mode. Processors auto-start on first frame.')
+  console.log('[vitals] stdin-pipe mode. Processors auto-start on first frame.')
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -192,12 +192,12 @@ export function startPresageProcessor(): void {
 
 function startProcessor(sessionId: string): ProcessorHandle | null {
   if (!existsSync(getProcessorPath())) {
-    console.warn(`[presage] Binary not found at ${getProcessorPath()}`)
+    console.warn(`[vitals] Processor not found at ${getProcessorPath()}`)
     if (!sessionErrors.has(sessionId)) {
       sessionErrors.set(
         sessionId,
-        `Presage binary not found at ${getProcessorPath()}. ` +
-        `Build it: cd /opt/cupid/services/presage-processor/build && cmake .. && make`
+        `Vitals processor not found at ${getProcessorPath()}. ` +
+        `Install: pip install -r services/vitals-processor/requirements.txt`
       )
     }
     return null
@@ -212,15 +212,13 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
     }
   }
 
-  const args = [sessionId]
-  if (getApiKey()) {
-    args.push(getApiKey())
-  }
+  const args = [getProcessorPath(), sessionId]
 
-  console.log(`[presage] Starting processor for session ${sessionId}`)
+  console.log(`[vitals] Starting processor for session ${sessionId}`)
 
-  const proc = spawn(getProcessorPath(), args, {
+  const proc = spawn(getPythonPath(), args, {
     stdio: ['pipe', 'pipe', 'pipe'],
+    env: { ...process.env, PYTHONUNBUFFERED: '1' },
   })
 
   const handle: ProcessorHandle = {
@@ -234,7 +232,7 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
 
   // Handle stdin errors (broken pipe if process dies)
   proc.stdin?.on('error', (err) => {
-    console.error(`[presage] stdin pipe error for ${sessionId}:`, err.message)
+    console.error(`[vitals] stdin pipe error for ${sessionId}:`, err.message)
   })
 
   // Parse JSON metrics from stdout
@@ -248,12 +246,12 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
         if (data.type === 'status') {
           if (data.status === 'ready') {
             handle.ready = true
-            console.log(`[presage] Processor ready for ${sessionId}`)
+            console.log(`[vitals] Processor ready for ${sessionId}`)
           }
           return
         }
 
-        // Handle error messages from C++
+        // Handle error messages from processor
         if (data.type === 'error') {
           sessionErrors.set(sessionId, data.message || data.error)
           return
@@ -271,7 +269,7 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
         latestMetrics.set(sessionId, metrics)
 
         if (data.type === 'core') {
-          console.log(`[presage] Core metrics for ${sessionId}: HR=${metrics.hr} BR=${metrics.br}`)
+          console.log(`[vitals] Core metrics for ${sessionId}: HR=${metrics.hr} BR=${metrics.br}`)
         }
       } catch {
         // Not JSON, skip
@@ -283,22 +281,20 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
   if (proc.stderr) {
     const rl = createInterface({ input: proc.stderr })
     rl.on('line', (line: string) => {
-      console.log(`[presage:${sessionId}] ${line}`)
+      console.log(`[vitals:${sessionId}] ${line}`)
 
-      if (line.includes('UNAUTHENTICATED') || line.includes('Authentication failed')) {
-        sessionErrors.set(sessionId, 'API key missing or invalid. Set PRESAGE_API_KEY in .env')
-      } else if (line.includes('Usage verification failed') && line.includes('403')) {
-        sessionErrors.set(sessionId, 'Presage API key rejected (403). Check your key at presage.com')
-      } else if (line.includes('NO_FACES_FOUND')) {
+      if (line.includes('No face detected') || line.includes('no face')) {
         sessionErrors.set(sessionId, 'No face detected in frame. Point camera at a person.')
-      } else if (line.includes('Init failed')) {
-        sessionErrors.set(sessionId, 'Presage initialization failed. Check SDK installation.')
+      } else if (line.includes('ModuleNotFoundError') || line.includes('ImportError')) {
+        sessionErrors.set(sessionId, 'Python dependencies missing. Run: pip install -r requirements.txt')
+      } else if (line.includes('JPEG decode failed')) {
+        sessionErrors.set(sessionId, 'Invalid frame data received')
       }
     })
   }
 
   proc.on('exit', (code) => {
-    console.log(`[presage] Processor for ${sessionId} exited (code ${code})`)
+    console.log(`[vitals] Processor for ${sessionId} exited (code ${code})`)
     if (code !== 0 && !sessionErrors.has(sessionId)) {
       sessionErrors.set(sessionId, `Processor exited with code ${code}`)
     }
@@ -306,7 +302,7 @@ function startProcessor(sessionId: string): ProcessorHandle | null {
   })
 
   proc.on('error', (err) => {
-    console.error(`[presage] Processor error for ${sessionId}:`, err)
+    console.error(`[vitals] Processor error for ${sessionId}:`, err)
     sessionErrors.set(sessionId, `Processor spawn error: ${err.message}`)
     processors.delete(sessionId)
   })
