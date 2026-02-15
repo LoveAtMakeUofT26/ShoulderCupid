@@ -50,7 +50,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
         const ctrl = new AbortController()
         const timer = setTimeout(() => ctrl.abort(), 5000)
         try {
-          const res = await fetch('/api/health', { signal: ctrl.signal })
+          const res = await fetch('/health', { signal: ctrl.signal })
           clearTimeout(timer)
           if (res.ok) {
             updateCheck('camera', { state: 'passed' })
@@ -129,7 +129,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const ctrl = new AbortController()
       const timer = setTimeout(() => ctrl.abort(), 5000)
       const effectiveSignal = signal || ctrl.signal
-      const res = await fetch('/api/health', { signal: effectiveSignal })
+      const res = await fetch('/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
         updateCheck('backend', { state: 'passed' })
