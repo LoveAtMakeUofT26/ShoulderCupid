@@ -66,15 +66,15 @@ export function PreflightPage({
   }, [checks, retryCheck])
 
   return (
-    <div className="min-h-screen bg-marble-50 flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-        <Link to="/dashboard" onClick={e => { e.preventDefault(); onBack() }} className="text-gray-500" aria-label="Go back">
+      <div className="border-b px-4 py-3 flex items-center" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <Link to="/dashboard" onClick={e => { e.preventDefault(); onBack() }} className="text-[var(--color-text-tertiary)]" aria-label="Go back">
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </Link>
-        <h1 className="flex-1 text-center font-semibold text-gray-900">Session Setup</h1>
+        <h1 className="flex-1 text-center font-semibold text-[var(--color-text)]">Session Setup</h1>
         <div className="w-6" />
       </div>
 
@@ -83,7 +83,7 @@ export function PreflightPage({
         <div className={`mx-auto p-4 pb-32 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
           {/* Coach Card */}
           {coach && (
-            <div className="flex items-center gap-3 p-4 bg-gradient-to-br from-cupid-50 to-white rounded-2xl shadow-card mb-4">
+            <div className="flex items-center gap-3 p-4 rounded-2xl shadow-card mb-4" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-md flex-shrink-0"
                 style={{
@@ -93,11 +93,11 @@ export function PreflightPage({
                 {coach.avatar_emoji}
               </div>
               <div>
-                <p className="text-xs text-gray-500">Your Coach</p>
-                <p className="font-semibold text-gray-900">{coach.name}</p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">Your Coach</p>
+                <p className="font-semibold text-[var(--color-text)]">{coach.name}</p>
               </div>
               {allPassed && (
-                <span className="ml-auto text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-lg">
+                <span className="ml-auto text-xs font-medium text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400 px-2 py-1 rounded-lg">
                   Ready
                 </span>
               )}
@@ -109,7 +109,7 @@ export function PreflightPage({
             <div className="space-y-4">
               {/* Camera Section */}
               <div className="card">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>📷</span> Camera Source
                   <CheckIndicator state={checks.camera.state} />
                 </h3>
@@ -118,7 +118,7 @@ export function PreflightPage({
                   onChange={onCameraSourceChange}
                 />
                 {/* Camera Preview */}
-                <div className="mt-3 aspect-video rounded-xl bg-gray-100 overflow-hidden relative">
+                <div className="mt-3 aspect-video rounded-xl overflow-hidden relative" style={{ backgroundColor: 'var(--color-surface-secondary)' }}>
                   {cameraSource === 'webcam' && checks.camera.state === 'passed' ? (
                     <video
                       ref={videoRef}
@@ -129,11 +129,11 @@ export function PreflightPage({
                       style={{ transform: 'scaleX(-1)' }}
                     />
                   ) : cameraSource === 'webcam' && checks.camera.state === 'checking' ? (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <div className="w-full h-full flex items-center justify-center text-[var(--color-text-faint)]">
                       <Spinner /> <span className="ml-2 text-sm">Accessing camera...</span>
                     </div>
                   ) : cameraSource === 'esp32' ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                    <div className="w-full h-full flex flex-col items-center justify-center text-[var(--color-text-faint)]">
                       <span className="text-3xl mb-1">📷</span>
                       <span className="text-xs">ESP32-CAM feed</span>
                     </div>
@@ -143,7 +143,7 @@ export function PreflightPage({
                       <span className="text-xs">{checks.camera.error}</span>
                     </div>
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                    <div className="w-full h-full flex items-center justify-center text-[var(--color-text-faint)]">
                       <span className="text-3xl">📷</span>
                     </div>
                   )}
@@ -152,7 +152,7 @@ export function PreflightPage({
 
               {/* Audio Section */}
               <div className="card">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>🎧</span> Audio Devices
                 </h3>
                 <AudioSettings />
@@ -161,7 +161,7 @@ export function PreflightPage({
                 {checks.microphone.state === 'passed' && micAnalyser && (
                   <div className="mt-3">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-gray-500">Mic Level</span>
+                      <span className="text-xs text-[var(--color-text-tertiary)]">Mic Level</span>
                       <CheckIndicator state="passed" />
                     </div>
                     <MicMeter analyser={micAnalyser} />
@@ -174,7 +174,7 @@ export function PreflightPage({
                 )}
 
                 {/* Speaker Check */}
-                <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
                   <span>🔊 Speaker</span>
                   <CheckIndicator state={checks.speaker.state} />
                   {checks.speaker.state === 'failed' && (
@@ -187,7 +187,7 @@ export function PreflightPage({
             {/* Right column (on desktop): Service Checks */}
             <div className="space-y-4">
               <div className="card">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>🔗</span> Service Connections
                 </h3>
                 <div className="space-y-2">
@@ -209,7 +209,7 @@ export function PreflightPage({
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-4 pb-safe">
+      <div className="fixed bottom-0 left-0 right-0 border-t p-4 pb-safe" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <div className={`mx-auto space-y-2 ${isDesktop ? 'max-w-3xl' : 'max-w-[428px]'}`}>
           {anyFailed && !anyChecking && (
             <button
@@ -235,7 +235,7 @@ export function PreflightPage({
 /* ── Inline sub-components ── */
 
 function CheckIndicator({ state }: { state: CheckState }) {
-  if (state === 'idle') return <span className="w-2 h-2 rounded-full bg-gray-300 inline-block" />
+  if (state === 'idle') return <span className="w-2 h-2 rounded-full bg-[var(--color-text-faint)] inline-block" />
   if (state === 'checking') return <Spinner size="sm" />
   if (state === 'passed') return <span className="text-green-500 text-xs font-bold">✓</span>
   return <span className="text-red-500 text-xs font-bold">✗</span>
@@ -259,15 +259,15 @@ function CheckRow({
     <div
       className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${
         state === 'passed'
-          ? 'border-green-200 bg-green-50'
+          ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20'
           : state === 'failed'
-          ? 'border-red-200 bg-red-50'
-          : 'border-gray-200 bg-gray-50'
+          ? 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+          : 'border-[var(--color-border-strong)] bg-[var(--color-surface-secondary)]'
       }`}
     >
       <span className="text-lg">{icon}</span>
       <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-sm font-medium text-[var(--color-text-secondary)]">{label}</span>
         {state === 'failed' && error && (
           <p className="text-xs text-red-500 mt-0.5 truncate">{error}</p>
         )}
@@ -284,7 +284,7 @@ function CheckRow({
           Retry
         </button>
       ) : (
-        <span className="text-gray-300 text-lg">○</span>
+        <span className="text-[var(--color-text-faint)] text-lg">○</span>
       )}
     </div>
   )
@@ -315,7 +315,7 @@ function MicMeter({ analyser }: { analyser: AnalyserNode }) {
   }, [analyser])
 
   return (
-    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+    <div className="w-full h-2 bg-[var(--color-border-strong)] rounded-full overflow-hidden">
       <div
         ref={barRef}
         className="h-full bg-green-500 rounded-full"

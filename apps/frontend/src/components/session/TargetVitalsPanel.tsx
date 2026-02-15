@@ -9,9 +9,9 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
   // Show error state
   if (presageError) {
     return (
-      <div className="bg-gray-800 rounded-2xl p-3">
+      <div className="card rounded-2xl p-3">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <h3 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider">
             Target Vitals
           </h3>
           <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">
@@ -31,24 +31,24 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
   // Show waiting state
   if (!vitals) {
     return (
-      <div className="bg-gray-800 rounded-2xl p-3">
+      <div className="card rounded-2xl p-3">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <h3 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider">
             Target Vitals
           </h3>
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]">
             Initializing
           </span>
         </div>
-        <div className="text-center text-gray-500 text-sm py-2">
+        <div className="text-center text-[var(--color-text-faint)] text-sm py-2">
           <div className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-4 w-4 text-gray-500" viewBox="0 0 24 24">
+            <svg className="animate-spin h-4 w-4 text-[var(--color-text-faint)]" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
             Analyzing camera feed...
           </div>
-          <p className="text-xs text-gray-600 mt-1">
+          <p className="text-xs text-[var(--color-text-faint)] mt-1">
             Presage needs ~10s of a visible face to start
           </p>
         </div>
@@ -59,9 +59,9 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
   const stressLevel = getStressLevel(vitals.heart_rate, vitals.hrv)
 
   return (
-    <div className="bg-gray-800 rounded-2xl p-3">
+    <div className="card rounded-2xl p-3">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+        <h3 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wider">
           Target Vitals
         </h3>
         <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stressLevel.colorClass}`}>
@@ -75,7 +75,7 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
           <div className="text-2xl font-bold text-cupid-400">
             {vitals.heart_rate > 0 ? Math.round(vitals.heart_rate) : '--'}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-[var(--color-text-faint)]">
             {vitals.heart_rate > 0 ? 'BPM' : 'BPM (needs API key)'}
           </div>
         </div>
@@ -85,7 +85,7 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
           <div className="text-2xl font-bold text-blue-400">
             {vitals.breathing_rate > 0 ? Math.round(vitals.breathing_rate) : '--'}
           </div>
-          <div className="text-xs text-gray-500">Breaths/min</div>
+          <div className="text-xs text-[var(--color-text-faint)]">Breaths/min</div>
         </div>
 
         {/* HRV */}
@@ -93,21 +93,21 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
           <div className="text-2xl font-bold text-green-400">
             {vitals.hrv > 0 ? Math.round(vitals.hrv) : '--'}
           </div>
-          <div className="text-xs text-gray-500">HRV ms</div>
+          <div className="text-xs text-[var(--color-text-faint)]">HRV ms</div>
         </div>
       </div>
 
       {/* Engagement indicators */}
-      <div className="flex gap-3 mt-2 pt-2 border-t border-gray-700">
+      <div className="flex gap-3 mt-2 pt-2 border-t border-[var(--color-border)]">
         <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${vitals.talking ? 'bg-green-500' : 'bg-gray-600'}`} />
-          <span className="text-xs text-gray-400">
+          <span className={`w-2 h-2 rounded-full ${vitals.talking ? 'bg-green-500' : 'bg-[var(--color-text-faint)]'}`} />
+          <span className="text-xs text-[var(--color-text-tertiary)]">
             {vitals.talking ? 'Talking' : 'Silent'}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={`w-2 h-2 rounded-full ${vitals.blinking ? 'bg-yellow-500' : 'bg-gray-600'}`} />
-          <span className="text-xs text-gray-400">
+          <span className={`w-2 h-2 rounded-full ${vitals.blinking ? 'bg-yellow-500' : 'bg-[var(--color-text-faint)]'}`} />
+          <span className="text-xs text-[var(--color-text-tertiary)]">
             {vitals.blinking ? 'Blinking' : 'Steady gaze'}
           </span>
         </div>
@@ -121,5 +121,5 @@ function getStressLevel(hr: number, hrv: number): { label: string; colorClass: s
   if (hr > 100 && hrv < 30) return { label: 'Stressed', colorClass: 'bg-red-500/20 text-red-400' }
   if (hr > 90) return { label: 'Elevated', colorClass: 'bg-yellow-500/20 text-yellow-400' }
   if (hr < 75 && hrv > 50) return { label: 'Relaxed', colorClass: 'bg-green-500/20 text-green-400' }
-  return { label: 'Normal', colorClass: 'bg-gray-500/20 text-gray-400' }
+  return { label: 'Normal', colorClass: 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]' }
 }

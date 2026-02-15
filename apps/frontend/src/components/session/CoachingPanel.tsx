@@ -21,7 +21,7 @@ const EMOTION_EMOJI: Record<string, string> = {
 }
 
 const MODE_LABELS: Record<CoachingMode, { label: string; color: string }> = {
-  IDLE: { label: 'Scanning', color: 'bg-gray-500' },
+  IDLE: { label: 'Scanning', color: 'bg-[var(--color-text-faint)]' },
   APPROACH: { label: 'Approach', color: 'bg-gold-500' },
   CONVERSATION: { label: 'Conversation', color: 'bg-cupid-500' },
 }

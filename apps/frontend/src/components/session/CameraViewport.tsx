@@ -29,8 +29,8 @@ export function CameraViewport({
 }: CameraViewportProps) {
   return (
     <div
-      className="flex-1 rounded-2xl bg-gray-800 relative overflow-hidden"
-      style={{ minHeight }}
+      className="flex-1 rounded-2xl relative overflow-hidden"
+      style={{ minHeight, backgroundColor: 'var(--color-surface)' }}
     >
       <CameraFeed
         source={cameraSource}
@@ -44,14 +44,14 @@ export function CameraViewport({
       <div className="absolute top-3 left-3">
         <span className={`px-3 py-1 rounded-full text-xs font-semibold text-white ${
           mode === 'CONVERSATION' ? 'bg-cupid-500' :
-          mode === 'APPROACH' ? 'bg-gold-500' : 'bg-gray-600'
+          mode === 'APPROACH' ? 'bg-gold-500' : 'bg-[var(--color-text-faint)]'
         }`}>
           {mode === 'IDLE' ? 'Scanning...' : mode}
         </span>
       </div>
 
       {distance > 0 && (
-        <div className="absolute bottom-3 left-3 bg-black/60 rounded-lg px-3 py-1">
+        <div className="absolute bottom-3 left-3 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--color-overlay)' }}>
           <span className="text-white text-sm font-medium">
             {Math.round(distance)}cm away
           </span>
@@ -76,12 +76,12 @@ export function TranscriptionStatus({ isConnected, partialTranscript }: Transcri
   return (
     <div className="flex items-center gap-2 px-1">
       <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
-        isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-500'
+        isConnected ? 'bg-green-500 animate-pulse' : 'bg-[var(--color-text-faint)]'
       }`} />
       {partialTranscript ? (
-        <p className="text-xs text-gray-400 italic truncate">"{partialTranscript}"</p>
+        <p className="text-xs text-[var(--color-text-tertiary)] italic truncate">"{partialTranscript}"</p>
       ) : (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-[var(--color-text-faint)]">
           {isConnected ? 'Listening...' : 'Mic off'}
         </p>
       )}
