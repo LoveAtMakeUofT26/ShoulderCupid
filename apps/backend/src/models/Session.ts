@@ -7,7 +7,10 @@ const sessionSchema = new mongoose.Schema({
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true,
+  },
+  test_session: {
+    type: Boolean,
+    default: false,
   },
   coach_id: {
     type: mongoose.Schema.Types.ObjectId,

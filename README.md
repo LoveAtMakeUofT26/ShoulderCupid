@@ -304,7 +304,7 @@ The backend auto-deploys to `shouldercupid.duckdns.org` (`155.138.146.221`) via 
 ```
 NODE_ENV=production
 FRONTEND_URL=https://shoulder-cupid.vercel.app
-BACKEND_URL=https://shouldercupid.duckdns.org
+BACKEND_URL=https://shoulder-cupid.vercel.app
 SESSION_SECRET=<random-secret>
 MONGODB_URI=mongodb://localhost:27017/shoulder-cupid
 GOOGLE_CLIENT_ID=<your-google-client-id>
@@ -318,10 +318,9 @@ ELEVENLABS_API_KEY=<your-elevenlabs-key>
 1. Go to [Google Cloud Console](https://console.cloud.google.com) > APIs & Services > Credentials
 2. Under **Authorized JavaScript origins**, add:
    - `https://shoulder-cupid.vercel.app`
-   - `https://shouldercupid.duckdns.org`
    - `http://localhost:3000` (for local dev)
 3. Under **Authorized redirect URIs**, add:
-   - `https://shouldercupid.duckdns.org/api/auth/google/callback`
+   - `https://shoulder-cupid.vercel.app/api/auth/google/callback`
    - `http://localhost:4000/api/auth/google/callback` (for local dev)
 
 ### Manual Backend Deploy

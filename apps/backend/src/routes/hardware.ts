@@ -2,6 +2,7 @@ import { Router } from 'express'
 import mongoose from 'mongoose'
 import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
+import { Coach } from '../models/Coach.js'
 import {
   updateSensors,
   updateEmotion,
@@ -35,8 +36,13 @@ const requireHardwareAuth = (req: any, res: any, next: any) => {
     return next()
   }
 
+  // Dev mode: no token configured = allow all requests
+  if (!configuredDeviceToken) {
+    return next()
+  }
+
   const token = getDeviceToken(req)
-  if (configuredDeviceToken && token && token === configuredDeviceToken) {
+  if (token && token === configuredDeviceToken) {
     return next()
   }
 
@@ -310,6 +316,36 @@ hardwareRouter.post('/trigger-warning', requireHardwareAuth, async (req, res) =>
   }
 
   res.json({ success: true, level: warningLevel })
+})
+
+// GET /api/test-session - Create or return a reusable test session (no auth needed)
+hardwareRouter.get('/test-session', async (_req, res) => {
+  try {
+    // Reuse existing test session if still active
+    const existing = await Session.findOne({ mode: 'IDLE', status: 'active', test_session: true })
+    if (existing) {
+      return res.json({ session_id: existing._id.toString() })
+    }
+
+    // Grab any coach to satisfy the schema
+    const coach = await Coach.findOne()
+    if (!coach) {
+      return res.status(500).json({ error: 'No coaches in DB — seed one first' })
+    }
+
+    const session = await Session.create({
+      coach_id: coach._id,
+      status: 'active',
+      mode: 'IDLE',
+      started_at: new Date(),
+      test_session: true,
+    })
+
+    res.json({ session_id: session._id.toString() })
+  } catch (error) {
+    console.error('[ShoulderCupid] Test session error:', error)
+    res.status(500).json({ error: 'Failed to create test session' })
+  }
 })
 
 // Clean up command queue when session ends

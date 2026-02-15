@@ -30,7 +30,7 @@ const PRICING_TIERS = {
   premium: { quick_5min: 2.0, standard_15min: 5.0, deep_30min: 8.0 },
 }
 
-const GEMINI_MODELS = ['gemini-2.5-flash-lite'] as const
+const GEMINI_MODELS = ['gemini-2.0-flash'] as const
 
 const COACH_PROFILE_SCHEMA = {
   type: SchemaType.OBJECT,
