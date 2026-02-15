@@ -1,6 +1,7 @@
 name: Deploy Backend to Vultr
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
