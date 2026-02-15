@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@elevenlabs/elevenlabs-js": "^2.35.0",
+    "@google/genai": "^1.41.0",
     "@google/generative-ai": "^0.17.0",
     "@shoulder-cupid/shared": "*",
     "axios": "^1.7.0",
