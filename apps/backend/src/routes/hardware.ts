@@ -136,6 +136,15 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
 
   console.log(`[ShoulderCupid] Frame received: source=${source || 'unknown'}, session=${session_id}, hasDetection=${!!detection}`)
 
+  // Update MJPEG stream buffer so GET /api/stream serves the latest frame
+  if (_jpeg) {
+    const base64Data = typeof _jpeg === 'string' && _jpeg.startsWith('data:')
+      ? _jpeg.split(',')[1] || ''
+      : _jpeg
+    const frameBuffer = Buffer.from(base64Data, 'base64')
+    setLatestEsp32Frame(frameBuffer)
+  }
+
   try {
     // Verify session exists and is active
     const session = await Session.findOne({ _id: session_id, status: 'active' })
