@@ -38,12 +38,31 @@ export interface SessionState {
 
 // Socket connects directly to the backend (not through Vite proxy).
 // Vite proxy works for REST but is unreliable for socket.io WebSocket upgrades.
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (typeof window !== 'undefined'
-  ? window.location.origin
-  : 'http://localhost:4000')
+const SOCKET_URL = (() => {
+  const explicitSocketUrl = import.meta.env.VITE_SOCKET_URL?.trim()
+  if (explicitSocketUrl) return explicitSocketUrl
+
+  const apiUrl = import.meta.env.VITE_API_URL?.trim()
+  if (apiUrl) return apiUrl
+
+  if (typeof window === 'undefined') {
+    return 'http://localhost:4000'
+  }
+
+  const { hostname, port, protocol, origin } = window.location
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    if (port === '3000') {
+      return `${protocol}//${hostname}:4000`
+    }
+    return `${protocol}//${hostname}:4000`
+  }
+
+  return origin
+})()
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)
+  const warningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [state, setState] = useState<SessionState>({
     isConnected: false,
@@ -67,7 +86,6 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
-    console.log(`Socket connecting to: ${SOCKET_URL}`)
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -75,7 +93,6 @@ export function useSessionSocket(sessionId: string | null) {
     socketRef.current = socket
 
     socket.on('connect', () => {
-      console.log('Socket connected:', socket.id)
       updateState({ isConnected: true, coachingMessage: 'Connected! Waiting for session to start...' })
 
       // Identify as web client and join session
@@ -88,8 +105,7 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ coachingMessage: `Connection failed: ${err.message}` })
     })
 
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason)
+    socket.on('disconnect', () => {
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
     })
 
@@ -104,8 +120,8 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     // Session events
-    socket.on('session-started', (data: { sessionId: string }) => {
-      if (data.sessionId !== sessionId) return
+    socket.on('session-started', (data: { sessionId?: string } | string | undefined) => {
+      if (typeof data === 'object' && data && data.sessionId !== undefined && data.sessionId !== sessionId) return
       updateState({ mode: 'IDLE', coachingMessage: 'Session started! Looking for targets...' })
     })
 
@@ -164,7 +180,8 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ warningLevel: data.level, warningMessage: data.message })
 
       // Auto-clear warning after 5 seconds
-      setTimeout(() => {
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
+      warningTimerRef.current = setTimeout(() => {
         updateState({ warningLevel: 0, warningMessage: '' })
       }, 5000)
     })
@@ -172,6 +189,7 @@ export function useSessionSocket(sessionId: string | null) {
     return () => {
       socket.disconnect()
       socketRef.current = null
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current)
     }
   }, [sessionId, updateState])
 
