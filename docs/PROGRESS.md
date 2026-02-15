@@ -1,8 +1,8 @@
 # Cupid - Development Progress
 
-## Current Status: ~75% Complete 🔄
+## Current Status: ~85% Complete 🔄
 
-Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Scribe STT (client-side) → Socket.io → Gemini 2.0 Flash coaching (server-side) → ElevenLabs TTS → audio playback. Live session UI with real preflight checks, Presage vitals, and transcript persistence.
+Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Scribe STT (client-side) → Socket.io → Gemini 2.0 Flash coaching (server-side) → ElevenLabs TTS → audio playback. Live session UI with real preflight checks, Presage vitals, and transcript persistence. AI coach generation pipeline with Tinder-style discovery, roster management, and voice preview. Premium desktop UI with responsive sidebar navigation and dark mode theme system.
 
 ---
 
@@ -13,6 +13,9 @@ Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Sc
 - [x] MongoDB connection (Atlas)
 - [x] Google OAuth authentication
 - [x] Coach CRUD API + seed data (3 coaches)
+- [x] AI coach generation pipeline (Gemini AI profiles + Pollinations avatars)
+- [x] Coach roster system (add/remove/set-default, free: 3, premium: 9)
+- [x] Voice pool with trait-based matching (30 ElevenLabs voices)
 - [x] User profile & coach selection API
 
 ### Epic 5: Frontend Core ✅
@@ -22,14 +25,20 @@ Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Sc
 - [x] Authentication flow (Google OAuth)
 - [x] Dashboard page with coach card
 - [x] Coaches page with selection
+- [x] Tinder-style coach discovery page (swipe to discover AI coaches)
+- [x] Coach detail modal with voice preview
+- [x] Roster management UI (add/remove coaches, set default)
 - [x] Sessions page with backend API
-- [x] Settings page (placeholder)
+- [x] Settings page (wired with real data)
 
 ### Design System ✅
 - [x] Color palette (Cupid pink, gold, marble)
 - [x] Typography (Playfair Display + Inter)
 - [x] Component styles (buttons, cards, nav)
 - [x] Mobile-first layouts
+- [x] Dark mode theme system (CSS custom properties, light/dark/system toggle)
+- [x] Desktop sidebar navigation (SideNav with theme toggle)
+- [x] Responsive layouts (mobile bottom nav + desktop sidebar)
 
 ### Epic 7: Onboarding ✅
 - [x] Multi-step wizard
@@ -94,7 +103,7 @@ Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Sc
 ### Remaining Polish
 - [ ] Device pairing flow
 - [ ] Edge case handling (disconnects, timeouts)
-- [ ] Desktop layouts (stretch goal)
+- [x] Desktop layouts (sidebar nav, responsive pages, premium UI)
 - [ ] Payment flow (Solana or Stripe)
 
 ---
@@ -107,8 +116,9 @@ Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Sc
 2. ✅ Build core pages with mobile layout
 3. ✅ Build Live Session UI (demo wow-factor)
 4. ✅ Connect real AI services (Gemini coaching + ElevenLabs STT/TTS)
-5. ⏳ Desktop layouts (stretch goal)
-6. ⏳ Polish pass (animations, micro-interactions)
+5. ✅ Desktop layouts (sidebar nav, responsive pages)
+6. ✅ Dark mode theme system (light/dark/system)
+7. ⏳ Polish pass (animations, micro-interactions)
 
 **Rationale:** Working demo > beautiful mockup for hackathon judges.
 
@@ -144,5 +154,16 @@ npm run type-check
 | `apps/frontend/src/hooks/usePreflightChecks.ts` | Device/service validation (camera, mic, backend, STT, Gemini) |
 | `apps/frontend/src/pages/LiveSessionPage.tsx` | Live session page (connects STT → socket → coaching) |
 | `apps/backend/src/scripts/seed.ts` | Coach seed data (names, prompts, ElevenLabs voice IDs) |
+| `apps/backend/src/services/coachGenerationService.ts` | AI coach generation (Gemini profiles + Pollinations avatars) |
+| `apps/backend/src/services/preferenceService.ts` | Swipe preference tracking + generation bias |
+| `apps/backend/src/config/voicePool.ts` | 30 ElevenLabs voices mapped to personality traits |
+| `apps/frontend/src/pages/CoachDiscoveryPage.tsx` | Tinder-style swipe coach discovery |
+| `apps/frontend/src/components/coaches/SwipeCard.tsx` | Drag gesture swipe card (Framer Motion) |
+| `apps/frontend/src/components/coaches/CoachDetailModal.tsx` | Full coach detail view with hire/save |
+| `apps/frontend/src/components/coaches/VoicePreviewButton.tsx` | Tap-to-hear coach voice samples |
+| `apps/frontend/src/services/coachService.ts` | Coach generation + roster management API client |
+| `apps/frontend/src/hooks/useThemeStore.ts` | Theme state (light/dark/system) with localStorage |
+| `apps/frontend/src/hooks/useIsDesktop.ts` | Responsive breakpoint hook (768px) |
+| `apps/frontend/src/components/layout/SideNav.tsx` | Desktop sidebar navigation with theme toggle |
 | `docs/DESIGN_SYSTEM.md` | Colors, typography, components |
 | `docs/github-issues/*.md` | Epic breakdowns |

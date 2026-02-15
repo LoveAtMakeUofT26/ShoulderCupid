@@ -9,7 +9,7 @@ const COACHES = [
     tagline: 'The Suave Strategist',
     quote: "She's leaning in, king. Time to ask about her weekend.",
     gradient: 'from-cupid-400 to-cupid-300',
-    borderColor: 'border-cupid-200/50',
+    borderColor: 'border-cupid-200/50 dark:border-cupid-700/30',
   },
   {
     name: 'Wingman Chad',
@@ -17,7 +17,7 @@ const COACHES = [
     tagline: 'Your Hype Man',
     quote: "BRO she's DEFINITELY feeling the vibe! Let's GO!",
     gradient: 'from-indigo-400 to-purple-400',
-    borderColor: 'border-indigo-200/50',
+    borderColor: 'border-indigo-200/50 dark:border-indigo-700/30',
   },
   {
     name: 'Gentle Guide',
@@ -25,7 +25,7 @@ const COACHES = [
     tagline: 'The Calm Companion',
     quote: "Take a breath. You're doing wonderfully. Just be yourself.",
     gradient: 'from-gold-300 to-gold-200',
-    borderColor: 'border-gold-200/50',
+    borderColor: 'border-gold-200/50 dark:border-gold-700/30',
   },
 ]
 
@@ -34,12 +34,12 @@ export function CoachShowcaseSection() {
     <section id="coaches" className="py-24 md:py-32 relative">
       {/* Background accent */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 rounded-full blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cupid-100/20 dark:bg-cupid-500/5 rounded-full blur-3xl" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">
-        <SectionHeading subtitle="Choose the personality that matches your vibe">
-          Meet Your Coaches
+        <SectionHeading subtitle="Swipe through AI-generated coaches with unique personalities, voices, and styles. Build your roster.">
+          Discover AI Coaches
         </SectionHeading>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -55,7 +55,7 @@ export function CoachShowcaseSection() {
                 </div>
 
                 {/* Name */}
-                <h3 className="font-display text-xl font-bold text-gray-900 mb-1">
+                <h3 className="font-display text-xl font-bold mb-1" style={{ color: 'var(--color-text)' }}>
                   {coach.name}
                 </h3>
 
@@ -66,8 +66,8 @@ export function CoachShowcaseSection() {
 
                 {/* Quote */}
                 <div className="relative">
-                  <div className="absolute -top-2 left-2 text-3xl text-gold-200/60 font-display">&ldquo;</div>
-                  <blockquote className="text-gray-500 text-sm italic leading-relaxed pl-4">
+                  <div className="absolute -top-2 left-2 text-3xl text-gold-200/60 dark:text-gold-600/40 font-display">&ldquo;</div>
+                  <blockquote className="text-sm italic leading-relaxed pl-4" style={{ color: 'var(--color-text-secondary)' }}>
                     {coach.quote}
                   </blockquote>
                 </div>
@@ -75,6 +75,18 @@ export function CoachShowcaseSection() {
             </FadeInView>
           ))}
         </div>
+
+        {/* AI generation callout */}
+        <FadeInView delay={0.5}>
+          <div className="mt-12 text-center">
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text-tertiary)' }}>
+              Powered by AI. Unlimited unique coaches. Preview their voice before you choose.
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-text-faint)' }}>
+              Free: 3 coaches in your roster &middot; Premium: up to 9
+            </p>
+          </div>
+        </FadeInView>
       </div>
     </section>
   )

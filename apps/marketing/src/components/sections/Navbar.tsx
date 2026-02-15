@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
+import { ThemeToggle } from '../ui/ThemeToggle'
 
 const NAV_LINKS = [
   { label: 'How It Works', href: '#how-it-works' },
   { label: 'Coaches', href: '#coaches' },
   { label: 'Features', href: '#features' },
 ]
+
+const APP_URL = import.meta.env.VITE_APP_URL || '/app'
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -20,15 +23,16 @@ export function Navbar() {
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-white/80 backdrop-blur-lg shadow-marble'
+          ? 'backdrop-blur-lg shadow-marble'
           : 'bg-transparent'
       }`}
+      style={scrolled ? { backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)' } : undefined}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         {/* Logo */}
         <a href="#" className="flex items-center gap-2">
           <span className="text-2xl">💘</span>
-          <span className="font-display font-bold text-xl text-gray-900">
+          <span className="font-display font-bold text-xl" style={{ color: 'var(--color-text)' }}>
             ShoulderCupid
           </span>
         </a>
@@ -39,14 +43,17 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 hover:text-cupid-500 transition-colors"
+              className="text-sm font-medium hover:text-cupid-500 transition-colors"
+              style={{ color: 'var(--color-text-secondary)' }}
             >
               {link.label}
             </a>
           ))}
+          <ThemeToggle />
           <a
-            href="http://localhost:3005"
-            className="bg-cupid-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-cupid-600 transition-colors"
+            href={APP_URL}
+            className="text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            style={{ backgroundColor: 'var(--color-primary)' }}
           >
             Try Now
           </a>
@@ -54,7 +61,8 @@ export function Navbar() {
 
         {/* Mobile menu button */}
         <button
-          className="md:hidden p-2 text-gray-600"
+          className="md:hidden p-2"
+          style={{ color: 'var(--color-text-secondary)' }}
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
         >
@@ -70,20 +78,32 @@ export function Navbar() {
 
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-marble-200 px-6 py-4 space-y-3">
+        <div
+          className="md:hidden backdrop-blur-lg px-6 py-4 space-y-3"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--color-surface) 95%, transparent)',
+            borderTop: '1px solid var(--color-border)',
+          }}
+        >
           {NAV_LINKS.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="block text-sm font-medium text-gray-600 hover:text-cupid-500 py-2"
+              className="block text-sm font-medium hover:text-cupid-500 py-2"
+              style={{ color: 'var(--color-text-secondary)' }}
               onClick={() => setMenuOpen(false)}
             >
               {link.label}
             </a>
           ))}
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm font-medium" style={{ color: 'var(--color-text-secondary)' }}>Theme</span>
+            <ThemeToggle />
+          </div>
           <a
-            href="http://localhost:3005"
-            className="block text-center bg-cupid-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-cupid-600 transition-colors"
+            href={APP_URL}
+            className="block text-center text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+            style={{ backgroundColor: 'var(--color-primary)' }}
             onClick={() => setMenuOpen(false)}
           >
             Try Now
