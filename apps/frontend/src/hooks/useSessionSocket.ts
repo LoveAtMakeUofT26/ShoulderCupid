@@ -12,6 +12,14 @@ export interface TranscriptEntry {
   emotion?: string
 }
 
+export interface TargetVitals {
+  heart_rate: number
+  breathing_rate: number
+  hrv: number
+  blinking: boolean
+  talking: boolean
+}
+
 export interface SessionState {
   isConnected: boolean
   mode: CoachingMode
@@ -22,6 +30,7 @@ export interface SessionState {
   heartRate: number
   warningLevel: WarningLevel
   warningMessage: string
+  targetVitals: TargetVitals | null
 }
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4005'
@@ -39,6 +48,7 @@ export function useSessionSocket(sessionId: string | null) {
     heartRate: -1,
     warningLevel: 0,
     warningMessage: '',
+    targetVitals: null,
   })
 
   const updateState = useCallback((updates: Partial<SessionState>) => {
@@ -97,6 +107,10 @@ export function useSessionSocket(sessionId: string | null) {
       if (data.distance !== undefined) updates.distance = data.distance
       if (data.heartRate !== undefined) updates.heartRate = data.heartRate
       updateState(updates)
+    })
+
+    socket.on('target-vitals', (data: TargetVitals) => {
+      updateState({ targetVitals: data })
     })
 
     socket.on('warning-triggered', (data: { level: WarningLevel; message: string }) => {
