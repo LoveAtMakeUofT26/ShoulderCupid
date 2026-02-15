@@ -60,6 +60,7 @@ export function OnboardingPage() {
     if (success) {
       navigate('/dashboard')
     }
+    return success
   }
 
   if (!authChecked) {
