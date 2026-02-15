@@ -14,6 +14,30 @@ interface ReportOutput {
   improvements: string[]
 }
 
+function buildFallbackReport(
+  durationSeconds: number,
+  analytics: { total_tips: number; approach_count: number; conversation_count: number; avg_emotion_score?: number; warnings_triggered: number },
+  transcriptLength: number
+): ReportOutput {
+  const mins = Math.round(durationSeconds / 60)
+  const parts: string[] = []
+
+  if (mins > 0) parts.push(`The session lasted ${mins} minute${mins !== 1 ? 's' : ''}`)
+  if (analytics.total_tips > 0) parts.push(`with ${analytics.total_tips} coaching tip${analytics.total_tips !== 1 ? 's' : ''} delivered`)
+  if (analytics.conversation_count > 0) parts.push(`and ${analytics.conversation_count} conversation${analytics.conversation_count !== 1 ? 's' : ''}`)
+
+  const summary = parts.length > 0
+    ? `${parts.join(' ')}. AI analysis is temporarily unavailable — here's a stats-based summary.`
+    : 'Session completed. AI analysis is temporarily unavailable — check back later or retry.'
+
+  const highlights: string[] = []
+  if (analytics.total_tips > 0) highlights.push(`Received ${analytics.total_tips} coaching tips during the session`)
+  if (analytics.conversation_count > 0) highlights.push(`Engaged in ${analytics.conversation_count} conversation${analytics.conversation_count !== 1 ? 's' : ''}`)
+  if (transcriptLength > 0) highlights.push('Session transcript was recorded for review')
+
+  return { summary, highlights, improvements: [] }
+}
+
 function buildPrompt(
   coachName: string,
   durationSeconds: number,
@@ -87,38 +111,40 @@ export async function generateSessionReport(sessionId: string): Promise<void> {
 
   const prompt = buildPrompt(coachName, durationSeconds, transcript, analytics)
 
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    generationConfig: {
-      maxOutputTokens: 500,
-      temperature: 0.7,
-      responseMimeType: 'application/json',
-    },
-  })
-
-  const result = await retryWithBackoff(
-    () => model.generateContent(prompt),
-    {
-      maxRetries: 2,
-      baseDelayMs: 1000,
-      onRetry: (attempt, err) => {
-        console.warn(`[report] Gemini retry ${attempt} for session ${sessionId}:`, err.message)
-      },
-    }
-  )
-
-  const text = result.response.text().trim()
   let report: ReportOutput
 
   try {
-    report = JSON.parse(text)
-  } catch {
-    console.error(`[report] Failed to parse Gemini response for session ${sessionId}:`, text)
-    report = {
-      summary: 'Session completed. Report generation encountered an issue — check back later.',
-      highlights: [],
-      improvements: [],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        maxOutputTokens: 500,
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+      },
+    })
+
+    const result = await retryWithBackoff(
+      () => model.generateContent(prompt),
+      {
+        maxRetries: 2,
+        baseDelayMs: 1000,
+        onRetry: (attempt, err) => {
+          console.warn(`[report] Gemini retry ${attempt} for session ${sessionId}:`, err.message)
+        },
+      }
+    )
+
+    const text = result.response.text().trim()
+
+    try {
+      report = JSON.parse(text)
+    } catch {
+      console.error(`[report] Failed to parse Gemini response for session ${sessionId}:`, text)
+      report = buildFallbackReport(durationSeconds, analytics, transcript.length)
     }
+  } catch (err) {
+    console.error(`[report] Gemini API failed for session ${sessionId}:`, err)
+    report = buildFallbackReport(durationSeconds, analytics, transcript.length)
   }
 
   await Session.findByIdAndUpdate(sessionId, {

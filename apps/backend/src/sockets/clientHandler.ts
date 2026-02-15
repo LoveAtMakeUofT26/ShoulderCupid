@@ -137,6 +137,14 @@ export function setupClientHandler(socket: Socket, io: Server) {
         state.mode = 'CONVERSATION'
         broadcastToSession(io, sessionId, 'mode-change', { mode: 'CONVERSATION', prevMode: 'IDLE' })
         console.log(`No hardware detected — defaulting session ${sessionId} to CONVERSATION mode`)
+
+        // Persist mode + increment conversation_count in DB
+        if (isValidObjectId(sessionId)) {
+          Session.findByIdAndUpdate(sessionId, {
+            mode: 'CONVERSATION',
+            $inc: { 'analytics.conversation_count': 1 },
+          }).catch(err => console.error('Failed to persist default CONVERSATION mode:', err))
+        }
       }
 
       // Initialize advice session (Gemini primary, OpenAI fallback)
