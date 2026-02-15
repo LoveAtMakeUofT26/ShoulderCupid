@@ -4,6 +4,7 @@ import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
 
 import { stopSession as stopSessionProcessor } from '../services/presageService.js'
+import { generateSessionReport } from '../services/reportService.js'
 import { clearCommandQueue } from './hardware.js'
 import mongoose from 'mongoose'
 
@@ -208,6 +209,11 @@ sessionsRouter.post('/:id/end', async (req, res) => {
 
     // Remove from active sessions
     activeSessions.delete(userId.toString())
+
+    // Generate report in background (don't block response)
+    generateSessionReport(session._id.toString()).catch(err => {
+      console.error(`[report] Failed to generate report for session ${session._id}:`, err)
+    })
 
     await session.populate('coach_id')
 
