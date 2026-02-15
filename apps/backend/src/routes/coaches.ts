@@ -51,8 +51,12 @@ coachesRouter.post('/generate', requireAuth, async (req, res) => {
 
     const coach = await createGeneratedCoach(bias ?? undefined)
     res.json({ coach })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating coach:', error)
+    const isRateLimit = error?.status === 429 || error?.message?.includes('429')
+    if (isRateLimit) {
+      return res.status(429).json({ error: 'Too many requests. Please wait a moment and try again.' })
+    }
     res.status(500).json({ error: 'Failed to generate coach' })
   }
 })
