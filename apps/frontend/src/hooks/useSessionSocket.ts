@@ -34,7 +34,9 @@ export interface SessionState {
   targetVitals: TargetVitals | null
 }
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4005'
+// In dev, Vite proxies /socket.io to the backend (see vite.config.ts)
+// In prod, set VITE_SOCKET_URL to the backend URL
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL as string | undefined
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)
@@ -59,10 +61,12 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
-    const socket = io(SOCKET_URL, {
-      transports: ['websocket', 'polling'],
+    const socketOpts = {
+      transports: ['websocket', 'polling'] as ('websocket' | 'polling')[],
       autoConnect: true,
-    })
+    }
+    // If no explicit URL, connect to same origin (goes through Vite proxy in dev)
+    const socket = SOCKET_URL ? io(SOCKET_URL, socketOpts) : io(socketOpts)
     socketRef.current = socket
 
     socket.on('connect', () => {
