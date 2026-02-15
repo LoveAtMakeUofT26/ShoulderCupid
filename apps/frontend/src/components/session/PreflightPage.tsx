@@ -227,7 +227,7 @@ export function PreflightPage({
             </button>
           )}
           <button
-            onClick={onStart}
+            onClick={() => onStart()}
             disabled={!allPassed}
             className={`btn-primary disabled:opacity-40 disabled:cursor-not-allowed ${isDesktop ? 'px-16' : 'w-full'}`}
           >
