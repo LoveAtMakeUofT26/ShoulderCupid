@@ -48,13 +48,33 @@ export default {
         '2xl': '16px',
         '3xl': '24px',
       },
+      backgroundImage: {
+        'gold-foil': 'linear-gradient(135deg, #C9A962 0%, #F5EDD8 50%, #C9A962 100%)',
+        'pink-glow': 'radial-gradient(circle at center, rgba(232, 86, 108, 0.15) 0%, transparent 70%)',
+      },
       boxShadow: {
         'card': '0 2px 8px rgba(0, 0, 0, 0.06)',
         'card-hover': '0 4px 16px rgba(0, 0, 0, 0.08)',
         'fab': '0 4px 12px rgba(232, 86, 108, 0.4)',
+        'marble': '0 10px 40px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03)',
+        'gold': '0 4px 16px rgba(201, 169, 98, 0.3)',
+        'pink-glow': '0 0 40px rgba(232, 86, 108, 0.4)',
+        'pink-glow-lg': '0 0 60px rgba(232, 86, 108, 0.6)',
       },
       animation: {
         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 6s ease-in-out infinite',
+        'shimmer': 'shimmer 3s linear infinite',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-20px)' },
+        },
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
     },
   },

@@ -32,7 +32,8 @@ export function LiveSessionPage() {
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
 
   const isNewSession = sessionId === 'new'
-  const activeSessionId = isNewSession ? null : sessionId || null
+  const [createdSessionId, setCreatedSessionId] = useState<string | null>(null)
+  const activeSessionId = createdSessionId || (isNewSession ? null : sessionId || null)
 
   const {
     isConnected,
@@ -51,7 +52,7 @@ export function LiveSessionPage() {
   // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
-    partialTranscript,
+    partialTranscript: _partialTranscript,
     isConnected: transcriptionConnected,
     startTranscription,
     stopTranscription,
@@ -111,13 +112,15 @@ export function LiveSessionPage() {
     }
   }, [phase, cameraSource])
 
-  // Stream partial transcripts to Gemini (real-time)
+  // Stream committed transcripts to Gemini (not partial)
   useEffect(() => {
-    if (partialTranscript && partialTranscript.length > 0 && geminiConnected) {
-      console.log("Streaming partial to Gemini:", partialTranscript);
-      sendTranscriptToGemini(partialTranscript);
+    if (transcriptionTranscripts.length > 0 && geminiConnected) {
+      const latestTranscript = transcriptionTranscripts[transcriptionTranscripts.length - 1];
+      if (latestTranscript) {
+        sendTranscriptToGemini(latestTranscript.text);
+      }
     }
-  }, [partialTranscript, geminiConnected, sendTranscriptToGemini]);
+  }, [transcriptionTranscripts, geminiConnected, sendTranscriptToGemini]);
 
   // Log Gemini responses
   useEffect(() => {
@@ -170,10 +173,23 @@ export function LiveSessionPage() {
   }, [phase, webcam])
 
   const handleStartSession = useCallback(async () => {
-    // TODO: Call POST /api/sessions/start to create session
-    // For now, just transition to active state
-    setPhase('active')
-    setDuration(0)
+    try {
+      const response = await fetch('/api/sessions/start', {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        console.error('Failed to start session:', err)
+        return
+      }
+      const session = await response.json()
+      setCreatedSessionId(session._id)
+      setPhase('active')
+      setDuration(0)
+    } catch (error) {
+      console.error('Failed to start session:', error)
+    }
   }, [])
 
   const handleEndSession = useCallback(async () => {
@@ -183,11 +199,20 @@ export function LiveSessionPage() {
     stopTranscription()
     disconnectFromGemini()
 
-    // TODO: Call POST /api/sessions/:id/end
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    if (activeSessionId) {
+      try {
+        await fetch(`/api/sessions/${activeSessionId}/end`, {
+          method: 'POST',
+          credentials: 'include',
+        })
+      } catch (error) {
+        console.error('Failed to end session:', error)
+      }
+    }
 
-    navigate('/sessions')
-  }, [endSession, navigate, webcam, stopTranscription, disconnectFromGemini])
+    // Navigate to session report (or list if no ID)
+    navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
+  }, [endSession, navigate, activeSessionId, webcam, stopTranscription, disconnectFromGemini])
 
   if (loading) {
     return (

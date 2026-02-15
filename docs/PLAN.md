@@ -23,7 +23,8 @@
 - The device running the website/server handles all audio
 - Browser requests microphone permissions (Web Audio API)
 - User wears Bluetooth earbuds for both input and output
-- Audio flow: Browser mic -> backend (ElevenLabs STT) -> transcript
+- STT flow: Browser mic -> ElevenLabs Scribe (client-side SDK, token from backend) -> transcript
+- Gemini flow: Transcript text -> Gemini 2.5 Flash Live session (client-side SDK, token from backend) -> coaching response
 - TTS flow: Backend (ElevenLabs TTS) -> browser -> Bluetooth earbuds
 
 ### Hosting
@@ -62,9 +63,9 @@
 │  ├── Exposes video stream endpoints to frontend          │
 │  ├── Edge Impulse API (person detection)                 │
 │  ├── Presage C++ SDK (emotion analysis)                  │
-│  ├── ElevenLabs STT (audio from browser -> text)         │
+│  ├── ElevenLabs STT token endpoint (/api/stt)            │
+│  ├── Gemini Live token endpoint (/api/gemini)            │
 │  ├── ElevenLabs TTS (coaching text -> audio)             │
-│  ├── Gemini API (coaching LLM)                           │
 │  ├── Command queue (buzz/slap -> ESP32)                  │
 │  └── MongoDB (users, sessions, transcripts)              │
 └──────────────────────┬───────────────────────────────────┘
@@ -74,9 +75,9 @@
 │              BROWSER / FRONTEND (Vercel)                   │
 │                                                           │
 │  React + Vite + TypeScript + Tailwind                    │
-│  ├── Requests mic permission (Web Audio API)             │
+│  ├── ElevenLabs Scribe SDK (client-side STT)             │
+│  ├── Gemini Live SDK (client-side coaching)              │
 │  ├── Captures audio from Bluetooth earbuds               │
-│  ├── Streams audio to backend for STT                    │
 │  ├── Receives TTS audio from backend -> plays to earbuds │
 │  ├── Displays live video feed from backend endpoints     │
 │  ├── Live session dashboard (transcript, emotions, HR)   │
@@ -98,19 +99,20 @@
    └─► If person detected + close enough: Presage C++ SDK -> emotion
 
 3. Browser captures audio (Bluetooth earbuds mic)
-   └─► Streams to backend via WebSocket
-   └─► ElevenLabs STT -> transcript text
+   └─► ElevenLabs Scribe SDK (client-side, token from /api/stt)
+   └─► Real-time partial + committed transcripts
 
-4. Backend assembles context
+4. Transcripts streamed to Gemini Live session
+   └─► Gemini 2.5 Flash (client-side SDK, token from /api/gemini)
+   └─► Real-time coaching responses
+
+5. TODO: Backend assembles full context for richer coaching
    {
      person_detected, gender, distance_cm,
      heart_rate_bpm, target_emotion,
      transcript, conversation_history,
      coach_personality
    }
-
-5. Gemini API generates coaching response
-   └─► Short 1-2 sentence coaching line
 
 6. ElevenLabs TTS converts coaching text to audio
    └─► Streamed back to browser -> Bluetooth earbuds
@@ -168,8 +170,9 @@
 ### AI Pipeline
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/audio` | Receive audio chunk from browser, STT |
-| POST | `/api/coach` | Assemble context, get coaching response |
+| GET | `/api/stt/scribe-token` | ElevenLabs Scribe single-use token for client-side STT |
+| GET | `/api/gemini/token` | Gemini Live ephemeral token for client-side coaching |
+| POST | `/api/coach` | Assemble full context, get coaching response (TODO) |
 | WS | `/ws/session` | Real-time session data (bidirectional) |
 
 ### Auth & Users
@@ -197,9 +200,9 @@
 |---------|---------|------------|
 | **Edge Impulse** | Person detection (male/female/none) | Backend (API call) |
 | **Presage SDK** | Emotion analysis from face | Backend (C++ native on Ubuntu) |
-| **ElevenLabs STT** | Speech-to-text from earbuds mic | Backend (API call) |
+| **ElevenLabs Scribe** | Real-time speech-to-text | Frontend (client-side SDK, token from backend) |
 | **ElevenLabs TTS** | Coaching text to speech | Backend (API call) |
-| **Gemini API** | Coaching LLM + session reports | Backend (API call) |
+| **Gemini 2.5 Flash Live** | Real-time coaching from transcript | Frontend (client-side SDK, token from backend) |
 
 ---
 
@@ -233,15 +236,15 @@
 - [ ] ESP32-CAM streaming MJPEG to backend
 - [ ] Backend exposes video stream endpoint
 - [ ] Frontend displays live video feed
-- [ ] Browser audio capture (mic permissions + Web Audio API)
-- [ ] Audio streaming to backend via WebSocket
-- [ ] ElevenLabs STT integration
+- [x] Browser audio capture (mic permissions via ElevenLabs Scribe SDK)
+- [x] ElevenLabs STT integration (client-side Scribe + backend token endpoint)
 - [ ] ElevenLabs TTS integration + playback to earbuds
 - [ ] Edge Impulse person detection on backend
 - [ ] Presage C++ SDK on Vultr Ubuntu
 
 ### Phase 3: AI Coaching Loop
-- [ ] Gemini coaching LLM with full context
+- [x] Gemini Live session (basic - streams transcript, gets responses)
+- [ ] Gemini coaching with full context (person detection, emotion, coach personality)
 - [ ] Approach mode (person detected, far away)
 - [ ] Conversation mode (close, STT active)
 - [ ] Coach personality system (prompt variations)
@@ -271,6 +274,8 @@
 
 1. **ESP32-CAM is dumb**: It only streams video. All intelligence is on the backend.
 2. **Browser is the audio device**: No ESP32 audio. User's phone/laptop with Bluetooth earbuds handles mic input and coaching audio output.
-3. **Presage needs Ubuntu**: C++ SDK won't run on macOS easily. Vultr Ubuntu VPS is the target.
-4. **Edge Impulse is server-side**: No TinyML on ESP32-CAM. Cloud API keeps firmware simple.
-5. **Two connections to ESP32**: Backend pulls video frames; backend pushes commands (buzz/slap).
+3. **STT and Gemini run client-side**: ElevenLabs Scribe and Gemini Live use client-side SDKs with backend-issued tokens. This avoids streaming raw audio through the server and reduces latency.
+4. **Presage needs Ubuntu**: C++ SDK won't run on macOS easily. Vultr Ubuntu VPS is the target.
+5. **Edge Impulse is server-side**: No TinyML on ESP32-CAM. Cloud API keeps firmware simple.
+6. **Two connections to ESP32**: Backend pulls video frames; backend pushes commands (buzz/slap).
+7. **New env vars needed**: `ELEVENLABS_API_KEY` (for Scribe tokens), `GOOGLE_AI_API_KEY` (for Gemini tokens).
