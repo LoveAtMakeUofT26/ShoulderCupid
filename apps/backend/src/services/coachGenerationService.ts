@@ -37,19 +37,13 @@ const PRICING_TIERS = {
 // Directory to store downloaded coach images
 const IMAGES_DIR = path.resolve('public/coaches')
 
+const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const
+
 /**
- * Generate a complete coach profile using Gemini, with retry on rate limit.
+ * Generate a complete coach profile using Gemini, with retry on rate limit
+ * and automatic fallback to alternative models on 503.
  */
 async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-lite',
-    generationConfig: {
-      temperature: 1.0,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-    },
-  })
-
   let biasInstruction = ''
   if (preferences) {
     const liked = Object.entries(preferences)
@@ -92,14 +86,36 @@ Return JSON with this exact schema:
 
 Personality tags should be simple descriptive words like: hype, chill, direct, witty, tough-love, gentle, bold, empathetic, sarcastic, motivational, analytical, warm, fierce, playful, nerdy, sophisticated.`
 
-  const result = await retryWithBackoff(
-    () => model.generateContent(prompt),
-    { maxRetries: 2, baseDelayMs: 1500 }
-  )
-  const text = result.response.text()
-  const profile = JSON.parse(text) as CoachProfile
-  profile.appearance.gender = profile.gender
-  return profile
+  let lastError: Error | undefined
+  for (const modelName of GEMINI_MODELS) {
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 1.0,
+        maxOutputTokens: 1024,
+        responseMimeType: 'application/json',
+      },
+    })
+
+    try {
+      const result = await retryWithBackoff(
+        () => model.generateContent(prompt),
+        { maxRetries: 3, baseDelayMs: 2000 }
+      )
+      const text = result.response.text()
+      const profile = JSON.parse(text) as CoachProfile
+      profile.appearance.gender = profile.gender
+      if (modelName !== GEMINI_MODELS[0]) {
+        console.warn(`Coach generation fell back to ${modelName}`)
+      }
+      return profile
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.warn(`Model ${modelName} failed: ${lastError.message}, trying next...`)
+    }
+  }
+
+  throw lastError!
 }
 
 /**
