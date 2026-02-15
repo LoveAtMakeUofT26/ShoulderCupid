@@ -18,7 +18,7 @@ export function initAdviceSession(sessionId: string): void {
   activeSessions.delete(sessionId)
 
   if (!apiKey) {
-    console.warn('No Gemini API key — advice will use OpenAI fallback')
+    console.warn('No Gemini API key — advice will only use OpenAI')
     return
   }
 
@@ -33,7 +33,7 @@ export function initAdviceSession(sessionId: string): void {
 
   const chat = model.startChat({ history: [] })
   activeSessions.set(sessionId, { chat })
-  console.log(`Advice session initialized for ${sessionId}`)
+  console.log(`Advice session initialized for ${sessionId} (OpenAI primary, Gemini fallback)`)
 }
 
 export async function getAdvice(
@@ -44,11 +44,17 @@ export async function getAdvice(
     return 'Listen, then share a bit about yourself.'
   }
 
-  const session = activeSessions.get(sessionId)
+  // OpenAI first — already proven and working
+  try {
+    return await getRelationshipAdvice(transcript)
+  } catch (err) {
+    console.warn('OpenAI advice failed, trying Gemini fallback:', (err as Error).message)
+  }
 
-  // No Gemini session → use OpenAI fallback directly
+  // Gemini fallback
+  const session = activeSessions.get(sessionId)
   if (!session) {
-    return getRelationshipAdvice(transcript)
+    return 'Listen, then share a bit.'
   }
 
   const formatted = formatTranscriptForPrompt(transcript)
@@ -68,9 +74,9 @@ export async function getAdvice(
     const text = result.response.text().trim()
     if (!text) throw new Error('Empty Gemini response')
     return text
-  } catch (err) {
-    console.warn('Gemini advice failed, falling back to OpenAI:', (err as Error).message)
-    return getRelationshipAdvice(transcript)
+  } catch (geminiErr) {
+    console.error('Both OpenAI and Gemini advice failed:', (geminiErr as Error).message)
+    return 'Listen, then share a bit.'
   }
 }
 
