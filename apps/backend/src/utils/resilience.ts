@@ -17,10 +17,16 @@ function isTransientError(error: unknown): boolean {
     return status === 429 || status === 500 || status === 503
   }
 
-  // Google Generative AI rate limit errors
+  // Google Generative AI SDK errors (status is directly on the error object)
+  const anyErr = error as { status?: number }
+  if (anyErr?.status && (anyErr.status === 429 || anyErr.status === 500 || anyErr.status === 503)) {
+    return true
+  }
+
+  // Error message patterns for rate limits, overload, and network issues
   if (error instanceof Error) {
     const msg = error.message.toLowerCase()
-    if (msg.includes('429') || msg.includes('resource_exhausted') || msg.includes('too many requests')) {
+    if (msg.includes('429') || msg.includes('503') || msg.includes('resource_exhausted') || msg.includes('too many requests') || msg.includes('service unavailable') || msg.includes('high demand')) {
       return true
     }
     // Network errors
