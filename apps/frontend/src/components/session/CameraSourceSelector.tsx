@@ -43,12 +43,13 @@ export function CameraSourceSelector({ value, onChange, esp32Connected = false }
 interface CameraFeedProps {
   source: CameraSource
   videoRef?: React.RefObject<HTMLVideoElement | null> | React.LegacyRef<HTMLVideoElement>
+  overlayCanvasRef?: React.RefObject<HTMLCanvasElement | null> | React.LegacyRef<HTMLCanvasElement>
   esp32StreamUrl?: string
   isActive?: boolean
   frameCount?: number
 }
 
-export function CameraFeed({ source, videoRef, esp32StreamUrl, isActive, frameCount }: CameraFeedProps) {
+export function CameraFeed({ source, videoRef, overlayCanvasRef, esp32StreamUrl, isActive, frameCount }: CameraFeedProps) {
   if (source === 'webcam') {
     return (
       <div className="relative w-full h-full">
@@ -60,6 +61,13 @@ export function CameraFeed({ source, videoRef, esp32StreamUrl, isActive, frameCo
           className="w-full h-full object-cover rounded-2xl"
           style={{ transform: 'scaleX(-1)' }} // Mirror for selfie view
         />
+        {overlayCanvasRef && (
+          <canvas
+            ref={overlayCanvasRef as React.LegacyRef<HTMLCanvasElement>}
+            className="absolute inset-0 w-full h-full pointer-events-none rounded-2xl"
+            style={{ transform: 'scaleX(-1)' }}
+          />
+        )}
         {isActive && (
           <div className="absolute top-3 right-3 flex items-center gap-2 rounded-lg px-3 py-1" style={{ backgroundColor: 'var(--color-overlay)' }}>
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
