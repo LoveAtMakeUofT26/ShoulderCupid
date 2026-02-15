@@ -1,52 +1,61 @@
-import { Router } from 'express'
-import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js'
+import express from 'express';
 
-export const ttsRouter = Router()
+const ttsRouter = express.Router();
+
+ttsRouter.post('/', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid text' });
+    }
+    const audioBuffer = await createAudioStreamFromText(text);
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Disposition': 'inline; filename="tts.mp3"',
+    });
+    res.send(audioBuffer);
+  } catch (err) {
+    console.error('TTS error:', err);
+    res.status(500).json({ error: 'Failed to generate audio' });
+  }
+});
+
+export { ttsRouter };
+import { ElevenLabsClient } from '@elevenlabs/elevenlabs-js';
+import * as dotenv from 'dotenv';
+
+dotenv.config();
+
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+
+if (!ELEVENLABS_API_KEY) {
+  throw new Error('Missing ELEVENLABS_API_KEY in environment variables');
+}
 
 const elevenlabs = new ElevenLabsClient({
-  apiKey: process.env.ELEVENLABS_API_KEY,
-})
+  apiKey: ELEVENLABS_API_KEY,
+});
 
-async function createAudioStreamFromText(text: string): Promise<Buffer> {
+export const createAudioStreamFromText = async (text: string): Promise<Buffer> => {
   const audioStream = await elevenlabs.textToSpeech.stream('JBFqnCBsd6RMkjVDRZzb', {
     modelId: 'eleven_multilingual_v2',
     text,
     outputFormat: 'mp3_44100_128',
+    // Optional voice settings that allow you to customize the output
     voiceSettings: {
       stability: 0,
       similarityBoost: 1.0,
       useSpeakerBoost: true,
       speed: 1.0,
     },
-  })
+  });
 
-  const chunks: Buffer[] = []
+  const chunks: Buffer[] = [];
   for await (const chunk of audioStream) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+    // Ensure chunk is a Buffer (convert from Uint8Array if needed)
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
   }
 
-  return Buffer.concat(chunks)
-}
-
-ttsRouter.post('/', async (req, res) => {
-  try {
-    const { text } = req.body
-    if (!text || typeof text !== 'string') {
-      return res.status(400).json({ error: 'Missing or invalid text' })
-    }
-
-    if (!process.env.ELEVENLABS_API_KEY) {
-      return res.status(503).json({ error: 'ELEVENLABS_API_KEY not configured' })
-    }
-
-    const audioBuffer = await createAudioStreamFromText(text)
-    res.set({
-      'Content-Type': 'audio/mpeg',
-      'Content-Disposition': 'inline; filename="tts.mp3"',
-    })
-    res.send(audioBuffer)
-  } catch (err) {
-    console.error('TTS error:', err)
-    res.status(500).json({ error: 'Failed to generate audio' })
-  }
-})
+  const content = Buffer.concat(chunks);
+  return content;
+};
