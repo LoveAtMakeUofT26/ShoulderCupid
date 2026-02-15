@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { AppShell } from '../components/layout'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -61,6 +61,10 @@ export function SessionReportPage() {
   const [error, setError] = useState<string | null>(null)
   const isDesktop = useIsDesktop()
 
+  const [reportPending, setReportPending] = useState(false)
+  const pollCountRef = useRef(0)
+  const MAX_POLLS = 10
+
   useEffect(() => {
     if (!id) return
     async function fetchSession() {
@@ -71,6 +75,12 @@ export function SessionReportPage() {
         if (!response.ok) throw new Error('Failed to fetch session')
         const data = await response.json()
         setSession(data)
+
+        // If session ended but no report yet, start polling
+        if (data.status === 'ended' && !data.report?.summary) {
+          setReportPending(true)
+          pollCountRef.current = 0
+        }
       } catch (err) {
         console.error('Failed to fetch session:', err)
         setError('Failed to load session')
@@ -80,6 +90,32 @@ export function SessionReportPage() {
     }
     fetchSession()
   }, [id])
+
+  // Poll for report generation
+  useEffect(() => {
+    if (!reportPending || !id) return
+
+    const interval = setInterval(async () => {
+      pollCountRef.current++
+      try {
+        const response = await fetch(`/api/sessions/${id}`, {
+          credentials: 'include',
+        })
+        if (!response.ok) return
+        const data = await response.json()
+        if (data.report?.summary) {
+          setSession(data)
+          setReportPending(false)
+        } else if (pollCountRef.current >= MAX_POLLS) {
+          setReportPending(false)
+        }
+      } catch {
+        // keep polling
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [reportPending, id])
 
   return (
     <AppShell>
@@ -256,13 +292,33 @@ export function SessionReportPage() {
               )}
             </div>
 
+            {/* Report generating state */}
+            {reportPending && !session.report?.summary && (
+              <div className={`text-center ${isDesktop ? 'card-featured py-16' : 'card py-8'}`}>
+                <div className={`mb-3 ${isDesktop ? 'text-6xl' : 'text-4xl'}`}>
+                  <Spinner size="lg" />
+                </div>
+                <p className="text-[var(--color-text-tertiary)] text-sm">
+                  Generating your session report...
+                </p>
+              </div>
+            )}
+
             {/* Empty report state */}
-            {!session.report?.summary && session.transcript.length === 0 && (
+            {!reportPending && !session.report?.summary && session.transcript.length === 0 && (
               <div className={`text-center ${isDesktop ? 'card-featured py-16' : 'card py-8'}`}>
                 <div className={`mb-3 ${isDesktop ? 'text-6xl' : 'text-4xl'}`}>📊</div>
                 <p className="text-[var(--color-text-tertiary)] text-sm">
                   No report data available for this session yet.
                 </p>
+                {session.status === 'ended' && (
+                  <button
+                    onClick={() => { setReportPending(true); pollCountRef.current = 0 }}
+                    className="mt-3 text-sm text-[var(--color-primary-text)] font-medium hover:underline"
+                  >
+                    Retry
+                  </button>
+                )}
               </div>
             )}
           </div>

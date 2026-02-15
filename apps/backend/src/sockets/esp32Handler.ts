@@ -1,10 +1,14 @@
 import { Server, Socket } from 'socket.io'
+import { setLatestEsp32Frame } from '../routes/hardware.js'
 
 export function setupESP32Handler(socket: Socket, io: Server) {
   console.log(`🤖 ESP32 device connected: ${socket.id}`)
 
   // Receive video frames from ESP32
   socket.on('video-frame', (frameData: Buffer) => {
+    // Feed into the MJPEG stream buffer so /api/stream serves it
+    setLatestEsp32Frame(Buffer.isBuffer(frameData) ? frameData : Buffer.from(frameData))
+
     // Broadcast to web clients watching this device
     io.emit('esp32-video-frame', {
       deviceId: socket.id,

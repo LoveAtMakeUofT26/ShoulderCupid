@@ -4,21 +4,21 @@ import { FadeInView } from '../animations/FadeInView'
 const STEPS = [
   {
     number: '01',
-    icon: '👓',
-    title: 'Wear the Glasses',
-    description: 'Our ESP32-CAM smart glasses detect people around you, read facial expressions, and measure distance - all in real-time.',
+    icon: '🔍',
+    title: 'Scan & Detect',
+    description: 'Smart glasses detect people around you, measure distance with ultrasonic sensors, and read facial expressions. Your coach tells you when someone is worth approaching.',
   },
   {
     number: '02',
     icon: '🎯',
-    title: 'Approach with Confidence',
-    description: 'Your AI coach whispers contextual advice in your ear. When to approach, what to say, and how to read the room.',
+    title: 'Get Live Coaching',
+    description: 'Your AI coach hears the conversation through your mic, reads emotions from the camera, and monitors your heart rate. Coaching transitions automatically from approach tips to conversation guidance.',
   },
   {
     number: '03',
-    icon: '📈',
-    title: 'Learn & Improve',
-    description: 'Post-session analytics show your progress. Emotion timelines, coaching replays, and personalized feedback to level up.',
+    icon: '📊',
+    title: 'Review Your Session',
+    description: 'Full transcripts with speaker detection, emotion timelines, biometric graphs, and coaching replay. See what worked, what didn\'t, and how to improve.',
   },
 ]
 
@@ -26,7 +26,7 @@ export function HowItWorksSection() {
   return (
     <section id="how-it-works" className="py-24 md:py-32">
       <div className="max-w-6xl mx-auto px-6">
-        <SectionHeading subtitle="Three steps to superhuman social skills">
+        <SectionHeading subtitle="From detection to conversation to analysis — all in real-time">
           How It Works
         </SectionHeading>
 

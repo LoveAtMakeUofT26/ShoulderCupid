@@ -7,6 +7,9 @@ import { type TranscriptEntry } from '../services/relationshipAdviceAgent.js'
 import { generateSpeech } from '../services/ttsService.js'
 import { ConcurrencyGuard } from '../utils/resilience.js'
 
+// Fallback voice when coach has no voice_id configured (ElevenLabs "Adam")
+const DEFAULT_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'
+
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
 }
@@ -192,18 +195,19 @@ export function setupClientHandler(socket: Socket, io: Server) {
         await addTranscriptEntry(io, sessionId, 'coach', coachingText)
 
         // Generate TTS audio using cached voiceId (no DB re-query)
-        const voiceId = state.voiceId
-        if (voiceId) {
-          try {
-            const audioBuffer = await generateSpeech(coachingText, voiceId)
-            broadcastToSession(io, sessionId, 'coach-audio', {
-              audio: audioBuffer.toString('base64'),
-              format: 'mp3',
-              text: coachingText,
-            })
-          } catch (ttsErr) {
-            console.error('TTS failed (text still delivered):', ttsErr)
-          }
+        const voiceId = state.voiceId || DEFAULT_VOICE_ID
+        if (!state.voiceId) {
+          console.warn(`No voice configured for session ${sessionId}, using default`)
+        }
+        try {
+          const audioBuffer = await generateSpeech(coachingText, voiceId)
+          broadcastToSession(io, sessionId, 'coach-audio', {
+            audio: audioBuffer.toString('base64'),
+            format: 'mp3',
+            text: coachingText,
+          })
+        } catch (ttsErr) {
+          console.error('TTS failed (text still delivered):', ttsErr)
         }
       } catch (err) {
         console.error('Coaching pipeline error:', err)
