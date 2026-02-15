@@ -77,6 +77,7 @@ export function LiveSessionPage() {
     isConnected: transcriptionConnected,
     startTranscription,
     stopTranscription,
+    error: transcriptionError,
   } = useTranscriptionService()
 
   const webcam = useWebcamService({
@@ -371,6 +372,7 @@ export function LiveSessionPage() {
             <TranscriptionStatus
               isConnected={transcriptionConnected}
               partialTranscript={partialTranscript}
+              error={transcriptionError}
             />
           </div>
         </div>
@@ -403,6 +405,7 @@ export function LiveSessionPage() {
           <TranscriptionStatus
             isConnected={transcriptionConnected}
             partialTranscript={partialTranscript}
+            error={transcriptionError}
           />
         </div>
       )}
