@@ -104,7 +104,28 @@ Personality tags should be simple descriptive words like: hype, chill, direct, w
       )
       const text = result.response.text()
       const profile = JSON.parse(text) as CoachProfile
-      profile.appearance.gender = profile.gender
+
+      // Validate required fields — model may return incomplete JSON
+      if (!profile.name || !profile.gender) {
+        throw new Error('Model returned incomplete profile: missing name or gender')
+      }
+      if (!Array.isArray(profile.personality_tags) || profile.personality_tags.length === 0) {
+        profile.personality_tags = [profile.personality_tone || 'friendly']
+      }
+      profile.personality_tone ??= 'calm'
+      profile.personality_style ??= 'supportive'
+      profile.pricing_tier ??= 'standard'
+      if (!profile.appearance || typeof profile.appearance !== 'object') {
+        profile.appearance = {
+          hair_color: 'black',
+          hair_style: 'short',
+          eye_color: 'brown',
+          outfit_color: 'teal',
+          gender: profile.gender as 'male' | 'female',
+        }
+      } else {
+        profile.appearance.gender = profile.gender as 'male' | 'female'
+      }
       if (modelName !== GEMINI_MODELS[0]) {
         console.warn(`Coach generation fell back to ${modelName}`)
       }
