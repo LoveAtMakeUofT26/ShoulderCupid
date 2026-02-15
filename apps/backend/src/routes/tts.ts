@@ -10,7 +10,8 @@ ttsRouter.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing or invalid text' });
     }
     // Use default voice if not provided
-    const voice = typeof voiceId === 'string' && voiceId ? voiceId : 'JBFqnCBsd6RMkjVDRZzb';
+    // ElevenLabs "Adam" (public voice) keeps dev/prod behavior consistent with socket TTS fallback.
+    const voice = typeof voiceId === 'string' && voiceId ? voiceId : 'pNInz6obpgDQGcFmaJgB';
     const audioBuffer = await generateSpeech(text, voice);
     res.set({
       'Content-Type': 'audio/mpeg',
