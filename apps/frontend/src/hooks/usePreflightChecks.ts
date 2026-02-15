@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { logger } from '../utils/logger'
 
 export type CheckId = 'camera' | 'microphone' | 'speaker' | 'backend' | 'stt' | 'gemini'
 export type CheckState = 'idle' | 'checking' | 'passed' | 'failed'
@@ -44,6 +45,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
           video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
         })
         cameraStreamRef.current = stream
+        logger.log('Preflight: camera passed (webcam)')
         updateCheck('camera', { state: 'passed' })
       } else {
         // ESP32 camera — just verify backend is reachable (ESP32 streams through backend)
@@ -53,12 +55,15 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
           const res = await fetch('/api/health', { signal: ctrl.signal })
           clearTimeout(timer)
           if (res.ok) {
+            logger.log('Preflight: camera passed (ESP32 backend reachable)')
             updateCheck('camera', { state: 'passed' })
           } else {
+            logger.warn('Preflight: camera failed — ESP32 backend unreachable')
             updateCheck('camera', { state: 'failed', error: 'ESP32 backend unreachable' })
           }
         } catch {
           clearTimeout(timer)
+          logger.warn('Preflight: camera failed — cannot reach ESP32 backend')
           updateCheck('camera', { state: 'failed', error: 'Cannot reach ESP32 backend' })
         }
       }
@@ -68,6 +73,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
         : err.name === 'NotFoundError' ? 'No camera found'
         : err.message
         : 'Camera check failed'
+      logger.warn('Preflight: camera failed —', msg)
       updateCheck('camera', { state: 'failed', error: msg })
     }
   }, [cameraSource, updateCheck])
@@ -95,6 +101,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       source.connect(analyser)
       analyserRef.current = analyser
 
+      logger.log('Preflight: microphone passed')
       updateCheck('microphone', { state: 'passed' })
     } catch (err) {
       const msg = err instanceof Error
@@ -102,6 +109,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
         : err.name === 'NotFoundError' ? 'No microphone found'
         : err.message
         : 'Microphone check failed'
+      logger.warn('Preflight: microphone failed —', msg)
       updateCheck('microphone', { state: 'failed', error: msg })
     }
   }, [updateCheck])
@@ -132,6 +140,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const res = await fetch('/api/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
+        logger.log('Preflight: backend passed')
         updateCheck('backend', { state: 'passed' })
       } else if (res.status === 502 || res.status === 503) {
         updateCheck('backend', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
@@ -154,6 +163,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const res = await fetch('/api/stt/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
+        logger.log('Preflight: stt passed')
         updateCheck('stt', { state: 'passed' })
       } else if (res.status === 502 || res.status === 503) {
         updateCheck('stt', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
@@ -174,6 +184,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       const res = await fetch('/api/gemini/health', { signal: effectiveSignal })
       clearTimeout(timer)
       if (res.ok) {
+        logger.log('Preflight: gemini passed')
         updateCheck('gemini', { state: 'passed' })
       } else if (res.status === 502 || res.status === 503) {
         updateCheck('gemini', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
@@ -186,6 +197,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
   }, [updateCheck])
 
   const runAllChecks = useCallback(async () => {
+    logger.log('Preflight: running all checks, cameraSource:', cameraSource)
     abortRef.current?.abort()
     const ctrl = new AbortController()
     abortRef.current = ctrl
@@ -198,7 +210,7 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
       checkSTT(ctrl.signal),
       checkGemini(ctrl.signal),
     ])
-  }, [checkCamera, checkMicrophone, checkSpeaker, checkBackend, checkSTT, checkGemini])
+  }, [cameraSource, checkCamera, checkMicrophone, checkSpeaker, checkBackend, checkSTT, checkGemini])
 
   const retryCheck = useCallback(async (id: CheckId) => {
     const checkMap: Record<CheckId, () => Promise<void>> = {

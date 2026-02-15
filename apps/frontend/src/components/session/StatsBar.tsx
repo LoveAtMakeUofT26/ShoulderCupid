@@ -4,6 +4,7 @@ interface StatsBarProps {
   mode: CoachingMode
   duration: number // seconds
   isConnected: boolean
+  cameraSource?: 'webcam' | 'esp32'
 }
 
 function formatDuration(seconds: number): string {
@@ -18,7 +19,7 @@ const MODE_COLORS: Record<CoachingMode, string> = {
   CONVERSATION: 'text-cupid-500',
 }
 
-export function StatsBar({ mode, duration, isConnected }: StatsBarProps) {
+export function StatsBar({ mode, duration, isConnected, cameraSource }: StatsBarProps) {
   return (
     <div className="flex items-center justify-between px-4 py-2 backdrop-blur border-b" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
       {/* Connection Status */}
@@ -29,6 +30,11 @@ export function StatsBar({ mode, duration, isConnected }: StatsBarProps) {
         <span className="text-xs text-[var(--color-text-tertiary)]">
           {isConnected ? 'Live' : 'Reconnecting...'}
         </span>
+        {cameraSource && (
+          <span className="text-xs text-[var(--color-text-faint)] border border-[var(--color-border)] px-1.5 py-0.5 rounded">
+            {cameraSource === 'webcam' ? '💻 Webcam' : '📷 ESP32'}
+          </span>
+        )}
       </div>
 
       {/* Session Timer */}

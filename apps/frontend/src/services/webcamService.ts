@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { logger } from '../utils/logger'
 
 export interface WebcamServiceOptions {
   sessionId: string
@@ -16,6 +17,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const streamRef = useRef<MediaStream | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const inFlightRef = useRef(false)
+  const frameCountRef = useRef(0)
 
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,9 +53,13 @@ export function useWebcamService(options: WebcamServiceOptions) {
           source: 'webcam',
         }),
       })
+      frameCountRef.current += 1
+      if (frameCountRef.current % 100 === 0) {
+        logger.log('Frame milestone:', frameCountRef.current, 'frames sent')
+      }
       setFrameCount(prev => prev + 1)
     } catch (err) {
-      console.error('Failed to send webcam frame:', err)
+      logger.error('Failed to send webcam frame:', err)
     } finally {
       inFlightRef.current = false
     }
@@ -86,10 +92,12 @@ export function useWebcamService(options: WebcamServiceOptions) {
 
       setIsActive(true)
       setFrameCount(0)
+      frameCountRef.current = 0
+      logger.log('Webcam capture started, fps:', fps)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to access webcam'
       setError(message)
-      console.error('Webcam error:', err)
+      logger.error('Webcam error:', err)
     }
   }, [width, height, fps, captureAndSend])
 
@@ -109,6 +117,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
     }
 
     setIsActive(false)
+    logger.log('Webcam capture stopped')
   }, [])
 
   // Cleanup on unmount
