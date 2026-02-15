@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { HomePage } from './pages/HomePage'
+import { LandingPage } from './pages/LandingPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CoachesPage } from './pages/CoachesPage'
 import { SessionsPage } from './pages/SessionsPage'
@@ -13,7 +13,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         {/* Public routes */}
-        <Route path="/" element={<HomePage />} />
+        <Route path="/" element={<LandingPage />} />
 
         {/* App routes (with bottom nav) */}
         <Route path="/dashboard" element={<DashboardPage />} />
