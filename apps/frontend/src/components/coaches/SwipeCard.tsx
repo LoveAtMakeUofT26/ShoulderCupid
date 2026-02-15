@@ -55,7 +55,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
 
   return (
     <motion.div
-      className="w-full max-w-sm mx-auto cursor-grab active:cursor-grabbing select-none"
+      className="w-full max-w-sm mx-auto cursor-grab active:cursor-grabbing select-none md:max-h-full"
       style={{ x, rotate, opacity }}
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
@@ -67,7 +67,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
           : {}
       }
     >
-      <div className="rounded-3xl shadow-card overflow-hidden relative" style={{ backgroundColor: 'var(--color-surface)' }}>
+      <div className="rounded-3xl shadow-card overflow-hidden relative md:flex md:flex-col md:max-h-full" style={{ backgroundColor: 'var(--color-surface)' }}>
         {/* Like/Nope overlays */}
         <motion.div
           className="absolute inset-0 bg-green-400 rounded-3xl z-10 pointer-events-none"
@@ -80,7 +80,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
 
         {/* Image area */}
         {hasImage ? (
-          <div className="w-full aspect-[3/4] bg-marble-100 relative overflow-hidden">
+          <div className="w-full aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 bg-marble-100 relative overflow-hidden">
             {!imgLoaded && (
               <div className="absolute inset-0 bg-marble-200 animate-shimmer" />
             )}
@@ -98,7 +98,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
           </div>
         ) : (
           <div
-            className="w-full aspect-[3/4] flex items-center justify-center"
+            className="w-full aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 flex items-center justify-center"
             style={{
               background: `linear-gradient(135deg, ${gradientFrom}, ${gradientTo})`,
             }}

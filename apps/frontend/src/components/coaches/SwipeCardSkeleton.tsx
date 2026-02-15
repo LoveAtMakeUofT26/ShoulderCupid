@@ -1,8 +1,8 @@
 export function SwipeCardSkeleton() {
   return (
-    <div className="w-full max-w-sm mx-auto bg-white rounded-3xl shadow-card overflow-hidden">
+    <div className="w-full max-w-sm mx-auto bg-white rounded-3xl shadow-card overflow-hidden md:flex md:flex-col md:max-h-full">
       {/* Image placeholder */}
-      <div className="w-full aspect-[3/4] bg-marble-200 animate-shimmer" />
+      <div className="w-full aspect-[3/4] md:aspect-auto md:flex-1 md:min-h-0 bg-marble-200 animate-shimmer" />
 
       {/* Content */}
       <div className="p-5 space-y-3">
