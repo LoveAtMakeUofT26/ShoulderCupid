@@ -1,5 +1,7 @@
 import { Server, Socket } from 'socket.io'
 import { Session } from '../models/Session.js'
+import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
+import { generateSpeech } from '../services/ttsService.js'
 
 interface SessionState {
   mode: 'IDLE' | 'APPROACH' | 'CONVERSATION'
@@ -15,7 +17,7 @@ const CONVERSATION_THRESHOLD = 150
 // In-memory session states for real-time updates
 const sessionStates = new Map<string, SessionState>()
 
-export function setupClientHandler(socket: Socket, _io: Server) {
+export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
 
   // Join a session room
@@ -45,12 +47,94 @@ export function setupClientHandler(socket: Socket, _io: Server) {
     })
   })
 
+  // Initialize coaching with the user's selected coach
+  socket.on('start-coaching', async (data: { sessionId: string }) => {
+    const { sessionId } = data
+    try {
+      const session = await Session.findById(sessionId).populate('coach_id')
+      if (!session) {
+        socket.emit('coaching-error', { error: 'Session not found' })
+        return
+      }
+
+      const coach = session.coach_id as unknown as { name: string; system_prompt: string; voice_id: string }
+      if (!coach?.system_prompt) {
+        socket.emit('coaching-error', { error: 'No coach assigned' })
+        return
+      }
+
+      await initCoachingSession(sessionId, coach.system_prompt, session.mode, coach.name)
+      socket.emit('coaching-ready', { sessionId, coachName: coach.name, voiceId: coach.voice_id })
+      console.log(`Coaching started: ${coach.name} for session ${sessionId}`)
+    } catch (err) {
+      console.error('Failed to start coaching:', err)
+      socket.emit('coaching-error', { error: 'Failed to initialize coaching' })
+    }
+  })
+
+  // Receive transcript from frontend, orchestrate Gemini + TTS
+  socket.on('transcript-input', async (data: {
+    sessionId: string
+    text: string
+    speaker: 'user' | 'target'
+    isFinal: boolean
+  }) => {
+    const { sessionId, text, speaker, isFinal } = data
+
+    // Only process final transcripts with actual text
+    if (!isFinal || !text.trim()) return
+
+    // Persist user/target transcript
+    await addTranscriptEntry(io, sessionId, speaker, text)
+
+    // Get current session state for context
+    const state = sessionStates.get(sessionId)
+    if (!state || state.mode === 'IDLE') return // No coaching in IDLE mode
+
+    try {
+      // Get coaching response from Gemini
+      const coachingText = await getCoachingResponse(sessionId, text, {
+        mode: state.mode,
+        emotion: state.targetEmotion,
+        distance: state.distance,
+      })
+
+      if (!coachingText.trim()) return
+
+      // Send coaching text immediately for UI display
+      sendCoachingUpdate(io, sessionId, coachingText)
+
+      // Persist coach transcript
+      await addTranscriptEntry(io, sessionId, 'coach', coachingText)
+
+      // Generate TTS audio (don't block text delivery)
+      const session = await Session.findById(sessionId).populate('coach_id')
+      const coach = session?.coach_id as unknown as { voice_id: string } | undefined
+
+      if (coach?.voice_id) {
+        try {
+          const audioBuffer = await generateSpeech(coachingText, coach.voice_id)
+          broadcastToSession(io, sessionId, 'coach-audio', {
+            audio: audioBuffer.toString('base64'),
+            format: 'mp3',
+            text: coachingText,
+          })
+        } catch (ttsErr) {
+          console.error('TTS failed (text still delivered):', ttsErr)
+        }
+      }
+    } catch (err) {
+      console.error('Coaching pipeline error:', err)
+    }
+  })
+
   // End session
   socket.on('end-session', (data: { sessionId: string }) => {
     const { sessionId } = data
     console.log(`Client ${socket.id} ending session ${sessionId}`)
     socket.leave(`session-${sessionId}`)
     sessionStates.delete(sessionId)
+    endCoachingSession(sessionId)
   })
 
   // Client requests to watch a specific ESP32 device
@@ -164,6 +248,9 @@ export async function updateSensors(
   if (newMode !== prevMode) {
     state.mode = newMode
     broadcastToSession(io, sessionId, 'mode-change', { mode: newMode, prevMode })
+
+    // Update Gemini coaching context
+    updateCoachingMode(sessionId, newMode)
 
     // Persist to DB
     try {

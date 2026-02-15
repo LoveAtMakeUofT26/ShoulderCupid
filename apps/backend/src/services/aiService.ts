@@ -1,0 +1,81 @@
+import { GoogleGenerativeAI, type ChatSession } from '@google/generative-ai'
+import dotenv from 'dotenv'
+
+dotenv.config()
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+
+interface CoachingContext {
+  chat: ChatSession
+  mode: string
+  coachName: string
+}
+
+// Active coaching sessions keyed by sessionId
+const activeSessions = new Map<string, CoachingContext>()
+
+export async function initCoachingSession(
+  sessionId: string,
+  systemPrompt: string,
+  mode: string,
+  coachName: string
+): Promise<void> {
+  // Clean up existing session if any
+  activeSessions.delete(sessionId)
+
+  const model = genAI.getGenerativeModel({
+    model: 'gemini-2.0-flash',
+    systemInstruction: `${systemPrompt}\n\nCURRENT MODE: ${mode}\nYou are whispering into the user's ear via an earpiece. Keep responses to 1-2 sentences maximum. Be specific and actionable.`,
+    generationConfig: {
+      maxOutputTokens: 100,
+      temperature: 0.7,
+    },
+  })
+
+  const chat = model.startChat({ history: [] })
+
+  activeSessions.set(sessionId, { chat, mode, coachName })
+  console.log(`Coaching session initialized: ${coachName} for session ${sessionId} in ${mode} mode`)
+}
+
+export async function getCoachingResponse(
+  sessionId: string,
+  text: string,
+  context: { mode: string; emotion?: string; distance?: number }
+): Promise<string> {
+  const session = activeSessions.get(sessionId)
+  if (!session) throw new Error(`No active coaching session for ${sessionId}`)
+
+  let prompt = `[${context.mode}] User heard: "${text}"`
+  if (context.emotion && context.emotion !== 'neutral') {
+    prompt += ` | Target emotion: ${context.emotion}`
+  }
+  if (context.distance && context.distance > 0) {
+    prompt += ` | Distance: ${Math.round(context.distance)}cm`
+  }
+
+  const result = await session.chat.sendMessage(prompt)
+  const response = result.response.text()
+
+  console.log(`Coach ${session.coachName}: "${response}"`)
+  return response
+}
+
+export function updateCoachingMode(sessionId: string, newMode: string): void {
+  const session = activeSessions.get(sessionId)
+  if (!session) return
+
+  session.mode = newMode
+
+  // Send a mode-change context message to Gemini so it adapts
+  session.chat.sendMessage(
+    `[SYSTEM] Mode changed to ${newMode}. Adjust your coaching style accordingly.`
+  ).catch(err => console.error('Failed to update coaching mode:', err))
+
+  console.log(`Coaching mode updated to ${newMode} for session ${sessionId}`)
+}
+
+export function endCoachingSession(sessionId: string): void {
+  activeSessions.delete(sessionId)
+  console.log(`Coaching session ended: ${sessionId}`)
+}
