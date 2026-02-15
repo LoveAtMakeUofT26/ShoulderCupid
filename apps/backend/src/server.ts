@@ -88,7 +88,8 @@ io.use((socket, next) => {
 
   // Try token from handshake auth
   const token = socket.handshake.auth?.token as string | undefined
-  if (!token) return next(new Error('Not authenticated'))
+  // Allow anonymous connections — assertSessionOwner() guards per-session
+  if (!token) return next()
 
   const userId = consumeSocketToken(token)
   if (!userId) return next(new Error('Invalid or expired socket token'))

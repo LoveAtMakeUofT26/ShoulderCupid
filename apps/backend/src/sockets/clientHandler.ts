@@ -20,13 +20,16 @@ function getSocketUserId(socket: Socket): string | null {
 
 async function assertSessionOwner(socket: Socket, sessionId: string): Promise<string | null> {
   if (!isValidObjectId(sessionId)) return null
+
+  const sessionRecord = await Session.findById(sessionId).select('user_id test_session').lean()
+  if (!sessionRecord) return null
+
+  // Test sessions are public — no ownership check
+  if (sessionRecord.test_session) return sessionId
+
   const userId = getSocketUserId(socket)
   if (!userId) return null
-
-  const sessionRecord = await Session.findById(sessionId).select('user_id').lean()
-  if (!sessionRecord || sessionRecord.user_id?.toString() !== userId) {
-    return null
-  }
+  if (sessionRecord.user_id?.toString() !== userId) return null
 
   return userId
 }
