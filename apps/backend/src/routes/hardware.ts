@@ -73,6 +73,8 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
     return res.status(400).json({ error: 'session_id required' })
   }
 
+  console.log(`[ShoulderCupid] Frame received: source=${source || 'unknown'}, session=${session_id}, hasDetection=${!!detection}`)
+
   try {
     // Verify session exists and is active
     const session = await Session.findOne({ _id: session_id, status: 'active' })
@@ -85,6 +87,7 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
 
     const hasPersonDetected = Boolean(detection?.person) && (detection.confidence ?? 0) > 0.5
     const shouldProcessFrame = source === 'webcam' || hasPersonDetected
+    console.debug(`[ShoulderCupid] Frame processing: shouldProcess=${shouldProcessFrame}, source=${source}, hasPersonDetected=${hasPersonDetected}`)
 
     // Process frame when person is detected (ESP32 path) or when source is webcam
     if (shouldProcessFrame) {
@@ -108,6 +111,7 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
       // Check for Presage metrics from the C++ processor
       const metrics = getLatestMetrics(session_id)
       if (metrics) {
+        console.debug(`[ShoulderCupid] Presage metrics: HR=${metrics.hr} BR=${metrics.br} HRV=${metrics.hrv}`)
         emotion = deriveEmotion(metrics)
 
         // Broadcast target vitals to frontend
@@ -146,7 +150,7 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
       coaching,
     })
   } catch (error) {
-    console.error('Frame processing error:', error)
+    console.error('[ShoulderCupid] Frame processing error:', error)
     res.status(500).json({ error: 'Failed to process frame' })
   }
 })
@@ -189,7 +193,7 @@ hardwareRouter.post('/sensors', requireHardwareAuth, async (req, res) => {
       mode: updatedSession?.mode || 'IDLE',
     })
   } catch (error) {
-    console.error('Sensor processing error:', error)
+    console.error('[ShoulderCupid] Sensor processing error:', error)
     res.status(500).json({ error: 'Failed to process sensors' })
   }
 })
@@ -221,7 +225,7 @@ hardwareRouter.get('/commands', requireHardwareAuth, async (req, res) => {
       coaching_audio_url: null,
     })
   } catch (error) {
-    console.error('Command fetch error:', error)
+    console.error('[ShoulderCupid] Command fetch error:', error)
     res.status(500).json({ error: 'Failed to fetch commands' })
   }
 })
@@ -296,7 +300,7 @@ hardwareRouter.post('/trigger-warning', requireHardwareAuth, async (req, res) =>
         })
       }
     } catch (ttsErr) {
-      console.error('Warning TTS failed (text still delivered):', ttsErr)
+      console.error('[ShoulderCupid] Warning TTS failed (text still delivered):', ttsErr)
     }
   }
 

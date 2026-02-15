@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { queueCoachAudio } from '../services/audioPlaybackService'
+import { logger } from '../utils/logger'
 
 export type CoachingMode = 'IDLE' | 'APPROACH' | 'CONVERSATION'
 export type WarningLevel = 0 | 1 | 2 | 3
@@ -93,6 +94,7 @@ export function useSessionSocket(sessionId: string | null) {
     socketRef.current = socket
 
     socket.on('connect', () => {
+      logger.log('Socket connected, sessionId:', sessionId)
       updateState({ isConnected: true, coachingMessage: 'Connected! Waiting for session to start...' })
 
       // Identify as web client and join session
@@ -101,16 +103,18 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     socket.on('connect_error', (err) => {
-      console.error('Socket connection error:', err.message)
+      logger.error('Socket connection error:', err.message)
       updateState({ coachingMessage: `Connection failed: ${err.message}` })
     })
 
     socket.on('disconnect', () => {
+      logger.log('Socket disconnected')
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
     })
 
     // Initial state from backend when joining an existing session
     socket.on('session-state', (data: { mode?: CoachingMode; targetEmotion?: string; distance?: number; heartRate?: number }) => {
+      logger.log('Session state received:', data)
       const updates: Partial<SessionState> = {}
       if (data.mode) updates.mode = data.mode
       if (data.targetEmotion) updates.targetEmotion = data.targetEmotion
@@ -122,10 +126,12 @@ export function useSessionSocket(sessionId: string | null) {
     // Session events
     socket.on('session-started', (data: { sessionId?: string } | string | undefined) => {
       if (typeof data === 'object' && data && data.sessionId !== undefined && data.sessionId !== sessionId) return
+      logger.log('Session started')
       updateState({ mode: 'IDLE', coachingMessage: 'Session started! Looking for targets...' })
     })
 
     socket.on('mode-change', (data: { mode: CoachingMode }) => {
+      logger.log('Mode change:', data.mode)
       updateState({ mode: data.mode })
     })
 
@@ -141,10 +147,12 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     socket.on('emotion-update', (data: { emotion: string }) => {
+      logger.debug('Emotion update:', data.emotion)
       updateState({ targetEmotion: data.emotion })
     })
 
     socket.on('sensors-update', (data: { distance?: number; heartRate?: number }) => {
+      logger.debug('Sensors update:', data)
       const updates: Partial<SessionState> = {}
       if (data.distance !== undefined) updates.distance = data.distance
       if (data.heartRate !== undefined) updates.heartRate = data.heartRate
@@ -152,14 +160,17 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     socket.on('person-detected', (data: { confidence: number }) => {
+      logger.debug('Person detected, confidence:', data.confidence)
       updateState({ personDetected: data.confidence > 0.5 })
     })
 
     socket.on('target-vitals', (data: TargetVitals) => {
+      logger.debug('Target vitals:', { hr: data.heart_rate, br: data.breathing_rate })
       updateState({ targetVitals: data })
     })
 
     socket.on('presage-error', (data: { error: string }) => {
+      logger.warn('Presage error:', data.error)
       updateState({ presageError: data.error })
     })
 
@@ -172,11 +183,12 @@ export function useSessionSocket(sessionId: string | null) {
     })
 
     socket.on('coaching-error', (data: { error: string }) => {
-      console.error('Coaching error:', data.error)
+      logger.error('Coaching error:', data.error)
       updateState({ coachingMessage: `Coach error: ${data.error}` })
     })
 
     socket.on('warning-triggered', (data: { level: WarningLevel; message: string }) => {
+      logger.log('Warning triggered, level:', data.level, data.message)
       updateState({ warningLevel: data.level, warningMessage: data.message })
 
       // Auto-clear warning after 5 seconds

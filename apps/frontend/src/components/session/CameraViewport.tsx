@@ -35,7 +35,7 @@ export function CameraViewport({
       <CameraFeed
         source={cameraSource}
         videoRef={videoRef}
-        esp32StreamUrl={isConnected ? '/api/stream' : undefined}
+        esp32StreamUrl={cameraSource === 'esp32' && isConnected ? '/api/stream' : undefined}
         isActive={isActive}
         frameCount={frameCount}
       />

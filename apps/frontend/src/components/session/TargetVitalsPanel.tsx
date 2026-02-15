@@ -51,6 +51,9 @@ export function TargetVitalsPanel({ vitals, presageError }: TargetVitalsPanelPro
           <p className="text-xs text-[var(--color-text-faint)] mt-1">
             Presage needs ~10s of a visible face to start
           </p>
+          <p className="text-xs text-[var(--color-text-faint)] mt-1">
+            Not seeing data? Ensure the Presage processor is running on the server.
+          </p>
         </div>
       </div>
     )

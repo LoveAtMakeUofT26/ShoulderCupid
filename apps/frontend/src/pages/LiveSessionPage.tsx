@@ -15,10 +15,11 @@ import {
   CameraViewport,
   TranscriptionStatus,
 } from '../components/session'
-import { CameraSourceSelector, type CameraSource } from '../components/session/CameraSourceSelector'
+import { type CameraSource } from '../components/session/CameraSourceSelector'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Spinner } from '../components/ui/Spinner'
 import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
+import { logger } from '../utils/logger'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 type ExistingSession = {
@@ -131,8 +132,9 @@ export function LiveSessionPage() {
       setDuration(elapsedSeconds(session.started_at))
       setPhase('active')
       setStartError(null)
+      logger.log('Resumed existing session:', id)
     } catch (error) {
-      console.error('Failed to load existing session:', error)
+      logger.error('Failed to load existing session:', error)
       setStartError('Unable to load this session. Please try again.')
     } finally {
       setLoading(false)
@@ -205,7 +207,7 @@ export function LiveSessionPage() {
         }
         setUser(currentUser)
       } catch (error) {
-        console.error('Failed to fetch user:', error)
+        logger.error('Failed to fetch user:', error)
         navigate('/')
       } finally {
         setLoading(false)
@@ -222,14 +224,6 @@ export function LiveSessionPage() {
     return () => clearInterval(interval)
   }, [phase])
 
-  const handleCameraSourceChange = useCallback((source: CameraSource) => {
-    if (webcam.isActive) webcam.stop()
-    setCameraSource(source)
-    if (phase === 'active' && source === 'webcam') {
-      webcam.start()
-    }
-  }, [phase, webcam])
-
   const handleStartSession = useCallback(async (paymentId?: string) => {
     // Unlock browser audio during user gesture so coach TTS can play later
     unlockAudio()
@@ -244,7 +238,7 @@ export function LiveSessionPage() {
       })
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
-        console.error('Failed to start session:', err)
+        logger.error('Failed to start session:', err)
 
         if (err.error === 'Active session exists' && err.sessionId) {
           // Resume the existing active session instead of blocking
@@ -271,13 +265,15 @@ export function LiveSessionPage() {
       setCreatedSessionId(session._id)
       setPhase('active')
       setDuration(0)
+      logger.log('Phase: preflight -> active, sessionId:', session._id)
     } catch (error) {
-      console.error('Failed to start session:', error)
+      logger.error('Failed to start session:', error)
       setStartError('Connection error. Check your internet and try again.')
     }
   }, [])
 
   const handleEndSession = useCallback(async () => {
+    logger.log('Phase: active -> ending')
     setIsEnding(true)
     endSession()
     webcam.stop()
@@ -291,7 +287,7 @@ export function LiveSessionPage() {
           credentials: 'include',
         })
       } catch (error) {
-        console.error('Failed to end session:', error)
+        logger.error('Failed to end session:', error)
       }
     }
 
@@ -329,6 +325,7 @@ export function LiveSessionPage() {
         mode={mode}
         duration={duration}
         isConnected={isConnected}
+        cameraSource={cameraSource}
       />
 
       {warningLevel > 0 && (
@@ -343,11 +340,6 @@ export function LiveSessionPage() {
         <div className="flex-1 flex p-4 gap-4 overflow-hidden">
           {/* Left panel: Camera + Vitals */}
           <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
-            <CameraSourceSelector
-              value={cameraSource}
-              onChange={handleCameraSourceChange}
-              esp32Connected={isConnected}
-            />
             <CameraViewport
               cameraSource={cameraSource}
               videoRef={webcam.videoRef}
@@ -385,11 +377,6 @@ export function LiveSessionPage() {
       ) : (
         /* Mobile: vertical stack */
         <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
-          <CameraSourceSelector
-            value={cameraSource}
-            onChange={handleCameraSourceChange}
-            esp32Connected={isConnected}
-          />
           <CameraViewport
             cameraSource={cameraSource}
             videoRef={webcam.videoRef}

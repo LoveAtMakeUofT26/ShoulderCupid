@@ -137,7 +137,18 @@ export function PreflightPage({
                   ) : cameraSource === 'esp32' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-[var(--color-text-faint)]">
                       <span className="text-3xl mb-1">📷</span>
-                      <span className="text-xs">ESP32-CAM feed</span>
+                      <span className="text-xs font-medium">
+                        {checks.camera.state === 'passed' ? 'ESP32-CAM Ready' :
+                         checks.camera.state === 'checking' ? 'Checking ESP32-CAM...' :
+                         checks.camera.state === 'failed' ? 'ESP32-CAM Unavailable' :
+                         'ESP32-CAM'}
+                      </span>
+                      {checks.camera.state === 'passed' && (
+                        <span className="text-xs text-green-500 mt-1">Backend reachable</span>
+                      )}
+                      {checks.camera.state === 'failed' && checks.camera.error && (
+                        <span className="text-xs text-red-400 mt-1">{checks.camera.error}</span>
+                      )}
                     </div>
                   ) : checks.camera.state === 'failed' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center text-red-400">
