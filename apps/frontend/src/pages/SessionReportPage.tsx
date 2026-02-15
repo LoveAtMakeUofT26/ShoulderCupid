@@ -125,7 +125,7 @@ export function SessionReportPage() {
   }
 
   return (
-    <AppShell>
+    <AppShell fullWidth>
       <div className="pt-6 md:pt-0">
         {/* Back link */}
         <Link to="/sessions" className="group inline-flex items-center gap-2 text-sm text-[var(--color-text-tertiary)] hover:text-[var(--color-primary-text)] font-medium mb-4 md:mb-6 transition-colors">

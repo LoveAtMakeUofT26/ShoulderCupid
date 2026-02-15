@@ -86,9 +86,23 @@ export function PreflightPage({
           {/* Coach Card */}
           {coach && (
             <div className="flex items-center gap-3 p-4 rounded-2xl shadow-card mb-4" style={{ background: 'linear-gradient(to bottom right, var(--color-primary-surface), var(--color-surface))' }}>
+              {coach.avatar_url ? (
+                <img
+                  src={coach.avatar_url}
+                  alt={coach.name}
+                  className="w-12 h-12 rounded-full object-cover shadow-md flex-shrink-0"
+                  onError={(e) => {
+                    const target = e.currentTarget
+                    const fallback = target.nextElementSibling as HTMLElement
+                    if (fallback) fallback.style.display = 'flex'
+                    target.style.display = 'none'
+                  }}
+                />
+              ) : null}
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center text-2xl shadow-md flex-shrink-0"
                 style={{
+                  display: coach.avatar_url ? 'none' : 'flex',
                   background: `linear-gradient(135deg, ${coach.color_from}, ${coach.color_to})`,
                 }}
               >
