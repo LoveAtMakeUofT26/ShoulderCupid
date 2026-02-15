@@ -26,7 +26,7 @@ export function SideNav({ user }: SideNavProps) {
             💘
           </div>
           <div>
-            <span className="font-display text-lg font-bold" style={{ color: 'var(--color-text)' }}>Cupid</span>
+            <span className="font-display text-lg font-bold" style={{ color: 'var(--color-text)' }}>ShoulderCupid</span>
             <p className="text-[11px] font-body -mt-0.5" style={{ color: 'var(--color-text-faint)' }}>AI Dating Coach</p>
           </div>
         </div>
