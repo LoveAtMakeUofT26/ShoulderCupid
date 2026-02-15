@@ -17,6 +17,7 @@ import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
 import { startPresageProcessor, stopAllProcessors } from './services/presageService.js'
+import { consumeSocketToken } from './routes/auth.js'
 
 const app = express()
 const httpServer = createServer(app)
@@ -77,6 +78,26 @@ const applyAuthMiddlewareToSockets = (appSocket: Server, authMiddlewares: Return
 
 const authMiddlewares = setupAuth(app)
 applyAuthMiddlewareToSockets(io, authMiddlewares)
+
+// Fallback: token-based auth for cross-domain socket connections
+io.use((socket, next) => {
+  // If cookie-based auth already worked, skip
+  const user = (socket.request as any).user
+  const sessionUser = (socket.request as any).session?.passport?.user
+  if (user || sessionUser) return next()
+
+  // Try token from handshake auth
+  const token = socket.handshake.auth?.token as string | undefined
+  if (!token) return next(new Error('Not authenticated'))
+
+  const userId = consumeSocketToken(token)
+  if (!userId) return next(new Error('Invalid or expired socket token'))
+
+  // Attach userId so getSocketUserId() can find it
+  ;(socket.request as any).user = { _id: userId }
+  console.log(`Socket ${socket.id} authenticated via token for user ${userId}`)
+  next()
+})
 
 // Middleware
 app.use(cors({
