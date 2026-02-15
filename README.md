@@ -4,14 +4,15 @@
 
 Real-time AI dating coach via ESP32-CAM smart glasses. Get live coaching during approaches and conversations.
 
-## Current Progress: 32% Complete
+## Current Progress: ~60% Complete
 
 | Phase | Status |
 |-------|--------|
 | Phase 1: Foundation | ✅ Complete |
-| Phase 2: Integration | 🔜 In Progress |
-| Phase 3: Full Loop | ⏳ Pending |
-| Phase 4: Polish | ⏳ Pending |
+| Phase 2: Hardware + Audio Integration | 🔧 In Progress |
+| Phase 3: AI Coaching Loop | ⏳ Pending |
+| Phase 4: Sessions + Reports | ⏳ Pending |
+| Phase 5: Polish + Deploy | 🔧 Partial (CI/CD done) |
 
 See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
 
@@ -22,26 +23,31 @@ See [docs/PROGRESS.md](docs/PROGRESS.md) for details.
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    WEARABLE RIG                          │
-│  ESP32-CAM ──► Edge Impulse (person detection)          │
-│  Ultrasonic ──► Distance to target                      │
-│  Heart Rate ──► Wearer BPM                              │
+│  ESP32-CAM ──► Streams MJPEG to backend via WiFi        │
+│  Ultrasonic ──► Distance to target (TBD)                │
+│  Heart Rate ──► Wearer BPM (TBD)                        │
 │  Servo ◄────── Slap mechanism (comfort warnings)        │
 └───────────────────────┬─────────────────────────────────┘
                         │ WiFi
                         ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   CLOUD BACKEND                          │
-│  Express API ─► Presage SDK (emotion analysis)          │
-│              ─► ElevenLabs (STT + TTS)                  │
-│              ─► Gemini API (coaching LLM)               │
-│              ─► MongoDB (users, sessions)               │
+│              BACKEND (Vultr Ubuntu VPS)                   │
+│  Express API ─► Presage C++ SDK (HR, breathing, HRV)    │
+│              ─► Edge Impulse API (person detection)      │
+│              ─► Gemini 2.5 Flash (coaching LLM)          │
+│              ─► ElevenLabs TTS (coach audio)             │
+│              ─► ElevenLabs Scribe tokens (for client)    │
+│              ─► MongoDB Atlas (users, sessions)          │
 └───────────────────────┬─────────────────────────────────┘
                         │
                         ▼
 ┌─────────────────────────────────────────────────────────┐
-│                  REACT FRONTEND                          │
-│  Landing ─► OAuth ─► Dashboard ─► Live Session          │
-│  Coach Selection ─► Session History ─► Reports          │
+│              BROWSER / FRONTEND (Vercel)                  │
+│  React + Vite + TypeScript + Tailwind                    │
+│  ElevenLabs Scribe SDK (client-side STT)                 │
+│  Audio via Bluetooth earbuds (mic + speaker)             │
+│  Landing ─► OAuth ─► Dashboard ─► Preflight ─► Session   │
+│  Coach Selection ─► Session History ─► Reports           │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -113,24 +119,28 @@ npm run dev
 ```
 cupid/
 ├── apps/
-│   ├── frontend/          # React + Vite
+│   ├── frontend/          # React + Vite (Vercel)
 │   │   ├── src/
 │   │   │   ├── components/
-│   │   │   │   └── layout/   # AppShell, BottomNav, FAB
-│   │   │   ├── pages/        # Dashboard, Coaches, Sessions
-│   │   │   └── services/     # API calls
+│   │   │   │   ├── layout/      # AppShell, BottomNav, FAB
+│   │   │   │   └── session/     # PreflightPage, CoachingPanel, TranscriptStream, etc.
+│   │   │   ├── hooks/           # usePreflightChecks, useSessionSocket
+│   │   │   ├── pages/           # Dashboard, Coaches, Sessions, LiveSession
+│   │   │   └── services/        # API, transcription, audio playback, webcam
 │   │   └── tailwind.config.js
 │   │
-│   └── backend/           # Express + Socket.io
+│   └── backend/           # Express + Socket.io (Vultr)
 │       └── src/
 │           ├── config/       # auth, database
 │           ├── models/       # User, Coach, Session
-│           ├── routes/       # auth, coaches, user, sessions
-│           ├── sockets/      # WebSocket handlers
+│           ├── routes/       # auth, coaches, user, sessions, stt, gemini, frame
+│           ├── services/     # coaching pipeline, Presage SDK
+│           ├── sockets/      # WebSocket handlers (coaching, vitals)
 │           └── scripts/      # seed.ts
 │
 ├── docs/
 │   ├── DESIGN_SYSTEM.md      # Colors, typography, components
+│   ├── PLAN.md               # Architecture decisions & data flow
 │   ├── PROGRESS.md           # Current status
 │   └── github-issues/        # Epic breakdowns
 │
@@ -155,21 +165,28 @@ cupid/
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/health` | Server health check (used by preflight) |
 | GET | `/api/auth/google` | OAuth redirect |
 | GET | `/api/auth/me` | Current user |
 | POST | `/api/auth/logout` | Logout |
 | GET | `/api/coaches` | List coaches |
 | PATCH | `/api/user/coach` | Select coach |
+| POST | `/api/frame` | Receive JPEG frame (ESP32-CAM or webcam) |
+| GET | `/api/stream` | Expose MJPEG stream to frontend |
+| POST | `/api/sessions/start` | Start coaching session |
+| POST | `/api/sessions/end` | End session |
+| GET | `/api/sessions` | List user sessions |
+| GET | `/api/sessions/:id` | Session detail |
+| GET | `/api/stt/scribe-token` | ElevenLabs Scribe token for client-side STT |
+| GET | `/api/gemini/token` | Gemini API key check (preflight) |
+| WS | Socket.io | Real-time events (transcript-input, coaching-update, coach-audio, target-vitals) |
 
 ### Coming Soon
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/api/frame` | Camera frame from ESP32 |
-| POST | `/api/sensors` | Sensor data |
-| GET | `/api/commands` | Command queue for ESP32 |
-| POST | `/api/sessions/start` | Start session |
-| POST | `/api/coach` | Get coaching response |
+| POST | `/api/sensors` | Sensor data (distance, HR) |
+| GET | `/api/commands` | Command queue for ESP32 (buzz, slap) |
 
 ---
 
@@ -229,7 +246,8 @@ SESSION_SECRET=<random-secret>
 MONGODB_URI=mongodb://localhost:27017/shoulder-cupid
 GOOGLE_CLIENT_ID=<your-google-client-id>
 GOOGLE_CLIENT_SECRET=<your-google-client-secret>
-GEMINI_API_KEY=<your-gemini-key>
+GOOGLE_AI_API_KEY=<your-gemini-key>
+ELEVENLABS_API_KEY=<your-elevenlabs-key>
 ```
 
 ### Google OAuth Setup
