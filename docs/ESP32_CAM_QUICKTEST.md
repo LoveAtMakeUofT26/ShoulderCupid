@@ -61,7 +61,8 @@ Copy this to Arduino IDE:
 // ===== EDIT THESE =====
 const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
-const char* SERVER_URL = "http://YOUR_COMPUTER_IP:4005/api/frame";
+const char* SERVER_URL = "http://YOUR_COMPUTER_IP:4000/api/frame";
+const char* DEVICE_TOKEN = "YOUR_DEVICE_TOKEN";  // must match DEVICE_API_TOKEN in backend .env
 const char* SESSION_ID = "test-session-123";
 // =======================
 
@@ -189,6 +190,7 @@ void sendFrame(uint8_t* data, size_t len) {
   HTTPClient http;
   http.begin(SERVER_URL);
   http.addHeader("Content-Type", "application/json");
+  http.addHeader("Authorization", String("Bearer ") + DEVICE_TOKEN);
   http.setTimeout(5000);
 
   // Convert to base64
@@ -288,7 +290,7 @@ cd ShoulderCupid/apps/backend
 npm run dev
 ```
 
-Should see: `Server running on http://localhost:4005`
+Should see: `Server running on http://localhost:4000`
 
 ---
 
@@ -336,8 +338,12 @@ POST /api/frame - received frame from test-session-123
 ### "Sending... FAILED: connection refused"
 - Is backend running?
 - Check SERVER_URL IP address
-- Check firewall (allow port 4005)
+- Check firewall (allow port 4000)
 - Make sure ESP32 and computer are on same network
+
+### "401 Unauthorized"
+- Check DEVICE_TOKEN matches DEVICE_API_TOKEN in backend `.env`
+- Ensure Authorization header is being sent
 
 ### "Sending... FAILED: timeout"
 - Reduce image quality: `config.jpeg_quality = 20`
@@ -353,9 +359,10 @@ POST /api/frame - received frame from test-session-123
 Use curl to test the endpoint:
 
 ```bash
-curl -X POST http://localhost:4005/api/frame \
+curl -X POST http://localhost:4000/api/frame \
   -H "Content-Type: application/json" \
-  -d '{"session_id":"test-123","jpeg":"dGVzdA==","detection":{"person":true,"confidence":0.9}}'
+  -H "Authorization: Bearer YOUR_DEVICE_TOKEN" \
+  -d '{"session_id":"SESSION_ID","jpeg":"dGVzdA==","detection":{"person":true,"confidence":0.9},"timestamp":1234567890}'
 ```
 
 Expected: `{"received":true}`
