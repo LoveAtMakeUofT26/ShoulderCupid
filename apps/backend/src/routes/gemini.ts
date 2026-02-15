@@ -1,12 +1,14 @@
 import { Router } from 'express';
 import { GoogleGenAI, Modality } from "@google/genai";
-import "dotenv/config";
+import { loadEnv } from '../config/loadEnv.js';
 import { RateLimiter } from '../utils/resilience.js';
 
 export const geminiRouter = Router();
 
+loadEnv();
+
 const client = new GoogleGenAI({
-  apiKey: process.env.GOOGLE_AI_API_KEY,
+  apiKey: process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY,
 });
 
 const tokenLimiter = new RateLimiter(10_000, 20); // 20 req / 10s per IP
@@ -25,10 +27,10 @@ const requireAuth = (req: any, res: any, next: any) => {
 
 // Lightweight health check — verifies API key is set without creating a token
 geminiRouter.get("/health", requireAuth, (_req, res) => {
-  if (process.env.GOOGLE_AI_API_KEY) {
+  if (process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY) {
     res.json({ status: "ok" });
   } else {
-    res.status(503).json({ error: "GOOGLE_AI_API_KEY not configured" });
+    res.status(503).json({ error: "Gemini API key not configured (GOOGLE_AI_API_KEY or GEMINI_API_KEY)" });
   }
 });
 
@@ -40,8 +42,8 @@ geminiRouter.get("/token", requireAuth, async (req, res) => {
     return;
   }
 
-  if (!process.env.GOOGLE_AI_API_KEY) {
-    res.status(503).json({ error: "GOOGLE_AI_API_KEY not configured" });
+  if (!process.env.GOOGLE_AI_API_KEY && !process.env.GEMINI_API_KEY) {
+    res.status(503).json({ error: "Gemini API key not configured (GOOGLE_AI_API_KEY or GEMINI_API_KEY)" });
     return;
   }
 

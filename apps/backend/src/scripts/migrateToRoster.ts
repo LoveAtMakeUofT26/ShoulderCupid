@@ -1,10 +1,10 @@
-import dotenv from 'dotenv'
 import mongoose from 'mongoose'
 import { connectDB } from '../config/database.js'
 import { User } from '../models/User.js'
 import { Coach } from '../models/Coach.js'
+import { loadEnv } from '../config/loadEnv.js'
 
-dotenv.config()
+loadEnv()
 
 async function migrate() {
   try {

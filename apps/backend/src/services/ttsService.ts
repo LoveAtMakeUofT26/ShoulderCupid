@@ -1,8 +1,8 @@
 import axios from 'axios'
-import dotenv from 'dotenv'
+import { loadEnv } from '../config/loadEnv.js'
 import { retryWithBackoff } from '../utils/resilience.js'
 
-dotenv.config()
+loadEnv()
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1'
 

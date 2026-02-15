@@ -1,10 +1,12 @@
 // Speech-to-Text service for WebSocket audio input
 import { Router } from 'express';
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
-import "dotenv/config";
+import { loadEnv } from '../config/loadEnv.js';
 import { RateLimiter } from '../utils/resilience.js';
 
 export const sttRouter = Router();
+
+loadEnv();
 
 const elevenlabs = new ElevenLabsClient({
   apiKey: process.env.ELEVENLABS_API_KEY,
