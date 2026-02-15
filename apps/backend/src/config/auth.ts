@@ -11,13 +11,9 @@ export interface AuthMiddlewares {
   passportSession: RequestHandler
 }
 
-const isProduction = process.env.NODE_ENV === 'production'
-
-const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`
-
 const getSessionSecret = () => {
   const secret = process.env.SESSION_SECRET
-  if (isProduction && !secret) {
+  if (process.env.NODE_ENV === 'production' && !secret) {
     throw new Error('SESSION_SECRET must be set in production')
   }
   return secret || 'dev-secret-change-in-production'
@@ -25,7 +21,7 @@ const getSessionSecret = () => {
 
 const getMongoUri = () => {
   const mongoUrl = process.env.MONGODB_URI
-  if (isProduction && !mongoUrl) {
+  if (process.env.NODE_ENV === 'production' && !mongoUrl) {
     throw new Error('MONGODB_URI must be set in production')
   }
   return mongoUrl || 'mongodb://localhost:27017/shoulder-cupid'
@@ -62,6 +58,7 @@ export function setupAuth(app: Express): AuthMiddlewares {
 
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`
     const callbackURL = `${backendUrl}/api/auth/google/callback`
 
     passport.use(
