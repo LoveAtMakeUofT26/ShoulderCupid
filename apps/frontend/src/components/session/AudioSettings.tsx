@@ -65,11 +65,11 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
     <div className="space-y-3">
       {/* Microphone */}
       <div>
-        <label className="block text-xs text-gray-400 mb-1">🎤 Microphone</label>
+        <label className="block text-xs text-gray-500 mb-1">🎤 Microphone</label>
         <select
           value={selectedMic}
           onChange={e => handleMicChange(e.target.value)}
-          className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cupid-500 focus:outline-none"
+          className="w-full bg-gray-50 text-gray-900 text-sm rounded-xl px-3 py-2.5 border border-gray-200 focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
         >
           {microphones.map(mic => (
             <option key={mic.deviceId} value={mic.deviceId}>
@@ -81,11 +81,11 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
 
       {/* Speaker */}
       <div>
-        <label className="block text-xs text-gray-400 mb-1">🔊 Speaker</label>
+        <label className="block text-xs text-gray-500 mb-1">🔊 Speaker</label>
         <select
           value={selectedSpeaker}
           onChange={e => handleSpeakerChange(e.target.value)}
-          className="w-full bg-gray-700 text-white text-sm rounded-lg px-3 py-2 border border-gray-600 focus:border-cupid-500 focus:outline-none"
+          className="w-full bg-gray-50 text-gray-900 text-sm rounded-xl px-3 py-2.5 border border-gray-200 focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
         >
           {speakers.map(spk => (
             <option key={spk.deviceId} value={spk.deviceId}>
