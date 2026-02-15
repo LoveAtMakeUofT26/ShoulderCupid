@@ -1,14 +1,10 @@
 import { Router } from 'express'
 import { Coach } from '../models/Coach.js'
 import { createGeneratedCoach } from '../services/coachGenerationService.js'
-import { getGenerationBias } from '../services/preferenceService.js'
 import { generateSpeech } from '../services/ttsService.js'
-import { RateLimiter, TTLCache } from '../utils/resilience.js'
+import { TTLCache } from '../utils/resilience.js'
 
 export const coachesRouter = Router()
-
-// Max 1 coach generation request per 5 seconds per user
-const generateLimiter = new RateLimiter(5000, 1)
 
 // Cache voice previews: key = `${coachId}:${text}`, value = base64 audio (10min TTL, max 50)
 const voicePreviewCache = new TTLCache<string, string>(10 * 60 * 1000, 50)
@@ -44,31 +40,13 @@ coachesRouter.get('/:id', async (req, res) => {
   }
 })
 
-// Generate a new AI coach
-coachesRouter.post('/generate', requireAuth, async (req, res) => {
+// Generate a new coach from random template pool (instant, no AI)
+coachesRouter.post('/generate', requireAuth, async (_req, res) => {
   try {
-    const userId = (req.user as any)._id.toString()
-
-    if (!generateLimiter.allow(userId)) {
-      return res.status(429).json({ error: 'Please wait a few seconds before generating another coach' })
-    }
-
-    const { useBias = true } = req.body
-
-    // Get user preference bias if requested
-    let bias = null
-    if (useBias) {
-      bias = await getGenerationBias(userId)
-    }
-
-    const coach = await createGeneratedCoach(bias ?? undefined)
+    const coach = await createGeneratedCoach()
     res.json({ coach })
   } catch (error: any) {
     console.error('Error generating coach:', error?.message ?? error)
-    const isRateLimit = error?.status === 429 || error?.message?.includes('429')
-    if (isRateLimit) {
-      return res.status(429).json({ error: 'Too many requests. Please wait a moment and try again.' })
-    }
     res.status(500).json({ error: 'Failed to generate coach' })
   }
 })
