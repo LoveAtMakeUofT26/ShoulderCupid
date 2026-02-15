@@ -45,4 +45,4 @@ jobs:
             npm install --omit=dev
             pm2 restart shoulder-cupid
             sleep 5
-            curl -sf http://localhost:4000/api/presage/status || echo "Health check failed"
+            curl -sf http://localhost:4000/api/health || { echo "::error::Health check failed — server did not start"; pm2 logs shoulder-cupid --lines 20 --nostream; exit 1; }
