@@ -16,8 +16,15 @@ function getClientKey(req: any): string {
   return req.ip || 'anonymous';
 }
 
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated?.()) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+  next()
+}
+
 // Lightweight health check — verifies API key is set without creating a token
-geminiRouter.get("/health", (_req, res) => {
+geminiRouter.get("/health", requireAuth, (_req, res) => {
   if (process.env.GOOGLE_AI_API_KEY) {
     res.json({ status: "ok" });
   } else {
@@ -26,7 +33,7 @@ geminiRouter.get("/health", (_req, res) => {
 });
 
 // Create ephemeral token for live Gemini session (only called when session actually starts)
-geminiRouter.get("/token", async (req, res) => {
+geminiRouter.get("/token", requireAuth, async (req, res) => {
   const key = getClientKey(req);
   if (!tokenLimiter.allow(key)) {
     res.status(429).json({ error: "Too many token requests. Please wait a moment." });
@@ -75,7 +82,6 @@ geminiRouter.get("/token", async (req, res) => {
 
   try {
     const token = await tokenPromise;
-    console.log(" Created Gemini text token:", token);
     res.json(token);
   } catch (error) {
     console.error("Failed to create Gemini text token:", error);

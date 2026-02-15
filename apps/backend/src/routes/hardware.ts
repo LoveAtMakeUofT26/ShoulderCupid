@@ -9,11 +9,47 @@ import {
 import { addFrame } from '../services/frameBuffer.js'
 import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
 import { generateSpeech } from '../services/ttsService.js'
+import mongoose from 'mongoose'
 
 export const hardwareRouter = Router()
 
 // Store pending commands per session (in production, use Redis)
 const commandQueues = new Map<string, string[]>()
+
+const getDeviceToken = (req: any) => {
+  const headerToken =
+    (req.headers?.authorization &&
+      typeof req.headers.authorization === 'string' &&
+      req.headers.authorization.toLowerCase().startsWith('bearer ')
+      ? req.headers.authorization.slice(7).trim()
+      : req.headers?.['x-device-token']) as string | undefined
+
+  return (
+    (typeof headerToken === 'string' ? headerToken.trim() : undefined) ||
+    (typeof req.query?.device_token === 'string' ? req.query.device_token : undefined) ||
+    (typeof req.body?.device_token === 'string' ? req.body.device_token : undefined)
+  )
+}
+
+const requireHardwareAuth = (req: any, res: any, next: any) => {
+  const hasUserSession = !!req.isAuthenticated?.()
+  const configuredDeviceToken = process.env.DEVICE_API_TOKEN
+
+  if (hasUserSession) {
+    return next()
+  }
+
+  const token = getDeviceToken(req)
+  if (configuredDeviceToken && token && token === configuredDeviceToken) {
+    return next()
+  }
+
+  res.status(401).json({ error: 'Unauthorized' })
+}
+
+const isValidObjectId = (id: string): boolean => {
+  return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
+}
 
 // Store io instance for broadcasting
 let ioInstance: Server | null = null
@@ -30,10 +66,10 @@ export function queueCommand(sessionId: string, command: string) {
 }
 
 // POST /api/frame - Receive camera frame from ESP32
-hardwareRouter.post('/frame', async (req, res) => {
+hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
   const { session_id, jpeg: _jpeg, detection, timestamp } = req.body
 
-  if (!session_id) {
+  if (!session_id || !isValidObjectId(session_id)) {
     return res.status(400).json({ error: 'session_id required' })
   }
 
@@ -113,10 +149,10 @@ hardwareRouter.post('/frame', async (req, res) => {
 })
 
 // POST /api/sensors - Receive sensor data from ESP32
-hardwareRouter.post('/sensors', async (req, res) => {
+hardwareRouter.post('/sensors', requireHardwareAuth, async (req, res) => {
   const { session_id, distance, heart_rate, person_detected } = req.body
 
-  if (!session_id) {
+  if (!session_id || !isValidObjectId(session_id)) {
     return res.status(400).json({ error: 'session_id required' })
   }
 
@@ -156,14 +192,19 @@ hardwareRouter.post('/sensors', async (req, res) => {
 })
 
 // GET /api/commands - ESP32 polls for commands
-hardwareRouter.get('/commands', async (req, res) => {
+hardwareRouter.get('/commands', requireHardwareAuth, async (req, res) => {
   const { session_id } = req.query
 
-  if (!session_id || typeof session_id !== 'string') {
+  if (!session_id || typeof session_id !== 'string' || !isValidObjectId(session_id)) {
     return res.status(400).json({ error: 'session_id required' })
   }
 
   try {
+    const session = await Session.findOne({ _id: session_id, status: 'active' })
+    if (!session) {
+      return res.status(404).json({ error: 'Active session not found' })
+    }
+
     // Get and clear pending commands
     const commands = commandQueues.get(session_id) || []
     commandQueues.set(session_id, [])
@@ -182,7 +223,7 @@ hardwareRouter.get('/commands', async (req, res) => {
 })
 
 // POST /api/devices/pair - Pair ESP32 device with user
-hardwareRouter.post('/devices/pair', async (req, res) => {
+hardwareRouter.post('/devices/pair', requireHardwareAuth, async (req, res) => {
   const { device_id, pairing_code } = req.body
 
   if (!device_id || !pairing_code) {
@@ -201,11 +242,16 @@ hardwareRouter.post('/devices/pair', async (req, res) => {
 })
 
 // POST /api/trigger-warning - Manually trigger comfort warning (for testing)
-hardwareRouter.post('/trigger-warning', async (req, res) => {
+hardwareRouter.post('/trigger-warning', requireHardwareAuth, async (req, res) => {
   const { session_id, level } = req.body
 
-  if (!session_id || !level) {
+  if (!session_id || !level || !isValidObjectId(session_id)) {
     return res.status(400).json({ error: 'session_id and level required' })
+  }
+
+  const session = await Session.findOne({ _id: session_id, status: 'active' })
+  if (!session) {
+    return res.status(404).json({ error: 'Active session not found' })
   }
 
   const warningLevel = parseInt(level)

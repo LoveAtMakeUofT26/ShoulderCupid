@@ -17,6 +17,13 @@ function getClientKey(req: any): string {
   return req.ip || 'anonymous';
 }
 
+const requireAuth = (req: any, res: any, next: any) => {
+  if (!req.isAuthenticated?.()) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+  next()
+}
+
 sttRouter.get("/health", (_req, res) => {
   if (!process.env.ELEVENLABS_API_KEY) {
     res.status(503).json({ error: "ELEVENLABS_API_KEY not configured" });
@@ -26,8 +33,8 @@ sttRouter.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
-sttRouter.get("/scribe-token", async (_req, res) => {
-  const key = getClientKey(_req);
+sttRouter.get("/scribe-token", requireAuth, async (req, res) => {
+  const key = getClientKey(req);
   if (!scribeTokenLimiter.allow(key)) {
     res.status(429).json({ error: "Too many token requests. Please wait a moment." });
     return;
@@ -58,7 +65,6 @@ sttRouter.get("/scribe-token", async (_req, res) => {
 
   try {
     const token = await tokenPromise;
-    console.log("🎤 Created scribe token:", token);
     res.json(token);
   } catch (error) {
     console.error("Failed to create scribe token:", error);

@@ -182,11 +182,11 @@ export function getLatestMetrics(sessionId: string): PresageMetrics | null {
 export function deriveEmotion(metrics: PresageMetrics): string {
   const { hr, br, talking } = metrics
 
-  // High heart rate = stressed/nervous (requires API key for HR)
-  if (hr > 100) return 'nervous'
-
   // Very high HR = excited
   if (hr > 110) return 'excited'
+
+  // High heart rate = stressed/nervous (requires API key for HR)
+  if (hr > 100) return 'nervous'
 
   // Low HR = calm/relaxed
   if (hr > 0 && hr < 75) return 'calm'
