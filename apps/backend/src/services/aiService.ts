@@ -1,8 +1,8 @@
 import { GoogleGenerativeAI, type ChatSession } from '@google/generative-ai'
-import dotenv from 'dotenv'
+import { loadEnv } from '../config/loadEnv.js'
 import { retryWithBackoff } from '../utils/resilience.js'
 
-dotenv.config()
+loadEnv()
 
 // Must match the env var used elsewhere (gemini.ts uses GOOGLE_AI_API_KEY)
 const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || ''

@@ -2,13 +2,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as crypto from 'node:crypto'
-import dotenv from 'dotenv'
+import { loadEnv } from '../config/loadEnv.js'
 import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
 import { buildCoachImagePrompt, generateImageBuffer, type AppearanceSpec } from '../config/imagePrompts.js'
 import { retryWithBackoff } from '../utils/resilience.js'
 
-dotenv.config()
+loadEnv()
 
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '')
 
