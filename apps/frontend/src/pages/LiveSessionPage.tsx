@@ -4,6 +4,7 @@ import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
 import { useWebcamService } from '../services/webcamService'
+import { usePersonDetection } from '../hooks/usePersonDetection'
 import {
   CoachingPanel,
   TranscriptStream,
@@ -101,10 +102,19 @@ export function LiveSessionPage() {
     error: transcriptionError,
   } = useTranscriptionService()
 
+  const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
+
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
     fps: 15,
     quality: 0.5,
+  })
+
+  usePersonDetection({
+    videoRef: webcam.videoRef,
+    overlayCanvasRef,
+    detectionRef: webcam.detectionRef,
+    enabled: phase === 'active' && cameraSource === 'webcam',
   })
 
   const lastSentIndexRef = useRef(0)
@@ -423,6 +433,7 @@ export function LiveSessionPage() {
               cameraSource={cameraSource}
               videoRef={webcam.videoRef}
               canvasRef={webcam.canvasRef}
+              overlayCanvasRef={overlayCanvasRef}
               isConnected={isConnected}
               isActive={webcam.isActive}
               frameCount={webcam.frameCount}
@@ -462,6 +473,7 @@ export function LiveSessionPage() {
             cameraSource={cameraSource}
             videoRef={webcam.videoRef}
             canvasRef={webcam.canvasRef}
+            overlayCanvasRef={overlayCanvasRef}
             isConnected={isConnected}
             isActive={webcam.isActive}
             frameCount={webcam.frameCount}

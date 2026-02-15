@@ -6,6 +6,7 @@ interface CameraViewportProps {
   cameraSource: CameraSource
   videoRef: React.RefObject<HTMLVideoElement | null> | React.LegacyRef<HTMLVideoElement>
   canvasRef: React.RefObject<HTMLCanvasElement | null> | React.LegacyRef<HTMLCanvasElement>
+  overlayCanvasRef?: React.RefObject<HTMLCanvasElement | null> | React.LegacyRef<HTMLCanvasElement>
   isConnected: boolean
   isActive: boolean
   frameCount: number
@@ -20,6 +21,7 @@ export function CameraViewport({
   cameraSource,
   videoRef,
   canvasRef,
+  overlayCanvasRef,
   isConnected: _isConnected,
   isActive,
   frameCount,
@@ -37,6 +39,7 @@ export function CameraViewport({
       <CameraFeed
         source={cameraSource}
         videoRef={videoRef}
+        overlayCanvasRef={overlayCanvasRef}
         esp32StreamUrl={cameraSource === 'esp32' ? '/api/stream' : undefined}
         isActive={isActive}
         frameCount={frameCount}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { logger } from '../utils/logger'
+import type { Detection } from './personDetectionService'
 
 export interface WebcamServiceOptions {
   sessionId: string
@@ -19,6 +20,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
   const inFlightRef = useRef(0)
   const frameCountRef = useRef(0)
   const disabledRef = useRef(false)
+  const detectionRef = useRef<Detection | null>(null)
 
   const [isActive, setIsActive] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
         body: JSON.stringify({
           session_id: sessionId,
           jpeg,
-          detection: null,
+          detection: detectionRef?.current ?? null,
           timestamp: Date.now(),
           source: 'webcam',
         }),
@@ -149,6 +151,7 @@ export function useWebcamService(options: WebcamServiceOptions) {
   return {
     videoRef,
     canvasRef,
+    detectionRef,
     isActive,
     error,
     frameCount,
