@@ -4,7 +4,7 @@ import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
 
 import { stopSession as stopSessionProcessor } from '../services/presageService.js'
-import { generateSessionReport } from '../services/reportService.js'
+import { analyzeTranscript } from '../services/analysisService.js'
 import { clearCommandQueue } from './hardware.js'
 import mongoose from 'mongoose'
 
@@ -210,17 +210,57 @@ sessionsRouter.post('/:id/end', async (req, res) => {
     // Remove from active sessions
     activeSessions.delete(userId.toString())
 
-    // Generate report in background (don't block response)
-    generateSessionReport(session._id.toString()).catch(err => {
-      console.error(`[report] Failed to generate report for session ${session._id}:`, err)
-    })
-
     await session.populate('coach_id')
 
     res.json(session)
   } catch (error) {
     console.error('Failed to end session:', error)
     res.status(500).json({ error: 'Failed to end session' })
+  }
+})
+
+// Analyze session transcript with OpenAI
+sessionsRouter.post('/:id/analyze', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+
+  const userId = (req.user as any)._id
+
+  try {
+    const session = await Session.findOne({
+      _id: req.params.id,
+      user_id: userId,
+    })
+
+    if (!session) {
+      return res.status(404).json({ error: 'Session not found' })
+    }
+
+    const transcript = (session.transcript || []).map((t: any) => ({
+      id: t._id?.toString() || '',
+      timestamp: t.timestamp?.getTime() || 0,
+      speaker: t.speaker,
+      text: t.text,
+      emotion: t.emotion,
+    }))
+
+    const result = await analyzeTranscript(transcript)
+
+    // Save to session.report for persistence
+    await Session.findByIdAndUpdate(req.params.id, {
+      report: {
+        summary: result.summary,
+        highlights: result.highlights,
+        improvements: result.recommendations,
+        generated_at: new Date(),
+      },
+    })
+
+    res.json(result)
+  } catch (error) {
+    console.error('Failed to analyze session:', error)
+    res.status(500).json({ error: 'Failed to analyze session' })
   }
 })
 

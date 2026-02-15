@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { AppShell } from '../components/layout'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -35,6 +35,12 @@ interface SessionDetail {
   }
 }
 
+interface Analysis {
+  summary: string
+  highlights: string[]
+  recommendations: string[]
+}
+
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
@@ -61,9 +67,9 @@ export function SessionReportPage() {
   const [error, setError] = useState<string | null>(null)
   const isDesktop = useIsDesktop()
 
-  const [reportPending, setReportPending] = useState(false)
-  const pollCountRef = useRef(0)
-  const MAX_POLLS = 10
+  const [analysis, setAnalysis] = useState<Analysis | null>(null)
+  const [analyzing, setAnalyzing] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -76,10 +82,13 @@ export function SessionReportPage() {
         const data = await response.json()
         setSession(data)
 
-        // If session ended but no report yet, start polling
-        if (data.status === 'ended' && !data.report?.summary) {
-          setReportPending(true)
-          pollCountRef.current = 0
+        // If report already exists (previously analyzed), populate analysis state
+        if (data.report?.summary) {
+          setAnalysis({
+            summary: data.report.summary,
+            highlights: data.report.highlights || [],
+            recommendations: data.report.improvements || [],
+          })
         }
       } catch (err) {
         console.error('Failed to fetch session:', err)
@@ -91,31 +100,29 @@ export function SessionReportPage() {
     fetchSession()
   }, [id])
 
-  // Poll for report generation
-  useEffect(() => {
-    if (!reportPending || !id) return
+  async function runAnalysis() {
+    if (!id || analyzing) return
+    setAnalyzing(true)
+    setAnalysisError(null)
 
-    const interval = setInterval(async () => {
-      pollCountRef.current++
-      try {
-        const response = await fetch(`/api/sessions/${id}`, {
-          credentials: 'include',
-        })
-        if (!response.ok) return
-        const data = await response.json()
-        if (data.report?.summary) {
-          setSession(data)
-          setReportPending(false)
-        } else if (pollCountRef.current >= MAX_POLLS) {
-          setReportPending(false)
-        }
-      } catch {
-        // keep polling
+    try {
+      const response = await fetch(`/api/sessions/${id}/analyze`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Analysis failed')
       }
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [reportPending, id])
+      const result = await response.json()
+      setAnalysis(result)
+    } catch (err) {
+      console.error('Analysis failed:', err)
+      setAnalysisError(err instanceof Error ? err.message : 'Analysis failed')
+    } finally {
+      setAnalyzing(false)
+    }
+  }
 
   return (
     <AppShell>
@@ -232,49 +239,13 @@ export function SessionReportPage() {
               </div>
             )}
 
-            {/* Report + Transcript: side-by-side on desktop */}
+            {/* Transcript + Analysis: side-by-side columns */}
             <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
-              {/* Report */}
-              {session.report?.summary && (
-                <div className={isDesktop ? 'card-desktop border-t-2 border-gold-400' : 'card'}>
-                  <h2 className="font-semibold text-[var(--color-text)] mb-2">Summary</h2>
-                  <p className="text-sm text-[var(--color-text-secondary)]">{session.report.summary}</p>
-
-                  {session.report.highlights && session.report.highlights.length > 0 && (
-                    <div className="mt-3">
-                      <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Highlights</h3>
-                      <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
-                        {session.report.highlights.map((h, i) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="text-green-500 shrink-0">+</span>
-                            {h}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {session.report.improvements && session.report.improvements.length > 0 && (
-                    <div className="mt-3">
-                      <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Areas to Improve</h3>
-                      <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
-                        {session.report.improvements.map((imp, i) => (
-                          <li key={i} className="flex gap-2">
-                            <span className="text-[var(--color-primary-text)] shrink-0">-</span>
-                            {imp}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Transcript */}
-              {session.transcript.length > 0 && (
-                <div className={isDesktop ? 'card-desktop border-t-2 border-cupid-400' : 'card'}>
-                  <h2 className="font-semibold text-[var(--color-text)] mb-3">Transcript</h2>
-                  <div className="space-y-2 max-h-96 overflow-y-auto">
+              {/* Left: Transcript */}
+              <div className={isDesktop ? 'card-desktop border-t-2 border-cupid-400' : 'card'}>
+                <h2 className="font-semibold text-[var(--color-text)] mb-3">Transcript</h2>
+                {session.transcript.length > 0 ? (
+                  <div className="space-y-2 max-h-[500px] overflow-y-auto">
                     {session.transcript.map((entry, i) => (
                       <div key={i} className={`text-sm p-2 rounded-lg ${
                         entry.speaker === 'user'
@@ -288,39 +259,100 @@ export function SessionReportPage() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Report generating state */}
-            {reportPending && !session.report?.summary && (
-              <div className={`text-center ${isDesktop ? 'card-featured py-16' : 'card py-8'}`}>
-                <div className={`mb-3 ${isDesktop ? 'text-6xl' : 'text-4xl'}`}>
-                  <Spinner size="lg" />
-                </div>
-                <p className="text-[var(--color-text-tertiary)] text-sm">
-                  Generating your session report...
-                </p>
-              </div>
-            )}
-
-            {/* Empty report state */}
-            {!reportPending && !session.report?.summary && session.transcript.length === 0 && (
-              <div className={`text-center ${isDesktop ? 'card-featured py-16' : 'card py-8'}`}>
-                <div className={`mb-3 ${isDesktop ? 'text-6xl' : 'text-4xl'}`}>📊</div>
-                <p className="text-[var(--color-text-tertiary)] text-sm">
-                  No report data available for this session yet.
-                </p>
-                {session.status === 'ended' && (
-                  <button
-                    onClick={() => { setReportPending(true); pollCountRef.current = 0 }}
-                    className="mt-3 text-sm text-[var(--color-primary-text)] font-medium hover:underline"
-                  >
-                    Retry
-                  </button>
+                ) : (
+                  <p className="text-sm text-[var(--color-text-tertiary)] py-8 text-center">
+                    No transcript recorded for this session.
+                  </p>
                 )}
               </div>
-            )}
+
+              {/* Right: Analysis */}
+              <div className={isDesktop ? 'card-desktop border-t-2 border-gold-400' : 'card'}>
+                <h2 className="font-semibold text-[var(--color-text)] mb-3">Analysis</h2>
+
+                {/* Analysis result */}
+                {analysis && !analyzing && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-[var(--color-text-secondary)]">{analysis.summary}</p>
+
+                    {analysis.highlights.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Highlights</h3>
+                        <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
+                          {analysis.highlights.map((h, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="text-green-500 shrink-0">+</span>
+                              {h}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {analysis.recommendations.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Recommendations</h3>
+                        <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
+                          {analysis.recommendations.map((r, i) => (
+                            <li key={i} className="flex gap-2">
+                              <span className="text-cupid-600 shrink-0">&#8227;</span>
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Re-run button */}
+                    <button
+                      onClick={runAnalysis}
+                      className="text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-primary-text)] font-medium transition-colors mt-2"
+                    >
+                      Re-analyze
+                    </button>
+                  </div>
+                )}
+
+                {/* Loading state */}
+                {analyzing && (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <Spinner size="lg" />
+                    <p className="text-sm text-[var(--color-text-tertiary)] mt-3">
+                      Analyzing transcript...
+                    </p>
+                  </div>
+                )}
+
+                {/* Error state */}
+                {analysisError && !analyzing && (
+                  <div className="text-center py-8">
+                    <p className="text-sm text-red-500 mb-2">{analysisError}</p>
+                    <button
+                      onClick={runAnalysis}
+                      className="text-sm text-[var(--color-primary-text)] font-medium hover:underline"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+
+                {/* Initial state: prompt to analyze */}
+                {!analysis && !analyzing && !analysisError && (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <button
+                      onClick={runAnalysis}
+                      disabled={session.transcript.length === 0}
+                      className="px-6 py-3 rounded-xl bg-[var(--color-primary)] text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                    >
+                      Run Analysis
+                    </button>
+                    <p className="text-xs text-[var(--color-text-tertiary)] mt-3">
+                      Powered by OpenAI
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
