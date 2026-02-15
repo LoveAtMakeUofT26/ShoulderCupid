@@ -12,8 +12,8 @@ export function useGeminiService() {
       throw new Error('Failed to fetch Gemini token');
     }
     const data = await response.json();
-    console.log("🤖 Gemini token fetched:", data.token);
-    return data.token;
+    console.log("🤖 Gemini token fetched:", data.name);
+    return data.name;
   };
 
   const connectToGemini = useCallback(async () => {
