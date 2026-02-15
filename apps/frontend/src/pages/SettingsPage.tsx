@@ -290,7 +290,7 @@ export function SettingsPage() {
           Settings
         </h1>
 
-        <div className="space-y-6 md:space-y-8 md:max-w-2xl">
+        <div className="space-y-6 md:space-y-8">
           {content}
         </div>
       </div>

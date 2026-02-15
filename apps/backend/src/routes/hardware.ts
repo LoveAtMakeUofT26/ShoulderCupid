@@ -7,8 +7,7 @@ import {
   updateEmotion,
   broadcastToSession,
 } from '../sockets/clientHandler.js'
-import { addFrame } from '../services/frameBuffer.js'
-import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
+import { feedFrame, getLatestMetrics, deriveEmotion, getPresageStatus, getSessionError } from '../services/presageService.js'
 import { generateSpeech } from '../services/ttsService.js'
 
 export const hardwareRouter = Router()
@@ -100,23 +99,18 @@ hardwareRouter.post('/frame', requireHardwareAuth, async (req, res) => {
         })
       }
 
-      // Save frame for Presage processing (SDK reads directly from directory)
+      // Feed frame to Presage processor (auto-starts on first frame)
       try {
-        await addFrame(session_id, _jpeg, timestamp || Date.now())
+        feedFrame(session_id, _jpeg, timestamp || Date.now())
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to write frame to disk'
-        console.error(`[ShoulderCupid] Failed to persist frame for session ${session_id}:`, err)
+        const message = err instanceof Error ? err.message : 'Failed to feed frame to processor'
+        console.error(`[ShoulderCupid] Failed to feed frame for session ${session_id}:`, err)
         if (ioInstance) {
           broadcastToSession(ioInstance, session_id, 'presage-error', {
-            error: `Frame write failed: ${message}. Check FRAMES_DIR permissions.`,
+            error: `Frame feed failed: ${message}`,
           })
         }
-        return res.status(500).json({ error: 'Failed to persist frame' })
-      }
-
-      // Start per-session processor if not already running
-      if (!isProcessorRunning(session_id)) {
-        startSessionProcessor(session_id)
+        return res.status(500).json({ error: 'Failed to feed frame' })
       }
 
       // Check for Presage metrics from the C++ processor

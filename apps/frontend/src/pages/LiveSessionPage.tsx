@@ -254,11 +254,6 @@ export function LiveSessionPage() {
           return
         }
 
-        if (err.error === 'Payment required') {
-          setStartError('Payment required. Please complete payment first.')
-          return
-        }
-
         setStartError(err.error || 'Failed to start session. Please try again.')
         return
       }
