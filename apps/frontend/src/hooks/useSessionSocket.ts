@@ -32,6 +32,7 @@ export interface SessionState {
   warningLevel: WarningLevel
   warningMessage: string
   targetVitals: TargetVitals | null
+  presageError: string | null
 }
 
 // Socket connects directly to the backend (not through Vite proxy).
@@ -52,6 +53,7 @@ export function useSessionSocket(sessionId: string | null) {
     warningLevel: 0,
     warningMessage: '',
     targetVitals: null,
+    presageError: null,
   })
 
   const updateState = useCallback((updates: Partial<SessionState>) => {
@@ -130,6 +132,10 @@ export function useSessionSocket(sessionId: string | null) {
 
     socket.on('target-vitals', (data: TargetVitals) => {
       updateState({ targetVitals: data })
+    })
+
+    socket.on('presage-error', (data: { error: string }) => {
+      updateState({ presageError: data.error })
     })
 
     socket.on('coaching-ready', (data: { coachName: string }) => {
