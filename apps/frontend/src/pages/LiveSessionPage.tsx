@@ -55,7 +55,6 @@ export function LiveSessionPage() {
     sendTranscript,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
-  // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
     partialTranscript,
@@ -64,14 +63,12 @@ export function LiveSessionPage() {
     stopTranscription,
   } = useTranscriptionService()
 
-  // Webcam service for browser camera capture
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
     fps: 2,
     quality: 0.7,
   })
 
-  // Track which transcripts we've already sent to avoid duplicates
   const lastSentIndexRef = useRef(0)
 
   // Combine socket and transcription transcripts
@@ -84,7 +81,6 @@ export function LiveSessionPage() {
     if (phase === 'active' && !transcriptionConnected) {
       startTranscription()
     }
-
     return () => {
       if (transcriptionConnected && phase !== 'active') {
         stopTranscription()
@@ -92,19 +88,16 @@ export function LiveSessionPage() {
     }
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
 
-  // Initialize coaching once socket is connected and session is active
   useEffect(() => {
     if (phase === 'active' && isConnected && activeSessionId) {
       startCoaching()
     }
   }, [phase, isConnected, activeSessionId, startCoaching])
 
-  // Start/stop webcam when session becomes active and source is webcam
   useEffect(() => {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
       webcam.start()
     }
-
     return () => {
       if (webcam.isActive && phase !== 'active') {
         webcam.stop()
@@ -112,7 +105,6 @@ export function LiveSessionPage() {
     }
   }, [phase, cameraSource])
 
-  // Send committed transcripts to backend pipeline (not directly to Gemini)
   useEffect(() => {
     if (transcriptionTranscripts.length > lastSentIndexRef.current) {
       for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
@@ -125,7 +117,6 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
-  // Fetch user on mount
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -145,23 +136,17 @@ export function LiveSessionPage() {
     fetchUser()
   }, [navigate])
 
-  // Duration timer
   useEffect(() => {
     if (phase !== 'active') return
-
     const interval = setInterval(() => {
       setDuration(prev => prev + 1)
     }, 1000)
-
     return () => clearInterval(interval)
   }, [phase])
 
   const handleCameraSourceChange = useCallback((source: CameraSource) => {
-    // Stop current camera before switching
     if (webcam.isActive) webcam.stop()
     setCameraSource(source)
-
-    // Start new source if session is active
     if (phase === 'active' && source === 'webcam') {
       webcam.start()
     }
@@ -208,13 +193,12 @@ export function LiveSessionPage() {
       }
     }
 
-    // Navigate to session report (or list if no ID)
     navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
   }, [endSession, navigate, activeSessionId, webcam, stopTranscription])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-marble-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
         <Spinner size="lg" />
       </div>
     )
@@ -235,17 +219,15 @@ export function LiveSessionPage() {
     )
   }
 
-  // Active session layout
+  // Active session layout — intentionally dark bg for video context
   return (
     <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Stats Bar */}
       <StatsBar
         mode={mode}
         duration={duration}
         isConnected={isConnected}
       />
 
-      {/* Warning Alert (overlays at top) */}
       {warningLevel > 0 && (
         <div className="absolute top-14 left-4 right-4 z-40 md:left-auto md:right-8 md:max-w-md">
           <WarningAlert level={warningLevel} message={warningMessage} />
@@ -345,7 +327,6 @@ export function LiveSessionPage() {
         </button>
       </div>
 
-      {/* End Session Modal */}
       <EndSessionModal
         isOpen={showEndModal}
         duration={duration}

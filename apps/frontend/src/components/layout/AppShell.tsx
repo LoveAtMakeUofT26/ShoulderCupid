@@ -13,7 +13,7 @@ export function AppShell({ children, showNav = true }: AppShellProps) {
 
   if (isDesktop) {
     return (
-      <div className="min-h-screen bg-marble-50">
+      <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
         {showNav && <SideNav />}
         <main
           className="min-h-screen"
@@ -28,7 +28,7 @@ export function AppShell({ children, showNav = true }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-marble-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--color-bg)' }}>
       <main className={`container-mobile ${showNav ? 'pb-24' : ''}`}>
         {children}
       </main>

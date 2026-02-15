@@ -9,8 +9,9 @@ import { FooterSection } from '../components/landing/sections/FooterSection'
 export function LandingPage() {
   return (
     <div
-      className="min-h-screen bg-marble-50"
+      className="min-h-screen"
       style={{
+        backgroundColor: 'var(--color-bg)',
         backgroundImage: "url('/assets/marble-texture.svg')",
         backgroundSize: '1200px 1200px',
         backgroundAttachment: 'fixed',

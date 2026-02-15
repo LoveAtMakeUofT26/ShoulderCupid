@@ -26,17 +26,18 @@ export function EndSessionModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ backgroundColor: 'var(--color-overlay)' }}
         onClick={onClose}
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
+      <div className="relative rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up" style={{ backgroundColor: 'var(--color-surface)' }}>
         {isEnding ? (
           // Generating Report State
           <div className="text-center py-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-cupid-100 flex items-center justify-center">
-              <svg className="animate-spin h-8 w-8 text-cupid-500" viewBox="0 0 24 24">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center">
+              <svg className="animate-spin h-8 w-8 text-[var(--color-primary)]" viewBox="0 0 24 24">
                 <circle
                   className="opacity-25"
                   cx="12"
@@ -53,28 +54,26 @@ export function EndSessionModal({
                 />
               </svg>
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">
               Generating Report...
             </h2>
-            <p className="text-gray-500">
+            <p className="text-[var(--color-text-tertiary)]">
               Analyzing your session with AI
             </p>
           </div>
         ) : (
           // Confirmation State
           <>
-            {/* Header */}
             <div className="text-center mb-6">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold-100 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--color-accent-surface)] flex items-center justify-center">
                 <span className="text-3xl">🎯</span>
               </div>
-              <h2 className="text-xl font-bold text-gray-900">End Session?</h2>
-              <p className="text-gray-500 mt-1">
+              <h2 className="text-xl font-bold text-[var(--color-text)]">End Session?</h2>
+              <p className="text-[var(--color-text-tertiary)] mt-1">
                 You've been coaching for {formatDuration(duration)}
               </p>
             </div>
 
-            {/* Actions */}
             <div className="space-y-3">
               <button
                 onClick={onConfirm}
