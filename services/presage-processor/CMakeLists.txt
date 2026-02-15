@@ -4,11 +4,13 @@ project(presage-processor LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find SmartSpectra SDK (installed via apt on Ubuntu 22.04)
+# SmartSpectra SDK (installed via apt: libsmartspectra-dev)
+# Transitively brings in PhysiologyEdge, OpenCV, mediapipe, abseil, protobuf
 find_package(SmartSpectra REQUIRED)
 
 add_executable(presage-processor main.cpp)
 
-target_link_libraries(presage-processor PRIVATE SmartSpectra::SmartSpectra)
+# SmartSpectra::Container includes BackgroundContainer + all video sources
+target_link_libraries(presage-processor PRIVATE SmartSpectra::Container)
 
 install(TARGETS presage-processor DESTINATION bin)

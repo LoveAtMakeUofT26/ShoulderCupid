@@ -64,6 +64,15 @@ export function setupClientHandler(socket: Socket, io: Server) {
       }
 
       await initCoachingSession(sessionId, coach.system_prompt, session.mode, coach.name)
+
+      // If no hardware connected, default to CONVERSATION so coaching works without ESP32
+      const state = sessionStates.get(sessionId)
+      if (state && state.mode === 'IDLE') {
+        state.mode = 'CONVERSATION'
+        broadcastToSession(io, sessionId, 'mode-change', { mode: 'CONVERSATION', prevMode: 'IDLE' })
+        console.log(`No hardware detected — defaulting session ${sessionId} to CONVERSATION mode`)
+      }
+
       socket.emit('coaching-ready', { sessionId, coachName: coach.name, voiceId: coach.voice_id })
       console.log(`Coaching started: ${coach.name} for session ${sessionId}`)
     } catch (err) {
@@ -125,6 +134,9 @@ export function setupClientHandler(socket: Socket, io: Server) {
       }
     } catch (err) {
       console.error('Coaching pipeline error:', err)
+      broadcastToSession(io, sessionId, 'coaching-error', {
+        error: err instanceof Error ? err.message : 'Coaching pipeline failed',
+      })
     }
   })
 

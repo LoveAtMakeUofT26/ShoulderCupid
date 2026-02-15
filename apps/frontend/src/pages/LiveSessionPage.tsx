@@ -18,6 +18,7 @@ import {
 import { CameraSourceSelector, type CameraSource } from '../components/session/CameraSourceSelector'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Spinner } from '../components/ui/Spinner'
+import { unlockAudio, clearAudioQueue } from '../services/audioPlaybackService'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -49,12 +50,12 @@ export function LiveSessionPage() {
     warningLevel,
     warningMessage,
     targetVitals,
+    presageError,
     endSession,
     startCoaching,
     sendTranscript,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
-  // ElevenLabs transcription service
   const {
     transcripts: transcriptionTranscripts,
     partialTranscript,
@@ -63,25 +64,24 @@ export function LiveSessionPage() {
     stopTranscription,
   } = useTranscriptionService()
 
-  // Webcam service for browser camera capture
   const webcam = useWebcamService({
     sessionId: activeSessionId || 'test',
     fps: 2,
     quality: 0.7,
   })
 
-  // Track which transcripts we've already sent to avoid duplicates
   const lastSentIndexRef = useRef(0)
 
   // Combine socket and transcription transcripts
-  const allTranscripts = [...transcript, ...transcriptionTranscripts]
+  // Use socket transcripts only (backend broadcasts both user + coach entries).
+  // transcriptionTranscripts is only used for sending to backend, not for display.
+  const allTranscripts = transcript
 
   // Start ElevenLabs transcription when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
       startTranscription()
     }
-
     return () => {
       if (transcriptionConnected && phase !== 'active') {
         stopTranscription()
@@ -89,19 +89,16 @@ export function LiveSessionPage() {
     }
   }, [phase, transcriptionConnected, startTranscription, stopTranscription])
 
-  // Initialize coaching once socket is connected and session is active
   useEffect(() => {
     if (phase === 'active' && isConnected && activeSessionId) {
       startCoaching()
     }
   }, [phase, isConnected, activeSessionId, startCoaching])
 
-  // Start/stop webcam when session becomes active and source is webcam
   useEffect(() => {
     if (phase === 'active' && cameraSource === 'webcam' && !webcam.isActive) {
       webcam.start()
     }
-
     return () => {
       if (webcam.isActive && phase !== 'active') {
         webcam.stop()
@@ -109,7 +106,6 @@ export function LiveSessionPage() {
     }
   }, [phase, cameraSource])
 
-  // Send committed transcripts to backend pipeline (not directly to Gemini)
   useEffect(() => {
     if (transcriptionTranscripts.length > lastSentIndexRef.current) {
       for (let i = lastSentIndexRef.current; i < transcriptionTranscripts.length; i++) {
@@ -122,7 +118,6 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
-  // Fetch user on mount
   useEffect(() => {
     async function fetchUser() {
       try {
@@ -142,29 +137,26 @@ export function LiveSessionPage() {
     fetchUser()
   }, [navigate])
 
-  // Duration timer
   useEffect(() => {
     if (phase !== 'active') return
-
     const interval = setInterval(() => {
       setDuration(prev => prev + 1)
     }, 1000)
-
     return () => clearInterval(interval)
   }, [phase])
 
   const handleCameraSourceChange = useCallback((source: CameraSource) => {
-    // Stop current camera before switching
     if (webcam.isActive) webcam.stop()
     setCameraSource(source)
-
-    // Start new source if session is active
     if (phase === 'active' && source === 'webcam') {
       webcam.start()
     }
   }, [phase, webcam])
 
   const handleStartSession = useCallback(async () => {
+    // Unlock browser audio during user gesture so coach TTS can play later
+    unlockAudio()
+
     try {
       const response = await fetch('/api/sessions/start', {
         method: 'POST',
@@ -189,6 +181,7 @@ export function LiveSessionPage() {
     endSession()
     webcam.stop()
     stopTranscription()
+    clearAudioQueue()
 
     if (activeSessionId) {
       try {
@@ -201,13 +194,12 @@ export function LiveSessionPage() {
       }
     }
 
-    // Navigate to session report (or list if no ID)
     navigate(activeSessionId ? `/sessions/${activeSessionId}` : '/sessions')
   }, [endSession, navigate, activeSessionId, webcam, stopTranscription])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-marble-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
         <Spinner size="lg" />
       </div>
     )
@@ -228,17 +220,15 @@ export function LiveSessionPage() {
     )
   }
 
-  // Active session layout
+  // Active session layout — intentionally dark bg for video context
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
-      {/* Stats Bar */}
+    <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg)' }}>
       <StatsBar
         mode={mode}
         duration={duration}
         isConnected={isConnected}
       />
 
-      {/* Warning Alert (overlays at top) */}
       {warningLevel > 0 && (
         <div className="absolute top-14 left-4 right-4 z-40 md:left-auto md:right-8 md:max-w-md">
           <WarningAlert level={warningLevel} message={warningMessage} />
@@ -268,7 +258,7 @@ export function LiveSessionPage() {
               webcamError={webcam.error}
               minHeight="300px"
             />
-            <TargetVitalsPanel vitals={targetVitals} />
+            <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           </div>
 
           {/* Right panel: Coaching + Transcript */}
@@ -309,7 +299,7 @@ export function LiveSessionPage() {
             distance={distance}
             webcamError={webcam.error}
           />
-          <TargetVitalsPanel vitals={targetVitals} />
+          <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           <CoachingPanel
             coach={user.coach || null}
             mode={mode}
@@ -329,7 +319,7 @@ export function LiveSessionPage() {
       )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-gray-800 border-t border-gray-700 pb-safe md:flex md:justify-center">
+      <div className="p-4 border-t pb-safe md:flex md:justify-center" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
         <button
           onClick={() => setShowEndModal(true)}
           className="w-full md:w-auto md:min-w-[200px] md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
@@ -338,7 +328,6 @@ export function LiveSessionPage() {
         </button>
       </div>
 
-      {/* End Session Modal */}
       <EndSessionModal
         isOpen={showEndModal}
         duration={duration}

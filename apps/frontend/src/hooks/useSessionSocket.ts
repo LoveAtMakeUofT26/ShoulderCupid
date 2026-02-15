@@ -32,9 +32,12 @@ export interface SessionState {
   warningLevel: WarningLevel
   warningMessage: string
   targetVitals: TargetVitals | null
+  presageError: string | null
 }
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4005'
+// Socket connects directly to the backend (not through Vite proxy).
+// Vite proxy works for REST but is unreliable for socket.io WebSocket upgrades.
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000'
 
 export function useSessionSocket(sessionId: string | null) {
   const socketRef = useRef<Socket | null>(null)
@@ -50,6 +53,7 @@ export function useSessionSocket(sessionId: string | null) {
     warningLevel: 0,
     warningMessage: '',
     targetVitals: null,
+    presageError: null,
   })
 
   const updateState = useCallback((updates: Partial<SessionState>) => {
@@ -59,6 +63,7 @@ export function useSessionSocket(sessionId: string | null) {
   useEffect(() => {
     if (!sessionId) return
 
+    console.log(`Socket connecting to: ${SOCKET_URL}`)
     const socket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
@@ -74,9 +79,24 @@ export function useSessionSocket(sessionId: string | null) {
       socket.emit('join-session', { sessionId })
     })
 
-    socket.on('disconnect', () => {
-      console.log('Socket disconnected')
+    socket.on('connect_error', (err) => {
+      console.error('Socket connection error:', err.message)
+      updateState({ coachingMessage: `Connection failed: ${err.message}` })
+    })
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason)
       updateState({ isConnected: false, coachingMessage: 'Connection lost. Reconnecting...' })
+    })
+
+    // Initial state from backend when joining an existing session
+    socket.on('session-state', (data: { mode?: CoachingMode; targetEmotion?: string; distance?: number; heartRate?: number }) => {
+      const updates: Partial<SessionState> = {}
+      if (data.mode) updates.mode = data.mode
+      if (data.targetEmotion) updates.targetEmotion = data.targetEmotion
+      if (data.distance !== undefined) updates.distance = data.distance
+      if (data.heartRate !== undefined) updates.heartRate = data.heartRate
+      updateState(updates)
     })
 
     // Session events
@@ -114,6 +134,10 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ targetVitals: data })
     })
 
+    socket.on('presage-error', (data: { error: string }) => {
+      updateState({ presageError: data.error })
+    })
+
     socket.on('coaching-ready', (data: { coachName: string }) => {
       updateState({ coachingMessage: `${data.coachName} is ready! Start talking...` })
     })
@@ -124,6 +148,7 @@ export function useSessionSocket(sessionId: string | null) {
 
     socket.on('coaching-error', (data: { error: string }) => {
       console.error('Coaching error:', data.error)
+      updateState({ coachingMessage: `Coach error: ${data.error}` })
     })
 
     socket.on('warning-triggered', (data: { level: WarningLevel; message: string }) => {

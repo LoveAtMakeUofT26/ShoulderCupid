@@ -47,9 +47,9 @@ function getStatusLabel(status: string) {
 }
 
 function getStatusClasses(status: string) {
-  if (status === 'ended') return 'bg-green-100 text-green-700'
-  if (status === 'active') return 'bg-cupid-100 text-cupid-700'
-  return 'bg-gray-100 text-gray-500'
+  if (status === 'ended') return 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+  if (status === 'active') return 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)] dark:bg-cupid-900/20 dark:text-cupid-400'
+  return 'bg-[var(--color-surface-secondary)] text-[var(--color-text-tertiary)]'
 }
 
 export function SessionsPage() {
@@ -80,10 +80,10 @@ export function SessionsPage() {
   return (
     <AppShell>
       <div className="pt-6 md:pt-0">
-        <h1 className="text-2xl md:text-4xl font-bold font-display text-gray-900 mb-2 tracking-tight">
+        <h1 className="text-2xl md:text-4xl font-bold font-display text-[var(--color-text)] mb-2 tracking-tight">
           Your Sessions
         </h1>
-        <p className="text-gray-500 mb-6 md:text-lg md:mb-8">
+        <p className="text-[var(--color-text-tertiary)] mb-6 md:text-lg md:mb-8">
           Review past coaching sessions
         </p>
 
@@ -104,8 +104,8 @@ export function SessionsPage() {
           isDesktop ? (
             <div className="card-featured text-center py-16">
               <div className="text-6xl mb-4">💝</div>
-              <h3 className="font-display text-xl font-semibold text-gray-900 mb-2">No sessions yet</h3>
-              <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">
+              <h3 className="font-display text-xl font-semibold text-[var(--color-text)] mb-2">No sessions yet</h3>
+              <p className="text-[var(--color-text-tertiary)] text-sm mb-6 max-w-sm mx-auto">
                 Start your first coaching session to see your history here
               </p>
               <Link to="/session/new" className="btn-glow text-sm inline-block">
@@ -115,8 +115,8 @@ export function SessionsPage() {
           ) : (
             <div className="card text-center py-12">
               <div className="text-5xl mb-4">💝</div>
-              <h3 className="font-semibold text-gray-900 mb-2">No sessions yet</h3>
-              <p className="text-gray-500 text-sm mb-6">
+              <h3 className="font-semibold text-[var(--color-text)] mb-2">No sessions yet</h3>
+              <p className="text-[var(--color-text-tertiary)] text-sm mb-6">
                 Start your first coaching session to see your history here
               </p>
               <Link to="/session/new" className="btn-primary mx-auto">
@@ -152,22 +152,22 @@ export function SessionsPage() {
 
                   {/* Content */}
                   <div className="flex-1 flex items-center gap-4 pb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-cupid-50 flex items-center justify-center text-xl
+                    <div className="w-12 h-12 rounded-2xl bg-[var(--color-primary-surface)] flex items-center justify-center text-xl
                       group-hover:scale-105 transition-transform duration-200">
                       {session.coach_id?.avatar_emoji || '💘'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-900">
+                      <p className="font-semibold text-[var(--color-text)]">
                         {session.coach_id?.name || 'Coaching Session'}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-sm text-[var(--color-text-tertiary)]">
                         {formatTimeAgo(session.started_at)}
                         {session.duration_seconds != null && ` · ${formatDuration(session.duration_seconds)}`}
                       </p>
                     </div>
                     {/* Analytics on large screens */}
                     {session.analytics && (
-                      <div className="hidden lg:flex items-center gap-4 text-sm text-gray-400">
+                      <div className="hidden lg:flex items-center gap-4 text-sm text-[var(--color-text-tertiary)]">
                         <span>{session.analytics.total_tips} tips</span>
                         <span>{session.analytics.approach_count} approaches</span>
                       </div>
@@ -175,7 +175,7 @@ export function SessionsPage() {
                     <span className={`text-xs font-medium px-3 py-1.5 rounded-full ${getStatusClasses(session.status)}`}>
                       {getStatusLabel(session.status)}
                     </span>
-                    <svg className="w-5 h-5 text-gray-300 group-hover:text-gray-500 group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-5 h-5 text-[var(--color-text-tertiary)] group-hover:text-[var(--color-text)] group-hover:translate-x-0.5 transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
@@ -191,14 +191,14 @@ export function SessionsPage() {
                   to={`/sessions/${session._id}`}
                   className="card flex items-center gap-3 hover:shadow-card-hover transition-shadow"
                 >
-                  <div className="w-10 h-10 rounded-full bg-cupid-100 flex items-center justify-center text-lg">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-primary-surface)] flex items-center justify-center text-lg">
                     {session.coach_id?.avatar_emoji || '💘'}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 truncate">
+                    <p className="font-medium text-[var(--color-text)] truncate">
                       {session.coach_id?.name || 'Coaching Session'}
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[var(--color-text-tertiary)]">
                       {formatTimeAgo(session.started_at)}
                       {session.duration_seconds != null && ` · ${formatDuration(session.duration_seconds)}`}
                     </p>

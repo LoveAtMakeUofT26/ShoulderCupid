@@ -19,7 +19,6 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
   useEffect(() => {
     async function loadDevices() {
       try {
-        // Request permission to enumerate devices with labels
         await navigator.mediaDevices.getUserMedia({ audio: true })
 
         const devices = await navigator.mediaDevices.enumerateDevices()
@@ -63,13 +62,13 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
 
   return (
     <div className="space-y-3">
-      {/* Microphone */}
       <div>
-        <label className="block text-xs text-gray-500 mb-1">🎤 Microphone</label>
+        <label className="block text-xs text-[var(--color-text-faint)] mb-1">🎤 Microphone</label>
         <select
           value={selectedMic}
           onChange={e => handleMicChange(e.target.value)}
-          className="w-full bg-gray-50 text-gray-900 text-sm rounded-xl px-3 py-2.5 border border-gray-200 focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
+          className="w-full text-sm rounded-xl px-3 py-2.5 border focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
+          style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text)', borderColor: 'var(--color-border-strong)' }}
         >
           {microphones.map(mic => (
             <option key={mic.deviceId} value={mic.deviceId}>
@@ -79,13 +78,13 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
         </select>
       </div>
 
-      {/* Speaker */}
       <div>
-        <label className="block text-xs text-gray-500 mb-1">🔊 Speaker</label>
+        <label className="block text-xs text-[var(--color-text-faint)] mb-1">🔊 Speaker</label>
         <select
           value={selectedSpeaker}
           onChange={e => handleSpeakerChange(e.target.value)}
-          className="w-full bg-gray-50 text-gray-900 text-sm rounded-xl px-3 py-2.5 border border-gray-200 focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
+          className="w-full text-sm rounded-xl px-3 py-2.5 border focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
+          style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text)', borderColor: 'var(--color-border-strong)' }}
         >
           {speakers.map(spk => (
             <option key={spk.deviceId} value={spk.deviceId}>

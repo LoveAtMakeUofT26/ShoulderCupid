@@ -106,10 +106,10 @@ export function QuizStep({ data, onUpdate, onNext, onBack, onRecommendCoach }: Q
 
   return (
     <div className="pt-8 animate-slide-up">
-      <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+      <h2 className="font-display text-2xl font-bold text-[var(--color-text)] mb-2">
         Coaching Style Quiz
       </h2>
-      <p className="text-gray-500 mb-2">
+      <p className="text-[var(--color-text-tertiary)] mb-2">
         We'll match you with the perfect coach
       </p>
 
@@ -119,7 +119,7 @@ export function QuizStep({ data, onUpdate, onNext, onBack, onRecommendCoach }: Q
           <div
             key={i}
             className={`h-1 flex-1 rounded-full transition-all ${
-              i <= questionIndex ? 'bg-cupid-400' : 'bg-gray-200'
+              i <= questionIndex ? 'bg-cupid-400' : 'bg-[var(--color-border-strong)]'
             }`}
           />
         ))}
@@ -127,7 +127,7 @@ export function QuizStep({ data, onUpdate, onNext, onBack, onRecommendCoach }: Q
 
       {/* Question */}
       <div key={questionIndex} className="animate-slide-up">
-        <p className="text-lg font-medium text-gray-900 mb-6">
+        <p className="text-lg font-medium text-[var(--color-text)] mb-6">
           {currentQuestion.question}
         </p>
 
@@ -138,12 +138,13 @@ export function QuizStep({ data, onUpdate, onNext, onBack, onRecommendCoach }: Q
               onClick={() => handleSelect(option.value)}
               className={`w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all text-left ${
                 currentAnswer === option.value
-                  ? 'border-cupid-500 bg-cupid-50'
-                  : 'border-gray-100 hover:border-gray-200 bg-white'
+                  ? 'border-cupid-500 bg-[var(--color-primary-surface)]'
+                  : 'hover:border-[var(--color-border-strong)]'
               }`}
+              style={currentAnswer !== option.value ? { borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' } : undefined}
             >
               <span className="text-2xl">{option.emoji}</span>
-              <span className="font-medium text-gray-900">{option.label}</span>
+              <span className="font-medium text-[var(--color-text)]">{option.label}</span>
             </button>
           ))}
         </div>

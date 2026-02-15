@@ -1,8 +1,10 @@
+import dotenv from 'dotenv'
+dotenv.config()
+
 import express from 'express'
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
-import dotenv from 'dotenv'
 import { connectDB } from './config/database.js'
 import { setupAuth } from './config/auth.js'
 import { authRouter } from './routes/auth.js'
@@ -13,22 +15,25 @@ import { hardwareRouter, setIoInstance } from './routes/hardware.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
-import { startPresageProcessor } from './services/presageMetrics.js'
-
-dotenv.config()
+import { startPresageProcessor, stopAllProcessors } from './services/presageMetrics.js'
 
 const app = express()
 const httpServer = createServer(app)
+// In dev, allow any localhost port. In prod, restrict to FRONTEND_URL.
+const corsOrigin = process.env.NODE_ENV === 'production'
+  ? process.env.FRONTEND_URL!
+  : [process.env.FRONTEND_URL || 'http://localhost:3000', /^http:\/\/localhost:\d+$/]
+
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: corsOrigin,
     credentials: true,
   },
 })
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: corsOrigin,
   credentials: true,
 }))
 app.use(express.json({ limit: '5mb' })) // Allow larger payloads for JPEG frames
@@ -40,11 +45,9 @@ await connectDB()
 setupAuth(app)
 
 // Routes
-const healthHandler: express.RequestHandler = (_req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
-}
-app.get('/health', healthHandler)
-app.get('/api/health', healthHandler)
+})
 
 app.use('/api/auth', authRouter)
 app.use('/api/coaches', coachesRouter)
@@ -67,4 +70,11 @@ const PORT = process.env.PORT || 4000
 
 httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`)
+})
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('Shutting down...')
+  await stopAllProcessors()
+  process.exit(0)
 })

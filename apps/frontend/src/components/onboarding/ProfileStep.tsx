@@ -17,17 +17,17 @@ const INTEREST_OPTIONS = [
 export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps) {
   return (
     <div className="pt-8 animate-slide-up">
-      <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+      <h2 className="font-display text-2xl font-bold text-[var(--color-text)] mb-2">
         About You
       </h2>
-      <p className="text-gray-500 mb-8">
+      <p className="text-[var(--color-text-tertiary)] mb-8">
         Help us personalize your experience
       </p>
 
       <div className="space-y-6">
         {/* Display Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
             Display Name
           </label>
           <input
@@ -35,14 +35,15 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
             value={data.name}
             onChange={(e) => onUpdate({ name: e.target.value })}
             placeholder="What should we call you?"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+            className="w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)]"
+            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border-strong)' }}
           />
         </div>
 
         {/* Age */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Age <span className="text-gray-400 font-normal">(optional)</span>
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+            Age <span className="text-[var(--color-text-faint)] font-normal">(optional)</span>
           </label>
           <input
             type="number"
@@ -51,14 +52,15 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
             placeholder="Your age"
             min="18"
             max="99"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-gray-900 placeholder:text-gray-400"
+            className="w-full px-4 py-3 rounded-xl border focus:border-cupid-400 focus:ring-2 focus:ring-cupid-100 outline-none transition-all text-[var(--color-text)] placeholder:text-[var(--color-text-faint)]"
+            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border-strong)' }}
           />
         </div>
 
         {/* Pronouns */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Pronouns <span className="text-gray-400 font-normal">(optional)</span>
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
+            Pronouns <span className="text-[var(--color-text-faint)] font-normal">(optional)</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {PRONOUN_OPTIONS.map((pronoun) => (
@@ -68,8 +70,9 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
                 className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                   data.pronouns === pronoun
                     ? 'bg-cupid-500 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'text-[var(--color-text-secondary)]'
                 }`}
+                style={data.pronouns !== pronoun ? { backgroundColor: 'var(--color-surface-hover)' } : undefined}
               >
                 {pronoun}
               </button>
@@ -79,7 +82,7 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
 
         {/* Interested In */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1.5">
             Interested In
           </label>
           <div className="grid grid-cols-3 gap-2">
@@ -90,8 +93,9 @@ export function ProfileStep({ data, onUpdate, onNext, onBack }: ProfileStepProps
                 className={`py-3 rounded-xl text-sm font-medium transition-all ${
                   data.interestedIn === option.value
                     ? 'bg-cupid-500 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'text-[var(--color-text-secondary)]'
                 }`}
+                style={data.interestedIn !== option.value ? { backgroundColor: 'var(--color-surface-hover)' } : undefined}
               >
                 {option.label}
               </button>

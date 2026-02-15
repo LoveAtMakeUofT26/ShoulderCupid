@@ -9,14 +9,14 @@ export function ProgressBar({ currentStep, totalSteps }: ProgressBarProps) {
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-500">
+        <span className="text-sm text-[var(--color-text-tertiary)]">
           Step {currentStep} of {totalSteps}
         </span>
-        <button className="text-sm text-gray-400 hover:text-gray-600">
+        <button className="text-sm text-[var(--color-text-faint)] hover:text-[var(--color-text-secondary)]">
           Skip
         </button>
       </div>
-      <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="w-full h-1.5 bg-[var(--color-border-strong)] rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-cupid-400 to-cupid-500 rounded-full transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}

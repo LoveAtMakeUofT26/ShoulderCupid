@@ -34,19 +34,16 @@ export function HowItWorksSection() {
           {STEPS.map((step, i) => (
             <FadeInView key={step.number} delay={i * 0.15}>
               <div className="marble-card p-8 text-center h-full">
-                {/* Step number */}
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-br from-gold-100 to-gold-200 mb-6">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--color-accent-surface)] mb-6">
                   <span className="font-display font-bold text-gold-600 text-sm">{step.number}</span>
                 </div>
 
-                {/* Icon */}
                 <div className="text-5xl mb-5">{step.icon}</div>
 
-                {/* Content */}
-                <h3 className="font-display text-xl font-bold text-gray-900 mb-3">
+                <h3 className="font-display text-xl font-bold text-[var(--color-text)] mb-3">
                   {step.title}
                 </h3>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-[var(--color-text-tertiary)] text-sm leading-relaxed">
                   {step.description}
                 </p>
               </div>
