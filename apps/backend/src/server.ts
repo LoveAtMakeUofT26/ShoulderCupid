@@ -9,7 +9,7 @@ import { connectDB } from './config/database.js'
 import { setupAuth } from './config/auth.js'
 import { authRouter } from './routes/auth.js'
 import { coachesRouter } from './routes/coaches.js'
-import { sessionsRouter } from './routes/sessions.js'
+import { sessionsRouter, setSessionsIoInstance } from './routes/sessions.js'
 import { userRouter } from './routes/user.js'
 import { hardwareRouter, setIoInstance } from './routes/hardware.js'
 import { sttRouter } from './routes/stt.js'
@@ -63,6 +63,9 @@ setupSocketHandlers(io)
 
 // Pass io instance to hardware routes for broadcasting
 setIoInstance(io)
+
+// Pass io instance to sessions routes for emitting session-started
+setSessionsIoInstance(io)
 
 // Start Presage C++ processor (if binary exists on Vultr)
 startPresageProcessor()

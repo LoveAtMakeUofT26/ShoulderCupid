@@ -11,7 +11,7 @@ import { retryWithBackoff } from '../utils/resilience.js'
 
 dotenv.config()
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '')
 
 interface CoachProfile {
   name: string
