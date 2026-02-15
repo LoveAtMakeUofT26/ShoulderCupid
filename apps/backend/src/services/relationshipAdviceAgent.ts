@@ -17,6 +17,8 @@ You receive a live conversation transcript. Speakers: **user** (your friend), **
 
 **Partial transcripts**: Polled every 4 seconds. The last entry may be PARTIAL (same sentence evolving). Focus on the full picture. Only give NEW hints when there's meaningful new content—avoid repeating for the same unfinished sentence.
 
+**Variety rule**: NEVER repeat the same idea, theme, or wording as a recent tip. Each new hint must address a DIFFERENT aspect of the conversation (body language, topic suggestion, tone, ask a question, give a compliment, pacing, energy, listening). If nothing new is worth commenting on, respond with exactly "---" and nothing else.
+
 Sound like a friend: casual, encouraging, no fluff. Real-time readable—something you can glance at mid-convo.`
 
 export function formatTranscriptForPrompt(entries: TranscriptEntry[]): string {
@@ -37,7 +39,8 @@ const llm = new ChatOpenAI({
 })
 
 export async function getRelationshipAdvice(
-  transcript: TranscriptEntry[]
+  transcript: TranscriptEntry[],
+  recentAdvice: string[] = []
 ): Promise<string> {
   if (!transcript.length) {
     return 'Listen, then share a bit about yourself.'
@@ -45,13 +48,19 @@ export async function getRelationshipAdvice(
 
   const formattedTranscript = formatTranscriptForPrompt(transcript)
 
+  const recentBlock = recentAdvice.length > 0
+    ? `\n\nDO NOT repeat or paraphrase any of these recent tips:\n${recentAdvice.map(a => `- "${a}"`).join('\n')}\n\nGive a DIFFERENT type of advice.`
+    : ''
+
   const response = await llm.invoke([
     new SystemMessage(ADVICE_SYSTEM_PROMPT),
     new HumanMessage(
-      `Conversation:\n\n${formattedTranscript}\n\nOne short hint (1-5 words or one sentence):`
+      `Conversation:\n\n${formattedTranscript}${recentBlock}\n\nOne short hint (1-5 words or one sentence):`
     ),
   ])
 
   const content = response.content
-  return typeof content === 'string' ? content : String(content)
+  const trimmed = (typeof content === 'string' ? content : String(content)).trim()
+  if (trimmed === '---') return ''
+  return trimmed
 }
