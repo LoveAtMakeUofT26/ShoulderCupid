@@ -44,7 +44,6 @@ export function LiveSessionPage() {
   const [duration, setDuration] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
-  const [adviceMessage, setAdviceMessage] = useState<string>('')
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
@@ -58,6 +57,7 @@ export function LiveSessionPage() {
     isConnected,
     mode,
     coachingMessage,
+    adviceMessage,
     transcript,
     targetEmotion,
     distance,
@@ -69,6 +69,7 @@ export function LiveSessionPage() {
     endSession,
     startCoaching,
     sendTranscript,
+    requestAdvice,
   } = useSessionSocket(phase === 'active' ? activeSessionId : null)
 
   const {
@@ -203,45 +204,29 @@ export function LiveSessionPage() {
     }
   }, [transcriptionTranscripts, sendTranscript])
 
-  // Poll relationship advice API every 2 seconds when session is active
+  // Request advice via socket every 2 seconds when session is active
   useEffect(() => {
     if (phase !== 'active') return
 
-    const fetchAdvice = async () => {
+    const emitAdvice = () => {
       const transcripts = transcriptRef.current
       const partial = partialRef.current
-      const transcriptForApi = [...transcripts]
+      const transcriptForSocket = [...transcripts]
       if (partial.trim()) {
-        transcriptForApi.push({
+        transcriptForSocket.push({
           id: 'partial',
           timestamp: Date.now(),
           speaker: 'user',
           text: partial.trim(),
         })
       }
-
-      try {
-        const res = await fetch('/api/gemini/advice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({ transcript: transcriptForApi }),
-        })
-        if (!res.ok) return
-        const data = await res.json()
-        if (data.advice) setAdviceMessage(data.advice)
-      } catch (err) {
-        console.error('Failed to fetch advice:', err)
-      }
+      requestAdvice(transcriptForSocket)
     }
 
-    fetchAdvice() // initial call
-    const interval = setInterval(fetchAdvice, 2000)
-    return () => {
-      clearInterval(interval)
-      setAdviceMessage('')
-    }
-  }, [phase])
+    emitAdvice()
+    const interval = setInterval(emitAdvice, 2000)
+    return () => clearInterval(interval)
+  }, [phase, requestAdvice])
 
   // Fetch user on mount
   useEffect(() => {

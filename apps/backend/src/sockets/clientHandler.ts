@@ -2,6 +2,8 @@ import { Server, Socket } from 'socket.io'
 import mongoose from 'mongoose'
 import { Session } from '../models/Session.js'
 import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
+import { initAdviceSession, getAdvice, endAdviceSession } from '../services/adviceService.js'
+import { type TranscriptEntry } from '../services/relationshipAdviceAgent.js'
 import { generateSpeech } from '../services/ttsService.js'
 import { ConcurrencyGuard } from '../utils/resilience.js'
 
@@ -48,6 +50,7 @@ const sessionStates = new Map<string, SessionState>()
 
 // Per-session concurrency guards for the coaching pipeline
 const coachingGuards = new Map<string, ConcurrencyGuard>()
+const adviceGuards = new Map<string, ConcurrencyGuard>()
 
 export function setupClientHandler(socket: Socket, io: Server) {
   console.log(`Web client connected: ${socket.id}`)
@@ -118,6 +121,9 @@ export function setupClientHandler(socket: Socket, io: Server) {
         broadcastToSession(io, sessionId, 'mode-change', { mode: 'CONVERSATION', prevMode: 'IDLE' })
         console.log(`No hardware detected — defaulting session ${sessionId} to CONVERSATION mode`)
       }
+
+      // Initialize advice session (Gemini primary, OpenAI fallback)
+      initAdviceSession(sessionId)
 
       socket.emit('coaching-ready', { sessionId, coachName: coach.name, voiceId: coach.voice_id })
       console.log(`Coaching started: ${coach.name} for session ${sessionId}`)
@@ -194,6 +200,28 @@ export function setupClientHandler(socket: Socket, io: Server) {
     })
   })
 
+  // Receive advice request from frontend
+  socket.on('request-advice', async (data: { sessionId: string; transcript: TranscriptEntry[] }) => {
+    const { sessionId, transcript } = data
+    if (!(await assertSessionOwner(socket, sessionId))) return
+
+    if (!adviceGuards.has(sessionId)) {
+      adviceGuards.set(sessionId, new ConcurrencyGuard())
+    }
+    const guard = adviceGuards.get(sessionId)!
+
+    await guard.run(async () => {
+      try {
+        const advice = await getAdvice(sessionId, transcript)
+        if (advice.trim()) {
+          broadcastToSession(io, sessionId, 'advice-update', { advice })
+        }
+      } catch (err) {
+        console.error('Advice request error:', err)
+      }
+    })
+  })
+
   // End session
   socket.on('end-session', (data: { sessionId: string }) => {
     const { sessionId } = data
@@ -204,7 +232,9 @@ export function setupClientHandler(socket: Socket, io: Server) {
       socket.leave(`session-${sessionId}`)
       sessionStates.delete(sessionId)
       coachingGuards.delete(sessionId)
+      adviceGuards.delete(sessionId)
       endCoachingSession(sessionId)
+      endAdviceSession(sessionId)
     })
   })
 

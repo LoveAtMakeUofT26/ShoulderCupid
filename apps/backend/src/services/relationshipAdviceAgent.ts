@@ -9,7 +9,7 @@ export interface TranscriptEntry {
   emotion?: string
 }
 
-const SYSTEM_PROMPT = `You're a supportive friend giving real-time hints during a conversation. Like a wingman whispering in their ear.
+export const ADVICE_SYSTEM_PROMPT = `You're a supportive friend giving real-time hints during a conversation. Like a wingman whispering in their ear.
 
 You receive a live conversation transcript. Speakers: **user** (your friend), **target** (person they're talking to), **coach** (past tips).
 
@@ -19,7 +19,7 @@ You receive a live conversation transcript. Speakers: **user** (your friend), **
 
 Sound like a friend: casual, encouraging, no fluff. Real-time readable—something you can glance at mid-convo.`
 
-function formatTranscriptForPrompt(entries: TranscriptEntry[]): string {
+export function formatTranscriptForPrompt(entries: TranscriptEntry[]): string {
   return entries
     .map((e) => {
       const emotion = e.emotion ? ` [emotion: ${e.emotion}]` : ''
@@ -46,7 +46,7 @@ export async function getRelationshipAdvice(
   const formattedTranscript = formatTranscriptForPrompt(transcript)
 
   const response = await llm.invoke([
-    new SystemMessage(SYSTEM_PROMPT),
+    new SystemMessage(ADVICE_SYSTEM_PROMPT),
     new HumanMessage(
       `Conversation:\n\n${formattedTranscript}\n\nOne short hint (1-5 words or one sentence):`
     ),

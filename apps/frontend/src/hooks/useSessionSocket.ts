@@ -26,6 +26,7 @@ export interface SessionState {
   isConnected: boolean
   mode: CoachingMode
   coachingMessage: string
+  adviceMessage: string
   transcript: TranscriptEntry[]
   targetEmotion: string
   distance: number // in cm
@@ -69,6 +70,7 @@ export function useSessionSocket(sessionId: string | null) {
     isConnected: false,
     mode: 'IDLE',
     coachingMessage: 'Waiting for connection...',
+    adviceMessage: '',
     transcript: [],
     targetEmotion: 'neutral',
     distance: -1,
@@ -171,6 +173,10 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ coachingMessage: data.message })
     })
 
+    socket.on('advice-update', (data: { advice: string }) => {
+      updateState({ adviceMessage: data.advice })
+    })
+
     socket.on('transcript-update', (entry: TranscriptEntry) => {
       setState(prev => ({
         ...prev,
@@ -254,10 +260,17 @@ export function useSessionSocket(sessionId: string | null) {
     }
   }, [sessionId])
 
+  const requestAdvice = useCallback((transcript: TranscriptEntry[]) => {
+    if (sessionId) {
+      socketRef.current?.emit('request-advice', { sessionId, transcript })
+    }
+  }, [sessionId])
+
   return {
     ...state,
     endSession,
     startCoaching,
     sendTranscript,
+    requestAdvice,
   }
 }
