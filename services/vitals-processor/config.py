@@ -1,12 +1,15 @@
 """Constants and thresholds for vitals processing."""
 
 # Frame rate thresholds
-MIN_FPS_FOR_HR = 10       # Below this, skip rPPG heart rate estimation
-MIN_FPS_FOR_BR_RPPG = 5   # Below this, use landmark-based BR only
+# Effective FPS is lower than configured FPS due to HTTP round-trip backpressure.
+# At 15 FPS configured, real delivery is ~5-8 FPS through Vercel proxy.
+MIN_FPS_FOR_HR = 5        # Below this, skip rPPG heart rate estimation
+                          # At 5 FPS Nyquist=2.5 Hz → max detectable HR ~150 BPM
+MIN_FPS_FOR_BR_RPPG = 3   # Below this, use landmark-based BR only
 
 # rPPG buffer
 RPPG_BUFFER_SECONDS = 30  # Seconds of frames to keep in ring buffer
-RPPG_MIN_FRAMES = 128     # Minimum frames before attempting HR estimation
+RPPG_MIN_FRAMES = 45      # Minimum frames before attempting HR estimation (~9s at 5 FPS)
 
 # Heart rate bandpass filter (Hz)
 HR_LOW_HZ = 0.7   # ~42 BPM
