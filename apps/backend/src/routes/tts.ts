@@ -4,11 +4,11 @@ const ttsRouter = express.Router();
 
 ttsRouter.post('/', async (req, res) => {
   try {
-    const { text } = req.body;
+    const { text, voiceId } = req.body;
     if (!text || typeof text !== 'string') {
       return res.status(400).json({ error: 'Missing or invalid text' });
     }
-    const audioBuffer = await createAudioStreamFromText(text);
+    const audioBuffer = await createAudioStreamFromText(text, voiceId);
     res.set({
       'Content-Type': 'audio/mpeg',
       'Content-Disposition': 'inline; filename="tts.mp3"',
@@ -36,8 +36,10 @@ const elevenlabs = new ElevenLabsClient({
   apiKey: ELEVENLABS_API_KEY,
 });
 
-export const createAudioStreamFromText = async (text: string): Promise<Buffer> => {
-  const audioStream = await elevenlabs.textToSpeech.stream('JBFqnCBsd6RMkjVDRZzb', {
+const DEFAULT_VOICE_ID = 'JBFqnCBsd6RMkjVDRZzb'
+
+export const createAudioStreamFromText = async (text: string, voiceId?: string): Promise<Buffer> => {
+  const audioStream = await elevenlabs.textToSpeech.stream(voiceId || DEFAULT_VOICE_ID, {
     modelId: 'eleven_multilingual_v2',
     text,
     outputFormat: 'mp3_44100_128',
