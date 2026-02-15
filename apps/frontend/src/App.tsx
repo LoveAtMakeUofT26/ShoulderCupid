@@ -30,6 +30,7 @@ function App() {
 
         {/* Full-screen routes (no bottom nav) */}
         <Route path="/sessions/:id" element={<SessionReportPage />} />
+        <Route path="/session/new" element={<LiveSessionPage />} />
         <Route path="/session/:sessionId" element={<LiveSessionPage />} />
 
         {/* Fallback */}

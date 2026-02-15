@@ -321,6 +321,10 @@ userRouter.patch('/onboarding', requireAuth, async (req, res) => {
   try {
     const { name, age, pronouns, preferences, coachId, quizResults } = req.body
 
+    if (!coachId) {
+      return res.status(400).json({ error: 'Coach selection is required to complete onboarding' })
+    }
+
     const updateData: any = {
       onboarding_completed: true,
     }

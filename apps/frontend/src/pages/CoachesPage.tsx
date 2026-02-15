@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { AppShell, FloatingActionButton } from '../components/layout'
 import { CoachDetailModal } from '../components/coaches/CoachDetailModal'
 import { getRoster, removeFromRoster, setDefaultCoach } from '../services/coachService'
-import type { Coach, RosterEntry } from '../services/auth'
+import { getCurrentUser, type Coach, type RosterEntry } from '../services/auth'
 import { Spinner } from '../components/ui/Spinner'
 
 export function CoachesPage() {
@@ -15,8 +15,17 @@ export function CoachesPage() {
   const [selectedCoach, setSelectedCoach] = useState<{ coach: Coach; isDefault: boolean } | null>(null)
 
   useEffect(() => {
-    fetchRoster()
-  }, [])
+    async function initialize() {
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        navigate('/')
+        return
+      }
+      await fetchRoster()
+    }
+
+    initialize()
+  }, [navigate])
 
   async function fetchRoster() {
     try {
@@ -60,8 +69,8 @@ export function CoachesPage() {
       <div className="pt-6 pb-32">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Coaches</h1>
-          <span className="text-sm font-medium text-gray-400 bg-marble-100 px-3 py-1 rounded-full">
+          <h1 className="text-2xl font-bold text-[var(--color-text)]">My Coaches</h1>
+          <span className="text-sm font-medium text-[var(--color-text-faint)] bg-marble-100 px-3 py-1 rounded-full">
             {roster.length}/{limit}
           </span>
         </div>
@@ -74,15 +83,15 @@ export function CoachesPage() {
             className="card text-center py-16"
           >
             <div className="text-6xl mb-4">💘</div>
-            <h3 className="font-display text-lg font-bold text-gray-900 mb-2">
+            <h3 className="font-display text-lg font-bold text-[var(--color-text)] mb-2">
               No coaches yet
             </h3>
-            <p className="text-gray-500 text-sm mb-6 max-w-xs mx-auto">
+            <p className="text-[var(--color-text-tertiary)] text-sm mb-6 max-w-xs mx-auto">
               Discover AI-generated coaches with unique personalities and voices
             </p>
             <button
               onClick={() => navigate('/coaches/discover')}
-              className="btn-primary px-8 py-3"
+              className="btn-primary"
             >
               Discover Your First Coach
             </button>
@@ -119,6 +128,11 @@ export function CoachesPage() {
                           alt={coach.name}
                           className="w-full h-full object-cover"
                           loading="lazy"
+                          onError={(e) => {
+                            const target = e.currentTarget
+                            target.style.display = 'none'
+                            target.parentElement!.innerHTML = `<span style="font-size:3rem;display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:linear-gradient(135deg,${coach.color_from || '#E8566C'},${coach.color_to || '#F5A3B1'})">${coach.avatar_emoji || '💘'}</span>`
+                          }}
                         />
                       </div>
                     ) : (
@@ -135,7 +149,7 @@ export function CoachesPage() {
                     {/* Info */}
                     <div className="p-3">
                       <div className="flex items-center gap-1 mb-1">
-                        <h3 className="font-semibold text-sm text-gray-900 truncate">
+                        <h3 className="font-semibold text-sm text-[var(--color-text)] truncate">
                           {coach.name}
                         </h3>
                         {entry.is_default && (
@@ -162,7 +176,7 @@ export function CoachesPage() {
                 disabled={isFull}
                 className={`w-full py-3.5 rounded-2xl text-sm font-semibold transition-all ${
                   isFull
-                    ? 'bg-marble-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-marble-200 text-[var(--color-text-faint)] cursor-not-allowed'
                     : 'btn-primary'
                 }`}
               >

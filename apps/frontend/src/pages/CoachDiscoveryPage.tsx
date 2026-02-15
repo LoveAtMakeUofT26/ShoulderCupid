@@ -1,10 +1,12 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SwipeCard } from '../components/coaches/SwipeCard'
 import { SwipeCardSkeleton } from '../components/coaches/SwipeCardSkeleton'
 import { generateCoach, addToRoster, recordSwipe, getRoster } from '../services/coachService'
 import type { Coach } from '../services/auth'
+import { getCurrentUser } from '../services/auth'
+import { Spinner } from '../components/ui/Spinner'
 
 export function CoachDiscoveryPage() {
   const navigate = useNavigate()
@@ -17,6 +19,27 @@ export function CoachDiscoveryPage() {
   const [error, setError] = useState<string | null>(null)
   const [cardKey, setCardKey] = useState(0)
   const lastGenerateRef = useRef(0)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [initLoading, setInitLoading] = useState(true)
+
+  // Cleanup polling interval on unmount
+  useEffect(() => {
+    return () => {
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    async function initialize() {
+      const currentUser = await getCurrentUser()
+      if (!currentUser) {
+        navigate('/')
+        return
+      }
+      setInitLoading(false)
+    }
+    initialize()
+  }, [navigate])
 
   // Preload next coach in background (throttled: min 3s between calls)
   const preloadNext = useCallback(async () => {
@@ -77,12 +100,15 @@ export function CoachDiscoveryPage() {
       // Next coach hasn't loaded yet - show skeleton briefly
       setCurrentCoach(null)
       setCardKey(prev => prev + 1)
+      // Clear any existing polling interval before starting a new one
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
       // Wait for preload
-      const interval = setInterval(() => {
+      pollIntervalRef.current = setInterval(() => {
         setNextCoach(prev => {
           if (prev) {
             setCurrentCoach(prev)
-            clearInterval(interval)
+            if (pollIntervalRef.current) clearInterval(pollIntervalRef.current)
+            pollIntervalRef.current = null
             preloadNext()
             return null
           }
@@ -134,12 +160,20 @@ export function CoachDiscoveryPage() {
 
   // Entry screen
   if (mode === 'entry') {
+    if (initLoading) {
+      return (
+        <div className="min-h-screen bg-marble-50 flex items-center justify-center px-6">
+          <Spinner size="lg" />
+        </div>
+      )
+    }
     return (
       <div className="min-h-screen bg-marble-50 flex flex-col items-center justify-center px-6">
         {/* Back button */}
         <button
           onClick={() => navigate('/coaches')}
-          className="absolute top-6 left-6 p-2 text-gray-500 hover:text-gray-700"
+          aria-label="Back to coaches"
+          className="absolute top-6 left-6 p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text)]"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -152,10 +186,10 @@ export function CoachDiscoveryPage() {
           className="text-center max-w-sm"
         >
           <div className="text-6xl mb-6">💘</div>
-          <h1 className="font-display text-3xl font-bold text-gray-900 mb-3">
+          <h1 className="font-display text-3xl font-bold text-[var(--color-text)] mb-3">
             Find Your Coach
           </h1>
-          <p className="text-gray-500 mb-8 leading-relaxed">
+          <p className="text-[var(--color-text-tertiary)] mb-8 leading-relaxed">
             Swipe through AI-generated coaches to build your team. Each one is unique with their own personality and voice.
           </p>
           {error && (
@@ -182,14 +216,15 @@ export function CoachDiscoveryPage() {
       <div className="flex items-center justify-between px-4 py-3">
         <button
           onClick={() => navigate('/coaches')}
-          className="p-2 text-gray-500 hover:text-gray-700"
+          aria-label="Back to coaches"
+          className="p-2 text-[var(--color-text-tertiary)] hover:text-[var(--color-text)]"
         >
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <span className="text-sm font-medium text-gray-500">
+        <span className="text-sm font-medium text-[var(--color-text-tertiary)]">
           {rosterCount}/{rosterLimit} coaches
         </span>
       </div>
@@ -238,7 +273,9 @@ export function CoachDiscoveryPage() {
         <div className="fixed bottom-8 left-0 right-0 flex items-center justify-center gap-8">
           <button
             onClick={handleSwipeLeft}
-            className="w-14 h-14 rounded-full bg-white shadow-card flex items-center justify-center text-gray-400 hover:text-red-400 hover:shadow-card-hover active:scale-90 transition-all"
+            aria-label="Pass on this coach"
+            className="w-14 h-14 rounded-full shadow-card flex items-center justify-center text-[var(--color-text-faint)] hover:text-red-400 hover:shadow-card-hover active:scale-90 transition-all"
+            style={{ backgroundColor: 'var(--color-surface)' }}
           >
             <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -246,6 +283,7 @@ export function CoachDiscoveryPage() {
           </button>
           <button
             onClick={handleSwipeRight}
+            aria-label="Add this coach to roster"
             className="w-16 h-16 rounded-full bg-cupid-500 shadow-pink-glow flex items-center justify-center text-white hover:bg-cupid-600 active:scale-90 transition-all"
           >
             <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
