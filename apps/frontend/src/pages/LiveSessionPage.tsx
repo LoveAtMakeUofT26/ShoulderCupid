@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
 import { useTranscriptionService } from '../services/transcriptionService'
@@ -10,12 +10,11 @@ import {
   TranscriptStream,
   WarningAlert,
   StatsBar,
-  StartSessionModal,
   EndSessionModal,
   TargetVitalsPanel,
+  PreflightPage,
 } from '../components/session'
 import { CameraSourceSelector, CameraFeed, type CameraSource } from '../components/session/CameraSourceSelector'
-import { AudioSettings } from '../components/session/AudioSettings'
 
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
@@ -229,44 +228,16 @@ export function LiveSessionPage() {
 
   if (!user) return null
 
-  // Pre-flight phase - show modal with I/O configuration
+  // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
-      <div className="min-h-screen bg-marble-50">
-        {/* Header */}
-        <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-          <Link to="/dashboard" className="text-gray-500">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="flex-1 text-center font-semibold text-gray-900">New Session</h1>
-          <div className="w-6" />
-        </div>
-
-        {/* I/O Configuration */}
-        <div className="p-4 space-y-4">
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Camera Source</h3>
-            <CameraSourceSelector
-              value={cameraSource}
-              onChange={setCameraSource}
-            />
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">Audio Devices</h3>
-            <AudioSettings />
-          </div>
-        </div>
-
-        <StartSessionModal
-          isOpen={true}
-          coach={user.coach || null}
-          onClose={() => navigate('/dashboard')}
-          onStart={handleStartSession}
-        />
-      </div>
+      <PreflightPage
+        coach={user.coach || null}
+        cameraSource={cameraSource}
+        onCameraSourceChange={setCameraSource}
+        onStart={handleStartSession}
+        onBack={() => navigate('/dashboard')}
+      />
     )
   }
 
