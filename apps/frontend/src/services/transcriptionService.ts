@@ -9,6 +9,32 @@ export interface TranscriptEntry {
   emotion?: string;
 }
 
+let inFlightTokenRequest: Promise<string> | null = null;
+
+async function fetchTokenFromServer() {
+  if (!inFlightTokenRequest) {
+    inFlightTokenRequest = (async () => {
+      try {
+        const response = await fetch('/api/stt/scribe-token');
+        if (!response.ok) {
+          throw new Error('Failed to fetch token');
+        }
+        const data = await response.json();
+        return data.token;
+      } catch (error) {
+        inFlightTokenRequest = null;
+        throw error;
+      }
+    })();
+  }
+
+  try {
+    return await inFlightTokenRequest;
+  } finally {
+    inFlightTokenRequest = null;
+  }
+}
+
 export function useTranscriptionService() {
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [partialTranscript, setPartialTranscript] = useState<string>("");
