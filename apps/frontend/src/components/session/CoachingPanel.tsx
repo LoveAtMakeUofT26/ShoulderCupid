@@ -1,5 +1,7 @@
+import { useEffect, useRef } from 'react'
 import { CoachingMode } from '../../hooks/useSessionSocket'
 import type { Coach } from '../../services/auth'
+import { fetchTTS } from '../../services/ttsService'
 
 interface CoachingPanelProps {
   coach: Coach | null
@@ -53,6 +55,24 @@ export function CoachingPanel({
   const modeInfo = MODE_LABELS[mode]
   const hrInfo = getHeartRateLabel(heartRate)
 
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const lastSpokenRef = useRef('')
+
+  useEffect(() => {
+    if (!message || message === lastSpokenRef.current) return
+    lastSpokenRef.current = message
+
+    fetchTTS(message)
+      .then((blob) => {
+        const url = URL.createObjectURL(blob)
+        if (audioRef.current) {
+          audioRef.current.src = url
+          audioRef.current.play().catch(() => {})
+        }
+      })
+      .catch(() => {})
+  }, [message])
+
   return (
     <div className="card-elevated p-4 space-y-4">
       {/* Coach Header */}
@@ -94,6 +114,7 @@ export function CoachingPanel({
         <p className="text-lg font-medium text-[var(--color-text)] leading-relaxed">
           {message || 'Waiting for coaching advice...'}
         </p>
+        <audio ref={audioRef} hidden />
       </div>
 
       {/* Context Stats */}
