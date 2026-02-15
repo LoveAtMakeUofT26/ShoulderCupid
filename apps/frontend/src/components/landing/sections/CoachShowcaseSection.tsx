@@ -37,8 +37,8 @@ export function CoachShowcaseSection() {
       </div>
 
       <div className="max-w-6xl mx-auto px-6 relative">
-        <SectionHeading subtitle="Choose the personality that matches your vibe">
-          Meet Your Coaches
+        <SectionHeading subtitle="Every coach is procedurally generated with a unique personality, voice, and appearance. Swipe Tinder-style, preview their voice, then add to your roster.">
+          1M+ Unique AI Coaches
         </SectionHeading>
 
         <div className="grid md:grid-cols-3 gap-8">
