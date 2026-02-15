@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AppShell, FloatingActionButton } from '../components/layout'
 import { getCurrentUser, type Coach } from '../services/auth'
+import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Spinner } from '../components/ui/Spinner'
 
 export function CoachesPage() {
@@ -8,6 +9,7 @@ export function CoachesPage() {
   const [loading, setLoading] = useState(true)
   const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null)
   const [selecting, setSelecting] = useState(false)
+  const isDesktop = useIsDesktop()
 
   useEffect(() => {
     async function fetchData() {
@@ -59,29 +61,78 @@ export function CoachesPage() {
     )
   }
 
+  const selectedCoach = coaches.find(c => c._id === selectedCoachId)
+
   return (
     <AppShell>
-      <div className="pt-6 md:pt-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+      <div className="pt-6 md:pt-0">
+        <h1 className="text-2xl md:text-4xl font-bold font-display text-gray-900 mb-2 tracking-tight">
           Choose Your Coach
         </h1>
-        <p className="text-gray-500 mb-6">
+        <p className="text-gray-500 mb-6 md:text-lg md:mb-8">
           Each coach has a unique style to match your vibe
         </p>
 
+        {/* Desktop: Featured selected coach */}
+        {isDesktop && selectedCoach && (
+          <div className="hidden md:block mb-8">
+            <p className="section-label mb-3">Your Active Coach</p>
+            <div className="card-featured flex items-center gap-8 p-8">
+              <div
+                className="w-24 h-24 rounded-3xl flex items-center justify-center text-5xl shadow-lg flex-shrink-0"
+                style={{ background: `linear-gradient(135deg, ${selectedCoach.color_from}, ${selectedCoach.color_to})` }}
+              >
+                {selectedCoach.avatar_emoji}
+              </div>
+              <div className="flex-1">
+                <h2 className="font-display text-2xl font-bold text-gray-900">{selectedCoach.name}</h2>
+                <p className="text-gray-500 mt-1">{selectedCoach.tagline}</p>
+                {selectedCoach.description && (
+                  <p className="text-sm text-gray-400 mt-2 max-w-lg">{selectedCoach.description}</p>
+                )}
+                <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <span className="text-yellow-500">★</span>
+                    {selectedCoach.rating.toFixed(1)}
+                  </span>
+                  <span>{selectedCoach.session_count.toLocaleString()} sessions</span>
+                </div>
+              </div>
+              {selectedCoach.sample_phrases?.[0] && (
+                <div className="max-w-xs bg-marble-50 rounded-2xl p-4 border border-marble-200">
+                  <p className="text-xs text-gray-400 mb-1">Sample phrase</p>
+                  <p className="text-sm text-gray-700 italic">"{selectedCoach.sample_phrases[0]}"</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Coach list */}
-        <div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
+        <div className="space-y-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-4 md:space-y-0">
           {coaches.map((coach) => (
             <div
               key={coach._id}
-              className={`card-elevated p-4 transition-all ${
+              className={`relative overflow-hidden ${
+                isDesktop ? 'card-desktop' : 'card-elevated p-4'
+              } transition-all ${
                 selectedCoachId === coach._id ? 'ring-2 ring-cupid-500' : ''
               }`}
             >
-              <div className="flex items-start gap-4">
+              {/* Desktop: gradient accent line at top */}
+              {isDesktop && (
+                <div
+                  className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
+                  style={{ background: `linear-gradient(90deg, ${coach.color_from}, ${coach.color_to})` }}
+                />
+              )}
+
+              <div className={`flex items-start gap-4 ${isDesktop ? 'pt-1' : ''}`}>
                 {/* Avatar */}
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-2xl flex-shrink-0 shadow-md"
+                  className={`rounded-full flex items-center justify-center text-2xl flex-shrink-0 shadow-md ${
+                    isDesktop ? 'w-20 h-20' : 'w-16 h-16'
+                  }`}
                   style={{
                     background: `linear-gradient(135deg, ${coach.color_from}, ${coach.color_to})`,
                   }}
@@ -119,10 +170,10 @@ export function CoachesPage() {
                 <button
                   onClick={() => handleSelectCoach(coach._id)}
                   disabled={selecting || selectedCoachId === coach._id}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     selectedCoachId === coach._id
                       ? 'bg-cupid-100 text-cupid-600'
-                      : 'bg-cupid-500 text-white hover:bg-cupid-600 active:scale-95'
+                      : 'bg-cupid-500 text-white hover:bg-cupid-600 hover:shadow-md active:scale-95'
                   }`}
                 >
                   {selectedCoachId === coach._id ? 'Selected' : 'Select'}
@@ -131,7 +182,7 @@ export function CoachesPage() {
 
               {/* Sample phrase */}
               {coach.sample_phrases?.[0] && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className={`mt-3 pt-3 border-t border-gray-100 ${isDesktop ? 'bg-marble-50 -mx-6 -mb-6 px-6 py-4 rounded-b-2xl' : ''}`}>
                   <p className="text-sm text-gray-600 italic">
                     "{coach.sample_phrases[0]}"
                   </p>
@@ -143,9 +194,9 @@ export function CoachesPage() {
 
         {/* Empty state */}
         {coaches.length === 0 && (
-          <div className="card text-center py-12">
-            <div className="text-5xl mb-4">🤔</div>
-            <h3 className="font-semibold text-gray-900 mb-2">No coaches available</h3>
+          <div className={`text-center ${isDesktop ? 'card-featured py-16' : 'card py-12'}`}>
+            <div className={`mb-4 ${isDesktop ? 'text-6xl' : 'text-5xl'}`}>🤔</div>
+            <h3 className="font-semibold text-gray-900 mb-2 md:font-display md:text-xl">No coaches available</h3>
             <p className="text-gray-500 text-sm">
               Check back soon for new coaches!
             </p>

@@ -87,6 +87,31 @@
     background-clip: text;
   }
 
+  /* Desktop-enhanced card with hover lift */
+  .card-desktop {
+    @apply bg-white rounded-2xl shadow-card p-4
+           md:p-6 md:transition-all md:duration-200
+           md:hover:shadow-card-lg md:hover:-translate-y-0.5;
+  }
+
+  /* Featured/hero card with marble treatment */
+  .card-featured {
+    @apply bg-white/90 backdrop-blur-sm rounded-3xl border border-gold-100/40 p-6;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+  }
+
+  /* Stats card with inner glow */
+  .card-stat {
+    @apply bg-white rounded-2xl p-5 border border-marble-200/50
+           md:transition-all md:duration-200 md:hover:border-marble-300;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 3px rgba(0,0,0,0.06);
+  }
+
+  /* Subtle section label */
+  .section-label {
+    @apply text-xs font-semibold text-gray-400 uppercase tracking-widest;
+  }
+
   .btn-glow {
     @apply relative bg-cupid-500 text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
     box-shadow: 0 0 40px rgba(232, 86, 108, 0.4);

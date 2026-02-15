@@ -250,7 +250,7 @@ export function LiveSessionPage() {
         /* Desktop: side-by-side layout */
         <div className="flex-1 flex p-4 gap-4 overflow-hidden">
           {/* Left panel: Camera + Vitals */}
-          <div className="flex-[3] flex flex-col gap-4 min-w-0">
+          <div className="flex-[3] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
             <CameraSourceSelector
               value={cameraSource}
               onChange={handleCameraSourceChange}
@@ -272,7 +272,7 @@ export function LiveSessionPage() {
           </div>
 
           {/* Right panel: Coaching + Transcript */}
-          <div className="flex-[2] flex flex-col gap-4 min-w-0">
+          <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-gray-800/50 rounded-2xl p-4">
             <CoachingPanel
               coach={user.coach || null}
               mode={mode}
@@ -329,10 +329,10 @@ export function LiveSessionPage() {
       )}
 
       {/* Bottom Actions */}
-      <div className="p-4 bg-gray-800 border-t border-gray-700 pb-safe">
+      <div className="p-4 bg-gray-800 border-t border-gray-700 pb-safe md:flex md:justify-center">
         <button
           onClick={() => setShowEndModal(true)}
-          className="w-full md:w-auto md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
+          className="w-full md:w-auto md:min-w-[200px] md:px-12 py-3 px-6 bg-red-500/15 hover:bg-red-500/25 text-red-400 font-semibold rounded-2xl transition-colors"
         >
           End Session
         </button>
