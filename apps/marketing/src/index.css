@@ -2,6 +2,75 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   Theme Tokens — Light (default)
+   ============================================ */
+:root {
+  /* Backgrounds */
+  --color-bg: #FAF7F5;
+  --color-surface: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: #F5F0EC;
+
+  /* Text */
+  --color-text: #111827;
+  --color-text-secondary: #4B5563;
+  --color-text-tertiary: #6B7280;
+  --color-text-faint: #9CA3AF;
+
+  /* Borders */
+  --color-border: #F3F4F6;
+  --color-border-strong: #E5E7EB;
+
+  /* Brand — Primary (Cupid) */
+  --color-primary: #E8566C;
+  --color-primary-hover: #D14459;
+  --color-primary-surface: #FFEAED;
+  --color-primary-text: #E8566C;
+
+  /* Brand — Accent (Gold) */
+  --color-accent: #B8944D;
+  --color-accent-surface: #EDE0C0;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+
+  /* Overlay */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   Theme Tokens — Dark
+   ============================================ */
+.dark {
+  --color-bg: #0F0F11;
+  --color-surface: #1A1A1F;
+  --color-surface-elevated: #222228;
+  --color-surface-hover: #2A2A32;
+
+  --color-text: #F5F0EC;
+  --color-text-secondary: #B0AAA4;
+  --color-text-tertiary: #8A8480;
+  --color-text-faint: #5A5550;
+
+  --color-border: #2A2A32;
+  --color-border-strong: #3A3A44;
+
+  --color-primary: #F07A8C;
+  --color-primary-hover: #E8566C;
+  --color-primary-surface: rgba(232, 86, 108, 0.15);
+  --color-primary-text: #F07A8C;
+
+  --color-accent: #C9A962;
+  --color-accent-surface: rgba(201, 169, 98, 0.15);
+
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-marble: 0 10px 40px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
+
+  --color-overlay: rgba(0, 0, 0, 0.7);
+}
+
 @layer base {
   html {
     font-family: 'Inter', system-ui, sans-serif;
@@ -11,12 +80,18 @@
   }
 
   body {
-    @apply bg-marble-50 text-gray-900;
+    background-color: var(--color-bg);
+    color: var(--color-text);
     margin: 0;
     padding: 0;
     background-image: url('/assets/marble-texture.svg');
     background-size: 1200px 1200px;
     background-attachment: fixed;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  html.dark body {
+    background-image: none;
   }
 
   h1, h2, h3, h4 {
@@ -26,8 +101,10 @@
 
 @layer components {
   .marble-card {
-    @apply bg-white/90 backdrop-blur-sm rounded-3xl border border-gold-100/40;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05), 0 2px 8px rgba(0, 0, 0, 0.03);
+    background-color: var(--color-surface);
+    @apply backdrop-blur-sm rounded-3xl;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-marble);
   }
 
   .gold-foil-text {
@@ -38,22 +115,35 @@
     background-clip: text;
   }
 
+  .dark .gold-foil-text {
+    background: linear-gradient(135deg, #C9A962 0%, #E0CDA0 40%, #C9A962 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
   .btn-glow {
-    @apply relative bg-cupid-500 text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
+    background-color: var(--color-primary);
+    @apply relative text-white font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
     box-shadow: 0 0 40px rgba(232, 86, 108, 0.4);
   }
 
   .btn-glow:hover {
-    @apply bg-cupid-600;
+    background-color: var(--color-primary-hover);
     box-shadow: 0 0 60px rgba(232, 86, 108, 0.6);
     transform: translateY(-2px);
   }
 
   .btn-ghost {
-    @apply bg-transparent border-2 border-cupid-400/50 text-cupid-600 font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
+    @apply bg-transparent font-semibold rounded-2xl px-8 py-4 transition-all duration-300;
+    border: 2px solid var(--color-primary);
+    color: var(--color-primary-text);
+    opacity: 0.8;
   }
 
   .btn-ghost:hover {
-    @apply bg-cupid-50 border-cupid-400;
+    background-color: var(--color-primary-surface);
+    opacity: 1;
   }
 }

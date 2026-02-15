@@ -3,14 +3,19 @@ import { FadeInView } from '../animations/FadeInView'
 
 const FEATURES = [
   {
+    icon: '💘',
+    title: 'Swipe to Discover',
+    description: 'Find your perfect coach with Tinder-style swiping. AI generates unique coaches with distinct personalities and voices.',
+  },
+  {
+    icon: '🎙️',
+    title: 'Voice Preview',
+    description: 'Hear your coach before you commit. Each AI coach has a unique voice powered by ElevenLabs.',
+  },
+  {
     icon: '👁️',
     title: 'Emotion Detection',
     description: 'AI reads facial expressions in real-time so you know exactly how the conversation is landing.',
-  },
-  {
-    icon: '📏',
-    title: 'Distance Tracking',
-    description: 'Ultrasonic sensors tell you the perfect moment to approach - and when to give space.',
   },
   {
     icon: '💬',
@@ -23,9 +28,19 @@ const FEATURES = [
     description: 'Emotion timelines, conversation replays, and scores to track your improvement over time.',
   },
   {
+    icon: '🖥️',
+    title: 'Desktop Experience',
+    description: 'Premium responsive UI with sidebar navigation. Works beautifully on any screen, from phone to desktop.',
+  },
+  {
     icon: '❤️',
     title: 'Heart Rate Monitor',
     description: 'Biofeedback keeps your nerves in check. Calm breathing prompts when anxiety spikes.',
+  },
+  {
+    icon: '📏',
+    title: 'Distance Tracking',
+    description: 'Ultrasonic sensors tell you the perfect moment to approach - and when to give space.',
   },
   {
     icon: '🔒',
@@ -47,15 +62,16 @@ export function FeaturesSection() {
             <FadeInView key={feature.title} delay={i * 0.1}>
               <div className="marble-card p-7 h-full">
                 {/* Icon with glow */}
-                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-cupid-50 mb-5">
-                  <div className="absolute inset-0 rounded-2xl bg-pink-glow opacity-0 hover:opacity-100 transition-opacity" />
+                <div className="relative inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5"
+                  style={{ backgroundColor: 'var(--color-primary-surface)' }}
+                >
                   <span className="text-2xl relative">{feature.icon}</span>
                 </div>
 
-                <h4 className="font-display text-lg font-bold text-gray-900 mb-2">
+                <h4 className="font-display text-lg font-bold mb-2" style={{ color: 'var(--color-text)' }}>
                   {feature.title}
                 </h4>
-                <p className="text-gray-500 text-sm leading-relaxed">
+                <p className="text-sm leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
                   {feature.description}
                 </p>
               </div>
