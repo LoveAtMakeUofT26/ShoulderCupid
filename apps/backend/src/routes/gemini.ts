@@ -8,7 +8,7 @@ const client = new GoogleGenAI({
   apiKey: process.env.GOOGLE_AI_API_KEY,
 });
 
-geminiRouter.get("/token", async (req, res) => {
+geminiRouter.get("/token", async (_req, res) => {
   try {
     const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     
