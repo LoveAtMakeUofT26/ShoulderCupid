@@ -232,7 +232,7 @@ export function LiveSessionPage() {
     }
 
     emitAdvice()
-    const interval = setInterval(emitAdvice, 2000)
+    const interval = setInterval(emitAdvice, 4000)
     return () => clearInterval(interval)
   }, [phase, requestAdvice])
 
