@@ -13,7 +13,7 @@ Foundation complete. Full AI coaching pipeline working end-to-end: ElevenLabs Sc
 - [x] MongoDB connection (Atlas)
 - [x] Google OAuth authentication
 - [x] Coach CRUD API + seed data (3 coaches)
-- [x] AI coach generation pipeline (Gemini AI profiles + Pollinations avatars)
+- [x] AI coach generation pipeline (Gemini AI profiles + Cloudflare Workers AI avatars)
 - [x] Coach roster system (add/remove/set-default, free: 3, premium: 9)
 - [x] Voice pool with trait-based matching (30 ElevenLabs voices)
 - [x] User profile & coach selection API
@@ -154,7 +154,7 @@ npm run type-check
 | `apps/frontend/src/hooks/usePreflightChecks.ts` | Device/service validation (camera, mic, backend, STT, Gemini) |
 | `apps/frontend/src/pages/LiveSessionPage.tsx` | Live session page (connects STT → socket → coaching) |
 | `apps/backend/src/scripts/seed.ts` | Coach seed data (names, prompts, ElevenLabs voice IDs) |
-| `apps/backend/src/services/coachGenerationService.ts` | AI coach generation (Gemini profiles + Pollinations avatars) |
+| `apps/backend/src/services/coachGenerationService.ts` | AI coach generation (Gemini profiles + Cloudflare Workers AI avatars) |
 | `apps/backend/src/services/preferenceService.ts` | Swipe preference tracking + generation bias |
 | `apps/backend/src/config/voicePool.ts` | 30 ElevenLabs voices mapped to personality traits |
 | `apps/frontend/src/pages/CoachDiscoveryPage.tsx` | Tinder-style swipe coach discovery |

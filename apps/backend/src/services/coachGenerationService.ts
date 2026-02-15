@@ -1,12 +1,11 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import axios from 'axios'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as crypto from 'node:crypto'
 import dotenv from 'dotenv'
 import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
-import { buildCoachImagePrompt, buildPollinationsUrl, type AppearanceSpec } from '../config/imagePrompts.js'
+import { buildCoachImagePrompt, generateImageBuffer, type AppearanceSpec } from '../config/imagePrompts.js'
 import { retryWithBackoff } from '../utils/resilience.js'
 
 dotenv.config()
@@ -119,7 +118,7 @@ Personality tags should be simple descriptive words like: hype, chill, direct, w
 }
 
 /**
- * Generate a coach avatar image via Pollinations.ai (free, no API key).
+ * Generate a coach avatar image via Cloudflare Workers AI (FLUX 2 Klein → FLUX 1 Schnell fallback).
  * Downloads the image and saves it locally as a static asset.
  */
 async function generateCoachImage(
@@ -127,15 +126,10 @@ async function generateCoachImage(
   traits: string[]
 ): Promise<{ url: string; prompt: string }> {
   const prompt = buildCoachImagePrompt(traits, appearance)
-  const seed = Math.floor(Math.random() * 1000000)
-  const pollinationsUrl = buildPollinationsUrl(prompt, seed)
 
-  // Download the image from Pollinations
-  const response = await retryWithBackoff(
-    () => axios.get(pollinationsUrl, {
-      responseType: 'arraybuffer',
-      timeout: 30000,
-    }),
+  // Generate image via Cloudflare Workers AI
+  const imageBuffer = await retryWithBackoff(
+    () => generateImageBuffer(prompt),
     { maxRetries: 2, baseDelayMs: 2000 }
   )
 
@@ -143,7 +137,7 @@ async function generateCoachImage(
   fs.mkdirSync(IMAGES_DIR, { recursive: true })
   const filename = `coach-${crypto.randomUUID()}.png`
   const filePath = path.join(IMAGES_DIR, filename)
-  fs.writeFileSync(filePath, Buffer.from(response.data))
+  fs.writeFileSync(filePath, imageBuffer)
 
   // Return URL path served as a static asset
   const url = `/coaches/${filename}`
@@ -187,7 +181,7 @@ export async function createGeneratedCoach(preferences?: TraitMap) {
   // 1. Generate profile via Gemini (text - free tier)
   const profile = await generateCoachProfile(preferences)
 
-  // 2. Generate image via Pollinations.ai (free, no API key)
+  // 2. Generate image via Cloudflare Workers AI (FLUX Schnell)
   const { url: avatarUrl, prompt: imagePrompt } = await generateCoachImage(
     profile.appearance,
     profile.personality_tags

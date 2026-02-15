@@ -14,7 +14,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
-/** Generate a new AI coach (calls backend Gemini + Pollinations pipeline). */
+/** Generate a new AI coach (calls backend Gemini + Cloudflare Workers AI pipeline). */
 export async function generateCoach(): Promise<Coach> {
   const data = await fetchJson<{ coach: Coach }>(`${API_BASE}/coaches/generate`, {
     method: 'POST',

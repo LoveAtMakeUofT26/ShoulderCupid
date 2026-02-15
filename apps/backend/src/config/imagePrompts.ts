@@ -34,13 +34,47 @@ export function buildCoachImagePrompt(
   ].join(', ')
 }
 
+const CF_IMAGE_MODELS = [
+  '@cf/black-forest-labs/flux-2-klein-4b',
+  '@cf/black-forest-labs/flux-1-schnell',
+] as const
+
 /**
- * Generate a Pollinations.ai image URL from a prompt.
- * Pollinations is free with no API key required.
- * Uses FLUX models under the hood.
+ * Generate a coach avatar image via Cloudflare Workers AI.
+ * Tries FLUX 2 Klein 4B first (cheaper, better quality), falls back to FLUX 1 Schnell.
+ * Returns the image as a PNG buffer.
  */
-export function buildPollinationsUrl(prompt: string, seed?: number): string {
-  const encodedPrompt = encodeURIComponent(prompt)
-  const seedParam = seed ?? Math.floor(Math.random() * 1000000)
-  return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${seedParam}`
+export async function generateImageBuffer(prompt: string): Promise<Buffer> {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID
+  const apiToken = process.env.CLOUDFLARE_API_TOKEN
+
+  if (!accountId || !apiToken) {
+    throw new Error('Missing CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN env vars')
+  }
+
+  const { default: axios } = await import('axios')
+
+  let lastError: Error | undefined
+  for (const model of CF_IMAGE_MODELS) {
+    try {
+      const response = await axios.post(
+        `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+        { prompt, width: 512, height: 512, num_steps: 4 },
+        {
+          headers: { Authorization: `Bearer ${apiToken}` },
+          responseType: 'arraybuffer',
+          timeout: 30000,
+        }
+      )
+      if (model !== CF_IMAGE_MODELS[0]) {
+        console.warn(`Image generation fell back to ${model}`)
+      }
+      return Buffer.from(response.data)
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.warn(`Model ${model} failed: ${lastError.message}, trying next...`)
+    }
+  }
+
+  throw lastError!
 }

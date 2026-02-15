@@ -199,7 +199,7 @@
 | POST | `/api/auth/logout` | Logout |
 | GET | `/api/coaches` | List coaches |
 | PATCH | `/api/user/coach` | Select coach |
-| POST | `/api/coaches/generate` | Generate new AI coach (Gemini + Pollinations) |
+| POST | `/api/coaches/generate` | Generate new AI coach (Gemini + Cloudflare Workers AI) |
 | POST | `/api/coaches/:id/voice-preview` | Get TTS voice sample for coach |
 | GET | `/api/user/roster` | Get user's coach roster |
 | POST | `/api/user/roster` | Add coach to roster |
