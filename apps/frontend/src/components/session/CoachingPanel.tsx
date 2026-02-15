@@ -1,11 +1,5 @@
 import { CoachingMode } from '../../hooks/useSessionSocket'
-
-interface Coach {
-  name: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-}
+import type { Coach } from '../../services/auth'
 
 interface CoachingPanelProps {
   coach: Coach | null

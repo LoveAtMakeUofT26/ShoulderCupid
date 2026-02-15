@@ -6,6 +6,7 @@ on:
     paths:
       - 'apps/backend/**'
       - 'packages/**'
+      - '.github/workflows/deploy-backend.yml'
 
 jobs:
   deploy:
@@ -19,8 +20,11 @@ jobs:
           key: ${{ secrets.VULTR_SSH_KEY }}
           script: |
             cd ${{ secrets.VULTR_APP_PATH }}
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            npm install
             cd apps/backend
-            npm install --production
-            npm run build
-            pm2 restart shoulder-cupid || pm2 start dist/index.js --name shoulder-cupid
+            npx tsc
+            cd ../..
+            npm prune --production
+            pm2 restart shoulder-cupid || pm2 start apps/backend/dist/server.js --name shoulder-cupid

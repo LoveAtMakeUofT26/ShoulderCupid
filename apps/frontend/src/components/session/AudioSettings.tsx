@@ -62,13 +62,12 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
 
   return (
     <div className="space-y-3">
-      {/* Microphone */}
       <div>
         <label className="block text-xs text-[var(--color-text-faint)] mb-1">🎤 Microphone</label>
         <select
           value={selectedMic}
           onChange={e => handleMicChange(e.target.value)}
-          className="w-full text-sm rounded-lg px-3 py-2 border focus:outline-none"
+          className="w-full text-sm rounded-xl px-3 py-2.5 border focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
           style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text)', borderColor: 'var(--color-border-strong)' }}
         >
           {microphones.map(mic => (
@@ -79,13 +78,12 @@ export function AudioSettings({ onMicChange, onSpeakerChange }: AudioSettingsPro
         </select>
       </div>
 
-      {/* Speaker */}
       <div>
         <label className="block text-xs text-[var(--color-text-faint)] mb-1">🔊 Speaker</label>
         <select
           value={selectedSpeaker}
           onChange={e => handleSpeakerChange(e.target.value)}
-          className="w-full text-sm rounded-lg px-3 py-2 border focus:outline-none"
+          className="w-full text-sm rounded-xl px-3 py-2.5 border focus:border-cupid-500 focus:outline-none focus:ring-1 focus:ring-cupid-500/30"
           style={{ backgroundColor: 'var(--color-surface-secondary)', color: 'var(--color-text)', borderColor: 'var(--color-border-strong)' }}
         >
           {speakers.map(spk => (

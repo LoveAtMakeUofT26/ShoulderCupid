@@ -94,7 +94,7 @@
     margin: 0;
     padding: 0;
     min-height: 100vh;
-    min-height: 100dvh; /* Dynamic viewport height for mobile */
+    min-height: 100dvh;
     transition: background-color 0.2s ease, color 0.2s ease;
   }
 
@@ -104,38 +104,37 @@
 }
 
 @layer components {
-  /* Primary button */
   .btn-primary {
     background-color: var(--color-primary);
     color: #FFFFFF;
-    @apply font-semibold rounded-2xl px-6 py-3.5 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md;
+    @apply font-semibold rounded-2xl px-6 py-3.5 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
   .btn-primary:hover {
     background-color: var(--color-primary-hover);
   }
 
-  /* Secondary button */
   .btn-secondary {
     background-color: transparent;
     border: 2px solid var(--color-primary);
     color: var(--color-primary-text);
-    @apply font-semibold rounded-2xl px-6 py-3 active:scale-[0.98] transition-all duration-200;
+    @apply font-semibold rounded-2xl px-6 py-3 active:scale-[0.98] transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
   .btn-secondary:hover {
     background-color: var(--color-primary-surface);
   }
 
-  /* Ghost button */
   .btn-ghost {
     background-color: var(--color-primary-surface);
     color: var(--color-primary-text);
-    @apply font-semibold rounded-2xl px-6 py-3.5 active:scale-[0.98] transition-all duration-200;
+    @apply font-semibold rounded-2xl px-6 py-3.5 active:scale-[0.98] transition-all duration-200
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cupid-500 focus-visible:ring-offset-2;
   }
   .btn-ghost:hover {
     background-color: var(--color-surface-hover);
   }
 
-  /* Card styles */
   .card {
     background-color: var(--color-surface);
     box-shadow: var(--shadow-card);
@@ -148,12 +147,10 @@
     @apply rounded-2xl p-4;
   }
 
-  /* Mobile-first container */
   .container-mobile {
     @apply max-w-[428px] mx-auto px-4;
   }
 
-  /* Landing page components */
   .marble-card {
     background-color: var(--color-surface);
     @apply backdrop-blur-sm rounded-3xl;
@@ -195,7 +192,6 @@
 }
 
 @layer utilities {
-  /* Hide scrollbar but keep functionality */
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -204,7 +200,6 @@
     display: none;
   }
 
-  /* Safe area padding */
   .pb-safe {
     padding-bottom: max(var(--safe-area-bottom), 16px);
   }
@@ -213,7 +208,6 @@
     padding-top: max(var(--safe-area-top), 16px);
   }
 
-  /* Animations */
   .animate-slide-up {
     animation: slideUp 0.3s ease-out;
   }

@@ -68,7 +68,7 @@ export function SessionReportPage() {
 
   return (
     <AppShell>
-      <div className="pt-6">
+      <div className="pt-6 md:pt-8">
         <Link to="/sessions" className="text-sm text-[var(--color-primary-text)] font-medium mb-4 inline-block">
           &larr; Back to Sessions
         </Link>
@@ -123,7 +123,7 @@ export function SessionReportPage() {
             {session.analytics && (
               <div className="card">
                 <h2 className="font-semibold text-[var(--color-text)] mb-3">Stats</h2>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3 text-center">
                   <div>
                     <div className="text-2xl font-bold text-cupid-600">{session.analytics.total_tips}</div>
                     <div className="text-xs text-[var(--color-text-tertiary)]">Tips</div>
@@ -136,66 +136,79 @@ export function SessionReportPage() {
                     <div className="text-2xl font-bold text-green-600">{session.analytics.conversation_count}</div>
                     <div className="text-xs text-[var(--color-text-tertiary)]">Conversations</div>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {/* Report */}
-            {session.report?.summary && (
-              <div className="card">
-                <h2 className="font-semibold text-[var(--color-text)] mb-2">Summary</h2>
-                <p className="text-sm text-[var(--color-text-secondary)]">{session.report.summary}</p>
-
-                {session.report.highlights && session.report.highlights.length > 0 && (
-                  <div className="mt-3">
-                    <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Highlights</h3>
-                    <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
-                      {session.report.highlights.map((h, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="text-green-500 shrink-0">+</span>
-                          {h}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {session.report.improvements && session.report.improvements.length > 0 && (
-                  <div className="mt-3">
-                    <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Areas to Improve</h3>
-                    <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
-                      {session.report.improvements.map((imp, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span className="text-cupid-500 shrink-0">-</span>
-                          {imp}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Transcript */}
-            {session.transcript.length > 0 && (
-              <div className="card">
-                <h2 className="font-semibold text-[var(--color-text)] mb-3">Transcript</h2>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {session.transcript.map((entry, i) => (
-                    <div key={i} className={`text-sm p-2 rounded-lg ${
-                      entry.speaker === 'user'
-                        ? 'bg-[var(--color-primary-surface)] text-[var(--color-text)]'
-                        : entry.speaker === 'coach'
-                          ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200'
-                          : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'
-                    }`}>
-                      <span className="font-medium capitalize">{entry.speaker}: </span>
-                      {entry.text}
+                  {session.analytics.avg_emotion_score != null && (
+                    <div className="hidden md:block">
+                      <div className="text-2xl font-bold text-blue-600">{session.analytics.avg_emotion_score.toFixed(1)}</div>
+                      <div className="text-xs text-[var(--color-text-tertiary)]">Emotion Score</div>
                     </div>
-                  ))}
+                  )}
+                  <div className="hidden md:block">
+                    <div className="text-2xl font-bold text-orange-600">{session.analytics.warnings_triggered}</div>
+                    <div className="text-xs text-[var(--color-text-tertiary)]">Warnings</div>
+                  </div>
                 </div>
               </div>
             )}
+
+            {/* Report + Transcript: side-by-side on desktop */}
+            <div className="space-y-4 md:grid md:grid-cols-2 md:gap-6 md:space-y-0">
+              {/* Report */}
+              {session.report?.summary && (
+                <div className="card">
+                  <h2 className="font-semibold text-[var(--color-text)] mb-2">Summary</h2>
+                  <p className="text-sm text-[var(--color-text-secondary)]">{session.report.summary}</p>
+
+                  {session.report.highlights && session.report.highlights.length > 0 && (
+                    <div className="mt-3">
+                      <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Highlights</h3>
+                      <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
+                        {session.report.highlights.map((h, i) => (
+                          <li key={i} className="flex gap-2">
+                            <span className="text-green-500 shrink-0">+</span>
+                            {h}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {session.report.improvements && session.report.improvements.length > 0 && (
+                    <div className="mt-3">
+                      <h3 className="text-sm font-medium text-[var(--color-text)] mb-1">Areas to Improve</h3>
+                      <ul className="text-sm text-[var(--color-text-secondary)] space-y-1">
+                        {session.report.improvements.map((imp, i) => (
+                          <li key={i} className="flex gap-2">
+                            <span className="text-cupid-500 shrink-0">-</span>
+                            {imp}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Transcript */}
+              {session.transcript.length > 0 && (
+                <div className="card">
+                  <h2 className="font-semibold text-[var(--color-text)] mb-3">Transcript</h2>
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {session.transcript.map((entry, i) => (
+                      <div key={i} className={`text-sm p-2 rounded-lg ${
+                        entry.speaker === 'user'
+                          ? 'bg-[var(--color-primary-surface)] text-[var(--color-text)]'
+                          : entry.speaker === 'coach'
+                            ? 'bg-blue-50 text-blue-900 dark:bg-blue-900/20 dark:text-blue-200'
+                            : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]'
+                      }`}>
+                        <span className="font-medium capitalize">{entry.speaker}: </span>
+                        {entry.text}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Empty report state */}
             {!session.report?.summary && session.transcript.length === 0 && (

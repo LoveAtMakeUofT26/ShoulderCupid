@@ -1,19 +1,7 @@
 import { useEffect, useState } from 'react'
 import { AppShell, FloatingActionButton } from '../components/layout'
-import { getCurrentUser } from '../services/auth'
-
-interface Coach {
-  _id: string
-  name: string
-  tagline: string
-  description: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-  rating: number
-  session_count: number
-  sample_phrases: string[]
-}
+import { getCurrentUser, type Coach } from '../services/auth'
+import { Spinner } from '../components/ui/Spinner'
 
 export function CoachesPage() {
   const [coaches, setCoaches] = useState<Coach[]>([])
@@ -64,12 +52,7 @@ export function CoachesPage() {
     return (
       <AppShell>
         <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-[var(--color-primary)]">
-            <svg className="animate-spin h-8 w-8" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-            </svg>
-          </div>
+          <Spinner size="lg" />
         </div>
       </AppShell>
     )
@@ -77,15 +60,16 @@ export function CoachesPage() {
 
   return (
     <AppShell>
-      <div className="pt-6">
-        <h1 className="text-2xl font-bold text-[var(--color-text)] mb-2">
+      <div className="pt-6 md:pt-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-[var(--color-text)] mb-2">
           Choose Your Coach
         </h1>
         <p className="text-[var(--color-text-tertiary)] mb-6">
           Each coach has a unique style to match your vibe
         </p>
 
-        <div className="space-y-4">
+        {/* Coach list */}
+        <div className="space-y-4 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
           {coaches.map((coach) => (
             <div
               key={coach._id}
@@ -112,7 +96,10 @@ export function CoachesPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-[var(--color-text-tertiary)] mb-2">{coach.tagline}</p>
+                  <p className="text-sm text-[var(--color-text-tertiary)] mb-1">{coach.tagline}</p>
+                  {coach.description && (
+                    <p className="text-xs text-[var(--color-text-faint)] mb-2 line-clamp-2">{coach.description}</p>
+                  )}
 
                   <div className="flex items-center gap-3 text-xs text-[var(--color-text-faint)]">
                     <span className="flex items-center gap-1">
