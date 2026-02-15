@@ -83,16 +83,33 @@ export async function generateImageBuffer(prompt: string): Promise<Buffer> {
 
       const response = await axios.post(url, data, {
         headers,
-        responseType: 'arraybuffer',
         timeout: 30000,
+        // Cloudflare REST API returns JSON: { result: { image: "<base64>" }, success: true }
       })
+
+      const base64Image = response.data?.result?.image
+      if (!base64Image || typeof base64Image !== 'string') {
+        throw new Error(
+          `Unexpected response from ${model.id}: success=${response.data?.success}, ` +
+          `keys=${JSON.stringify(Object.keys(response.data?.result ?? {}))}`
+        )
+      }
+
+      const buffer = Buffer.from(base64Image, 'base64')
+      if (buffer.length < 8) {
+        throw new Error(`Model ${model.id} returned empty image (${buffer.length} bytes)`)
+      }
+
       if (model !== CF_IMAGE_MODELS[0]) {
         console.warn(`Image generation fell back to ${model.id}`)
       }
-      return Buffer.from(response.data)
+      return buffer
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
-      console.warn(`Model ${model.id} failed: ${lastError.message}, trying next...`)
+      const axiosErr = error as { response?: { status?: number; data?: unknown } }
+      const status = axiosErr.response?.status
+      const detail = status ? ` [HTTP ${status}]` : ''
+      console.warn(`Model ${model.id} failed: ${lastError.message}${detail}, trying next...`)
     }
   }
 
