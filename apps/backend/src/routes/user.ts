@@ -32,6 +32,16 @@ userRouter.get('/profile', requireAuth, async (req, res) => {
     const defaultEntry = roster.find((r: any) => r.is_default) || roster[0]
     const tier = (user as any).tier || 'free'
 
+    // Calculate sessions this month (reset if new month)
+    const now = new Date()
+    const resetDate = (user as any).sessions_month_reset
+      ? new Date((user as any).sessions_month_reset)
+      : new Date(0)
+    const isNewMonth =
+      now.getMonth() !== resetDate.getMonth() ||
+      now.getFullYear() !== resetDate.getFullYear()
+    const sessionsThisMonth = isNewMonth ? 0 : ((user as any).sessions_this_month || 0)
+
     res.json({
       id: user._id,
       email: user.email,
@@ -44,6 +54,9 @@ userRouter.get('/profile', requireAuth, async (req, res) => {
       preferences: user.preferences,
       onboarding_completed: user.onboarding_completed,
       credits: user.credits,
+      sessions_this_month: sessionsThisMonth,
+      free_sessions_limit: 3,
+      wallet_address: (user as any).wallet_address || null,
     })
   } catch (error) {
     console.error('Error fetching profile:', error)

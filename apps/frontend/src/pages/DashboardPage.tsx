@@ -5,8 +5,14 @@ import { AppShell, FloatingActionButton } from '../components/layout'
 import { useIsDesktop } from '../hooks/useIsDesktop'
 import { Spinner } from '../components/ui/Spinner'
 
+interface DashboardStats {
+  sessionsThisWeek: number
+  avgScore: number | null
+}
+
 export function DashboardPage() {
   const [user, setUser] = useState<User | null>(null)
+  const [stats, setStats] = useState<DashboardStats>({ sessionsThisWeek: 0, avgScore: null })
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
@@ -34,6 +40,14 @@ export function DashboardPage() {
 
     fetchUser()
   }, [navigate])
+
+  useEffect(() => {
+    if (!user) return
+    fetch('/api/sessions/stats', { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setStats(data) })
+      .catch(() => {})
+  }, [user])
 
   if (loading) {
     return (
@@ -66,15 +80,17 @@ export function DashboardPage() {
         <div className="hidden md:grid md:grid-cols-4 gap-4 mb-8">
           <div className="card-stat">
             <p className="section-label mb-1">Sessions This Week</p>
-            <p className="text-3xl font-bold text-[var(--color-text)] font-display">0</p>
+            <p className="text-3xl font-bold text-[var(--color-text)] font-display">{stats.sessionsThisWeek}</p>
           </div>
           <div className="card-stat">
             <p className="section-label mb-1">Avg Score</p>
-            <p className="text-3xl font-bold text-[var(--color-text)] font-display">--</p>
+            <p className="text-3xl font-bold text-[var(--color-text)] font-display">{stats.avgScore ?? '--'}</p>
           </div>
           <div className="card-stat">
-            <p className="section-label mb-1">Credits</p>
-            <p className="text-3xl font-bold text-[var(--color-primary-text)] font-display">{user.credits}</p>
+            <p className="section-label mb-1">Free Sessions</p>
+            <p className="text-3xl font-bold text-[var(--color-primary-text)] font-display">
+              {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}/{user.free_sessions_limit || 3}
+            </p>
           </div>
           <div className="card-stat">
             <p className="section-label mb-1">Current Coach</p>
@@ -92,16 +108,18 @@ export function DashboardPage() {
             </h2>
             <div className="grid grid-cols-3 gap-3">
               <div className="card text-center py-4">
-                <p className="text-2xl font-bold text-[var(--color-text)]">0</p>
+                <p className="text-2xl font-bold text-[var(--color-text)]">{stats.sessionsThisWeek}</p>
                 <p className="text-xs text-[var(--color-text-tertiary)]">Sessions</p>
               </div>
               <div className="card text-center py-4">
-                <p className="text-2xl font-bold text-[var(--color-text)]">-</p>
+                <p className="text-2xl font-bold text-[var(--color-text)]">{stats.avgScore ?? '-'}</p>
                 <p className="text-xs text-[var(--color-text-tertiary)]">Avg Score</p>
               </div>
               <div className="card text-center py-4">
-                <p className="text-2xl font-bold text-[var(--color-text)]">{user.credits}</p>
-                <p className="text-xs text-[var(--color-text-tertiary)]">Credits</p>
+                <p className="text-2xl font-bold text-[var(--color-text)]">
+                  {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}
+                </p>
+                <p className="text-xs text-[var(--color-text-tertiary)]">Free Left</p>
               </div>
             </div>
           </section>

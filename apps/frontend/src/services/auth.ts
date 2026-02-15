@@ -50,6 +50,9 @@ export interface User {
   }
   onboarding_completed: boolean
   credits: number
+  sessions_this_month: number
+  free_sessions_limit: number
+  wallet_address: string | null
 }
 
 export async function getCurrentUser(): Promise<User | null> {

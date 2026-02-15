@@ -33,6 +33,7 @@ export interface SessionState {
   warningMessage: string
   targetVitals: TargetVitals | null
   presageError: string | null
+  personDetected: boolean
 }
 
 // Socket connects directly to the backend (not through Vite proxy).
@@ -60,6 +61,7 @@ export function useSessionSocket(sessionId: string | null) {
     warningMessage: '',
     targetVitals: null,
     presageError: null,
+    personDetected: false,
   })
 
   const updateState = useCallback((updates: Partial<SessionState>) => {
@@ -131,6 +133,10 @@ export function useSessionSocket(sessionId: string | null) {
       if (data.distance !== undefined) updates.distance = data.distance
       if (data.heartRate !== undefined) updates.heartRate = data.heartRate
       updateState(updates)
+    })
+
+    socket.on('person-detected', (data: { confidence: number }) => {
+      updateState({ personDetected: data.confidence > 0.5 })
     })
 
     socket.on('target-vitals', (data: TargetVitals) => {

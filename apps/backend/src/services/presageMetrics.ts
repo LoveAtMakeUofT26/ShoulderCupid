@@ -165,6 +165,7 @@ export async function stopSessionProcessor(sessionId: string): Promise<void> {
   }
 
   latestMetrics.delete(sessionId)
+  sessionErrors.delete(sessionId)
 }
 
 /**

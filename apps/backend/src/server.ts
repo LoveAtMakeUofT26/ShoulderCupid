@@ -9,9 +9,10 @@ import { connectDB } from './config/database.js'
 import { setupAuth } from './config/auth.js'
 import { authRouter } from './routes/auth.js'
 import { coachesRouter } from './routes/coaches.js'
-import { sessionsRouter } from './routes/sessions.js'
+import { sessionsRouter, setSessionsIoInstance } from './routes/sessions.js'
 import { userRouter } from './routes/user.js'
 import { hardwareRouter, setIoInstance } from './routes/hardware.js'
+import { paymentsRouter } from './routes/payments.js'
 import { sttRouter } from './routes/stt.js'
 import { geminiRouter } from './routes/gemini.js'
 import { setupSocketHandlers } from './sockets/index.js'
@@ -55,6 +56,7 @@ app.use('/api/coaches', coachesRouter)
 app.use('/api/sessions', sessionsRouter)
 app.use('/api/user', userRouter)
 app.use('/api', hardwareRouter) // /api/frame, /api/sensors, /api/commands
+app.use('/api/payments', paymentsRouter)
 app.use('/api/stt', sttRouter)
 app.use('/api/gemini', geminiRouter)
 
@@ -63,6 +65,9 @@ setupSocketHandlers(io)
 
 // Pass io instance to hardware routes for broadcasting
 setIoInstance(io)
+
+// Pass io instance to sessions routes for emitting session-started
+setSessionsIoInstance(io)
 
 // Start Presage C++ processor (if binary exists on Vultr)
 startPresageProcessor()

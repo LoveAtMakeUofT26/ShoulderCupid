@@ -199,6 +199,13 @@
 | POST | `/api/auth/logout` | Logout |
 | GET | `/api/coaches` | List coaches |
 | PATCH | `/api/user/coach` | Select coach |
+| POST | `/api/coaches/generate` | Generate new AI coach (Gemini + Pollinations) |
+| POST | `/api/coaches/:id/voice-preview` | Get TTS voice sample for coach |
+| GET | `/api/user/roster` | Get user's coach roster |
+| POST | `/api/user/roster` | Add coach to roster |
+| DELETE | `/api/user/roster/:id` | Remove coach from roster |
+| PATCH | `/api/user/roster/:id/default` | Set default coach |
+| POST | `/api/user/swipe` | Record swipe preference (like/dislike traits) |
 
 ### Sessions
 | Method | Endpoint | Description |
@@ -244,7 +251,7 @@
 - [x] Express backend with TypeScript
 - [x] MongoDB connection (Atlas)
 - [x] Google OAuth
-- [x] Coach CRUD + seed data
+- [x] Coach CRUD + seed data + AI generation pipeline
 - [x] React frontend scaffold
 - [x] Mobile app shell + design system
 - [x] Dashboard, Coaches, Sessions pages
@@ -289,6 +296,9 @@
 ### Phase 5: Polish + Deploy
 - [x] Deploy backend to Vultr (GitHub Actions CI/CD)
 - [x] Deploy frontend to Vercel (auto-deploy)
+- [x] Desktop layouts (sidebar nav, responsive pages, premium UI)
+- [x] Dark mode theme system (light/dark/system with CSS custom properties)
+- [x] Tinder-style coach discovery + roster management
 - [ ] Payment flow (Solana or Stripe)
 - [ ] Edge case handling (disconnects, timeouts)
 - [ ] Demo video

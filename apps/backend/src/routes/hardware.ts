@@ -8,6 +8,7 @@ import {
 } from '../sockets/clientHandler.js'
 import { addFrame } from '../services/frameBuffer.js'
 import { getLatestMetrics, deriveEmotion, startSessionProcessor, isProcessorRunning, getPresageStatus, getSessionError } from '../services/presageMetrics.js'
+import { generateSpeech } from '../services/ttsService.js'
 
 export const hardwareRouter = Router()
 
@@ -226,14 +227,36 @@ hardwareRouter.post('/trigger-warning', async (req, res) => {
       2: 'Slow down! Give them some space.',
       3: 'Abort! Step back now.',
     }
+    const warningMessage = messages[warningLevel as 1 | 2 | 3]
     broadcastToSession(ioInstance, session_id, 'warning-triggered', {
       level: warningLevel,
-      message: messages[warningLevel as 1 | 2 | 3],
+      message: warningMessage,
     })
+
+    // Generate TTS audio for the warning using the session's coach voice
+    try {
+      const session = await Session.findById(session_id).populate('coach_id')
+      const coach = session?.coach_id as unknown as { voice_id?: string } | undefined
+      if (coach?.voice_id) {
+        const audioBuffer = await generateSpeech(warningMessage, coach.voice_id)
+        broadcastToSession(ioInstance, session_id, 'coach-audio', {
+          audio: audioBuffer.toString('base64'),
+          format: 'mp3',
+          text: warningMessage,
+        })
+      }
+    } catch (ttsErr) {
+      console.error('Warning TTS failed (text still delivered):', ttsErr)
+    }
   }
 
   res.json({ success: true, level: warningLevel })
 })
+
+// Clean up command queue when session ends
+export function clearCommandQueue(sessionId: string) {
+  commandQueues.delete(sessionId)
+}
 
 // GET /api/presage/status - Presage system health check
 hardwareRouter.get('/presage/status', (_req, res) => {

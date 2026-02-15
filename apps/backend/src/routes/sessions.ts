@@ -1,9 +1,21 @@
 import { Router } from 'express'
+import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
+import { Payment } from '../models/Payment.js'
 import { stopSessionProcessor } from '../services/presageMetrics.js'
+import { clearCommandQueue } from './hardware.js'
+
+const FREE_SESSIONS_PER_MONTH = 3
 
 export const sessionsRouter = Router()
+
+// Store io instance for emitting socket events
+let ioInstance: Server | null = null
+
+export function setSessionsIoInstance(io: Server) {
+  ioInstance = io
+}
 
 // Store active sessions in memory for quick lookup
 export const activeSessions = new Map<string, string>() // odId -> sessionId
@@ -21,6 +33,37 @@ sessionsRouter.get('/', async (req, res) => {
     res.json(sessions)
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch sessions' })
+  }
+})
+
+// Get dashboard stats for current user
+sessionsRouter.get('/stats', async (req, res) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: 'Not authenticated' })
+  }
+
+  const userId = (req.user as any)._id
+
+  try {
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+
+    const sessionsThisWeek = await Session.countDocuments({
+      user_id: userId,
+      started_at: { $gte: weekAgo },
+    })
+
+    const avgResult = await Session.aggregate([
+      { $match: { user_id: userId, 'analytics.avg_emotion_score': { $exists: true, $ne: null } } },
+      { $group: { _id: null, avgScore: { $avg: '$analytics.avg_emotion_score' } } },
+    ])
+
+    const avgScore = avgResult.length > 0 ? Math.round(avgResult[0].avgScore) : null
+
+    res.json({ sessionsThisWeek, avgScore })
+  } catch (error) {
+    console.error('Failed to fetch stats:', error)
+    res.status(500).json({ error: 'Failed to fetch stats' })
   }
 })
 
@@ -62,11 +105,11 @@ sessionsRouter.post('/start', async (req, res) => {
       })
     }
 
-    // Get user's selected coach (check roster if legacy coach_id is not set)
+    // Get user's selected coach (roster is primary, legacy coach_id as fallback)
     const user = await User.findById(userId)
     const roster = (user as any)?.coach_roster || []
     const defaultRosterEntry = roster.find((r: any) => r.is_default) || roster[0]
-    const coachId = user?.coach_id || defaultRosterEntry?.coach_id
+    const coachId = defaultRosterEntry?.coach_id || user?.coach_id
 
     if (!coachId) {
       return res.status(400).json({ error: 'No coach selected' })
@@ -75,6 +118,45 @@ sessionsRouter.post('/start', async (req, res) => {
     // Sync coach_id if it was only in roster
     if (!user?.coach_id && coachId) {
       await User.findByIdAndUpdate(userId, { coach_id: coachId })
+    }
+
+    // Check free session quota + payment gate
+    const now = new Date()
+    const resetDate = (user as any).sessions_month_reset
+      ? new Date((user as any).sessions_month_reset)
+      : new Date(0)
+    const isNewMonth =
+      now.getMonth() !== resetDate.getMonth() ||
+      now.getFullYear() !== resetDate.getFullYear()
+
+    let sessionsThisMonth = isNewMonth ? 0 : ((user as any).sessions_this_month || 0)
+
+    let confirmedPayment: any = null
+
+    if (sessionsThisMonth >= FREE_SESSIONS_PER_MONTH) {
+      // Require payment
+      const { paymentId } = req.body
+      if (!paymentId) {
+        return res.status(402).json({
+          error: 'Payment required',
+          sessions_used: sessionsThisMonth,
+          free_limit: FREE_SESSIONS_PER_MONTH,
+        })
+      }
+
+      // Verify payment is confirmed and belongs to this user
+      const payment = await Payment.findOne({
+        _id: paymentId,
+        user_id: userId,
+        status: 'confirmed',
+        session_id: { $exists: false },
+      })
+
+      if (!payment) {
+        return res.status(402).json({ error: 'Valid confirmed payment required' })
+      }
+
+      confirmedPayment = payment
     }
 
     // Create new session
@@ -86,8 +168,27 @@ sessionsRouter.post('/start', async (req, res) => {
       started_at: new Date(),
     })
 
+    // Link payment to session if paid
+    if (confirmedPayment) {
+      confirmedPayment.session_id = session._id
+      await confirmedPayment.save()
+    }
+
+    // Increment session counter
+    await User.findByIdAndUpdate(userId, {
+      sessions_this_month: sessionsThisMonth + 1,
+      sessions_month_reset: isNewMonth ? now : resetDate,
+    })
+
     // Track active session
     activeSessions.set(userId.toString(), session._id.toString())
+
+    // Emit session-started event so frontend listeners pick it up
+    if (ioInstance) {
+      ioInstance.to(`session-${session._id.toString()}`).emit('session-started', {
+        sessionId: session._id.toString(),
+      })
+    }
 
     // Populate coach info for response
     await session.populate('coach_id')
@@ -132,6 +233,9 @@ sessionsRouter.post('/:id/end', async (req, res) => {
 
     // Stop Presage processor for this session
     await stopSessionProcessor(req.params.id)
+
+    // Clean up hardware command queue
+    clearCommandQueue(req.params.id)
 
     // Remove from active sessions
     activeSessions.delete(userId.toString())

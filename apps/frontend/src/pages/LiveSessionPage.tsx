@@ -230,7 +230,7 @@ export function LiveSessionPage() {
     }
   }, [phase, webcam])
 
-  const handleStartSession = useCallback(async () => {
+  const handleStartSession = useCallback(async (paymentId?: string) => {
     // Unlock browser audio during user gesture so coach TTS can play later
     unlockAudio()
     setStartError(null)
@@ -239,6 +239,8 @@ export function LiveSessionPage() {
       const response = await fetch('/api/sessions/start', {
         method: 'POST',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentId ? { paymentId } : {}),
       })
       if (!response.ok) {
         const err = await response.json().catch(() => ({}))
@@ -254,6 +256,11 @@ export function LiveSessionPage() {
 
         if (err.error === 'No coach selected') {
           setStartError('No coach selected. Pick a coach first.')
+          return
+        }
+
+        if (err.error === 'Payment required') {
+          setStartError('Payment required. Please complete payment first.')
           return
         }
 

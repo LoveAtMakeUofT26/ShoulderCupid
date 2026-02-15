@@ -7,10 +7,11 @@ import dotenv from 'dotenv'
 import { Coach } from '../models/Coach.js'
 import { selectVoiceByTraits } from '../config/voicePool.js'
 import { buildCoachImagePrompt, buildPollinationsUrl, type AppearanceSpec } from '../config/imagePrompts.js'
+import { retryWithBackoff } from '../utils/resilience.js'
 
 dotenv.config()
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY || '')
 
 interface CoachProfile {
   name: string
@@ -36,25 +37,13 @@ const PRICING_TIERS = {
 // Directory to store downloaded coach images
 const IMAGES_DIR = path.resolve('public/coaches')
 
-const MAX_RETRIES = 3
-
-async function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+const GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.0-flash'] as const
 
 /**
- * Generate a complete coach profile using Gemini, with retry on rate limit.
+ * Generate a complete coach profile using Gemini, with retry on rate limit
+ * and automatic fallback to alternative models on 503.
  */
 async function generateCoachProfile(preferences?: TraitMap): Promise<CoachProfile> {
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash-lite',
-    generationConfig: {
-      temperature: 1.0,
-      maxOutputTokens: 1024,
-      responseMimeType: 'application/json',
-    },
-  })
-
   let biasInstruction = ''
   if (preferences) {
     const liked = Object.entries(preferences)
@@ -97,26 +86,36 @@ Return JSON with this exact schema:
 
 Personality tags should be simple descriptive words like: hype, chill, direct, witty, tough-love, gentle, bold, empathetic, sarcastic, motivational, analytical, warm, fierce, playful, nerdy, sophisticated.`
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  let lastError: Error | undefined
+  for (const modelName of GEMINI_MODELS) {
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 1.0,
+        maxOutputTokens: 1024,
+        responseMimeType: 'application/json',
+      },
+    })
+
     try {
-      const result = await model.generateContent(prompt)
+      const result = await retryWithBackoff(
+        () => model.generateContent(prompt),
+        { maxRetries: 3, baseDelayMs: 2000 }
+      )
       const text = result.response.text()
       const profile = JSON.parse(text) as CoachProfile
       profile.appearance.gender = profile.gender
-      return profile
-    } catch (err: any) {
-      const isRateLimit = err?.status === 429 || err?.message?.includes('429')
-      if (isRateLimit && attempt < MAX_RETRIES - 1) {
-        const delay = (attempt + 1) * 10_000 // 10s, 20s, 30s
-        console.log(`Gemini rate limited, retrying in ${delay / 1000}s (attempt ${attempt + 1}/${MAX_RETRIES})`)
-        await sleep(delay)
-        continue
+      if (modelName !== GEMINI_MODELS[0]) {
+        console.warn(`Coach generation fell back to ${modelName}`)
       }
-      throw err
+      return profile
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      console.warn(`Model ${modelName} failed: ${lastError.message}, trying next...`)
     }
   }
 
-  throw new Error('Failed to generate coach profile after retries')
+  throw lastError!
 }
 
 /**
@@ -132,10 +131,13 @@ async function generateCoachImage(
   const pollinationsUrl = buildPollinationsUrl(prompt, seed)
 
   // Download the image from Pollinations
-  const response = await axios.get(pollinationsUrl, {
-    responseType: 'arraybuffer',
-    timeout: 30000,
-  })
+  const response = await retryWithBackoff(
+    () => axios.get(pollinationsUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    }),
+    { maxRetries: 2, baseDelayMs: 2000 }
+  )
 
   // Save to public/coaches/ directory
   fs.mkdirSync(IMAGES_DIR, { recursive: true })
