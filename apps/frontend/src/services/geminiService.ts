@@ -70,9 +70,11 @@ export function useGeminiService() {
     }
 
     try {
-      // Send content...
+      // Send content with system prompt
       await session.send({
-        text: transcript
+        text: `You are a dating and social coach. Provide helpful, practical advice based on the conversation. Be supportive and encouraging.
+
+User said: "${transcript}"`
       });
       console.log("📤 Sent transcript to Gemini:", transcript);
     } catch (error) {

@@ -85,13 +85,18 @@ export function LiveSessionPage() {
     };
   }, [phase, transcriptionConnected, startTranscription, stopTranscription, geminiConnected, connectToGemini, disconnectFromGemini])
 
-  // Stream partial transcripts to Gemini (real-time)
+  // Stream committed transcripts to Gemini (not partial)
   useEffect(() => {
-    if (partialTranscript && partialTranscript.length > 0 && geminiConnected) {
-      console.log("📤 Streaming partial to Gemini:", partialTranscript);
-      sendTranscriptToGemini(partialTranscript);
+    console.log("Transcription transcripts:", transcriptionTranscripts);
+    if (transcriptionTranscripts.length > 0 && geminiConnected) {
+      console.log("Transcription transcripts:", transcriptionTranscripts);
+      const latestTranscript = transcriptionTranscripts[transcriptionTranscripts.length - 1];
+      if (latestTranscript) {
+        console.log("📤 Sending committed transcript to Gemini:", latestTranscript.text);
+        sendTranscriptToGemini(latestTranscript.text);
+      }
     }
-  }, [partialTranscript, geminiConnected, sendTranscriptToGemini]);
+  }, [transcriptionTranscripts, geminiConnected, sendTranscriptToGemini]);
 
   // Log Gemini responses
   useEffect(() => {
