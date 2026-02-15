@@ -347,7 +347,7 @@ export function SessionReportPage() {
                       Run Analysis
                     </button>
                     <p className="text-xs text-[var(--color-text-tertiary)] mt-3">
-                      Powered by OpenAI
+                      AI-powered analysis
                     </p>
                   </div>
                 )}

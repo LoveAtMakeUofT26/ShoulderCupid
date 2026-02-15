@@ -44,6 +44,7 @@ export function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({ sessionsThisWeek: 0, avgScore: null })
   const [sessions, setSessions] = useState<SessionItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [sessionsLoading, setSessionsLoading] = useState(true)
   const navigate = useNavigate()
   const isDesktop = useIsDesktop()
 
@@ -81,6 +82,7 @@ export function DashboardPage() {
       .then(r => r.ok ? r.json() : [])
       .then(data => setSessions(data.slice(0, 3)))
       .catch(() => {})
+      .finally(() => setSessionsLoading(false))
   }, [user])
 
   if (loading) {
@@ -307,7 +309,24 @@ export function DashboardPage() {
               View All
             </Link>
           </div>
-          {sessions.length > 0 ? (
+          {sessionsLoading ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 ${
+                    isDesktop ? 'card-desktop p-4' : 'card'
+                  }`}
+                >
+                  <div className={`${isDesktop ? 'w-10 h-10 rounded-xl' : 'w-10 h-10 rounded-full'} bg-[var(--color-surface-secondary)] animate-pulse flex-shrink-0`} />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="h-4 w-32 bg-[var(--color-surface-secondary)] rounded animate-pulse" />
+                    <div className="h-3 w-20 bg-[var(--color-surface-secondary)] rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : sessions.length > 0 ? (
             <div className="space-y-3">
               {sessions.map((session) => (
                 <Link
