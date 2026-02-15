@@ -13,6 +13,7 @@ import {
   TargetVitalsPanel,
   PreflightPage,
   CameraViewport,
+  SolanaPayModal,
 } from '../components/session'
 import { type CameraSource } from '../components/session/CameraSourceSelector'
 import { useIsDesktop } from '../hooks/useIsDesktop'
@@ -48,6 +49,7 @@ export function LiveSessionPage() {
   const [cameraSource, setCameraSource] = useState<CameraSource>('webcam')
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
+  const [showPayModal, setShowPayModal] = useState(false)
   const [isTestSession, setIsTestSession] = useState(false)
 
   const isDesktop = useIsDesktop()
@@ -357,14 +359,22 @@ export function LiveSessionPage() {
   // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
-      <PreflightPage
-        coach={user?.coach || null}
-        cameraSource={cameraSource}
-        onCameraSourceChange={setCameraSource}
-        onStart={handleStartSession}
-        onBack={() => navigate('/dashboard')}
-        startError={startError}
-      />
+      <>
+        <PreflightPage
+          coach={user?.coach || null}
+          cameraSource={cameraSource}
+          onCameraSourceChange={setCameraSource}
+          onStart={() => setShowPayModal(true)}
+          onBack={() => navigate('/dashboard')}
+          startError={startError}
+        />
+        <SolanaPayModal
+          isOpen={showPayModal}
+          coach={user?.coach || null}
+          onConfirm={() => { setShowPayModal(false); handleStartSession() }}
+          onClose={() => setShowPayModal(false)}
+        />
+      </>
     )
   }
 

@@ -18,7 +18,6 @@ export function CoachDiscoveryPage() {
   const [rosterLimit, setRosterLimit] = useState(3)
   const [error, setError] = useState<string | null>(null)
   const [cardKey, setCardKey] = useState(0)
-  const lastGenerateRef = useRef(0)
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const [initLoading, setInitLoading] = useState(true)
 
@@ -41,25 +40,13 @@ export function CoachDiscoveryPage() {
     initialize()
   }, [navigate])
 
-  // Preload next coach in background (throttled: min 3s between calls)
+  // Preload next coach in background (instant — random template pool, no AI)
   const preloadNext = useCallback(async () => {
-    const now = Date.now()
-    const elapsed = now - lastGenerateRef.current
-    const MIN_GAP = 3000
-    if (elapsed < MIN_GAP) {
-      await new Promise(r => setTimeout(r, MIN_GAP - elapsed))
-    }
     try {
-      lastGenerateRef.current = Date.now()
       const coach = await generateCoach()
       setNextCoach(coach)
     } catch (err: any) {
-      if (err.message?.includes('wait') || err.message?.includes('Too many')) {
-        // Rate limited — auto-retry after delay
-        setTimeout(preloadNext, 5000)
-      } else {
-        console.error('Failed to preload next coach:', err)
-      }
+      console.error('Failed to preload next coach:', err)
     }
   }, [])
 
@@ -84,11 +71,7 @@ export function CoachDiscoveryPage() {
       preloadNext()
     } catch (err: any) {
       console.error('Failed to start swiping:', err)
-      if (err.message?.includes('Too many') || err.message?.includes('429')) {
-        setError('Generating too fast! Wait a few seconds and tap again.')
-      } else {
-        setError('Failed to generate coach. Please try again.')
-      }
+      setError('Failed to generate coach. Please try again.')
       setMode('entry')
     } finally {
       setLoading(false)
