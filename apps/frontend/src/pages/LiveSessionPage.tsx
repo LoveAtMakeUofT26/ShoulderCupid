@@ -50,7 +50,7 @@ export function LiveSessionPage() {
   const [startError, setStartError] = useState<string | null>(null)
   const [resumingSession, setResumingSession] = useState(false)
   const [showPayModal, setShowPayModal] = useState(false)
-  const [, setIsTestSession] = useState(false)
+  const [isTestSession, setIsTestSession] = useState(false)
 
   const isDesktop = useIsDesktop()
   const isNewSession = sessionId === 'new'
@@ -354,14 +354,14 @@ export function LiveSessionPage() {
     )
   }
 
-  if (!user) return null
+  if (!user && !isTestSession) return null
 
   // Pre-flight phase - setup I/O + real checks before session
   if (phase === 'preflight') {
     return (
       <>
         <PreflightPage
-          coach={user.coach || null}
+          coach={user?.coach || null}
           cameraSource={cameraSource}
           onCameraSourceChange={setCameraSource}
           onStart={() => setShowPayModal(true)}
@@ -370,7 +370,7 @@ export function LiveSessionPage() {
         />
         <SolanaPayModal
           isOpen={showPayModal}
-          coach={user.coach || null}
+          coach={user?.coach || null}
           onConfirm={() => { setShowPayModal(false); handleStartSession() }}
           onClose={() => setShowPayModal(false)}
         />
@@ -418,7 +418,7 @@ export function LiveSessionPage() {
           {/* Right panel: Coaching + Transcript */}
           <div className="flex-[2] flex flex-col gap-4 min-w-0 bg-[var(--color-surface-secondary)] rounded-2xl p-4">
             <CoachingPanel
-              coach={user.coach || null}
+              coach={user?.coach || null}
               mode={mode}
               message={adviceMessage || coachingMessage}
               targetEmotion={targetEmotion}
@@ -451,7 +451,7 @@ export function LiveSessionPage() {
           />
           <TargetVitalsPanel vitals={targetVitals} presageError={presageError} />
           <CoachingPanel
-            coach={user.coach || null}
+            coach={user?.coach || null}
             mode={mode}
             message={adviceMessage || coachingMessage}
             targetEmotion={targetEmotion}

@@ -1,5 +1,7 @@
 import { useScribe } from "@elevenlabs/react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+
+const MAX_STT_RETRIES = 3;
 
 export interface TranscriptEntry {
   id: string;
@@ -13,6 +15,7 @@ export function useTranscriptionService() {
   const [transcripts, setTranscripts] = useState<TranscriptEntry[]>([]);
   const [partialTranscript, setPartialTranscript] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+  const retryCountRef = useRef(0);
 
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
@@ -56,6 +59,11 @@ export function useTranscriptionService() {
   };
 
   const startTranscription = useCallback(async () => {
+    if (retryCountRef.current >= MAX_STT_RETRIES) {
+      setError('Transcription unavailable — too many failed attempts');
+      return;
+    }
+
     if (!scribe.isConnected) {
       try {
         setError(null);
@@ -69,10 +77,12 @@ export function useTranscriptionService() {
           },
         });
 
+        retryCountRef.current = 0;
         return token;
       } catch (err) {
+        retryCountRef.current += 1;
         const msg = err instanceof Error ? err.message : 'Failed to start transcription';
-        console.error('[Scribe] Failed to start transcription:', err);
+        console.error(`[Scribe] Failed to start transcription (attempt ${retryCountRef.current}/${MAX_STT_RETRIES}):`, err);
         setError(msg);
       }
     }
