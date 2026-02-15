@@ -14,12 +14,11 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
   return res.json()
 }
 
-/** Generate a new AI coach (calls backend Gemini + Cloudflare Workers AI pipeline). */
+/** Generate a new coach from the combinatorial algorithm. */
 export async function generateCoach(): Promise<Coach> {
   const data = await fetchJson<{ coach: Coach }>(`${API_BASE}/coaches/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ useBias: true }),
   })
   return data.coach
 }

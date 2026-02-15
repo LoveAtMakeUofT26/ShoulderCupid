@@ -40,7 +40,7 @@ export function CoachDiscoveryPage() {
     initialize()
   }, [navigate])
 
-  // Preload next coach in background (instant — random template pool, no AI)
+  // Preload next coach in background (instant — combinatorial algorithm)
   const preloadNext = useCallback(async () => {
     try {
       const coach = await generateCoach()

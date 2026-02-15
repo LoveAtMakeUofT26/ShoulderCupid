@@ -8,7 +8,7 @@ export interface AppearanceSpec {
 
 /**
  * Build a consistent prompt for chibi anime cupid coach images.
- * Kept for storage in generation_metadata (can be used for future AI image gen).
+ * Kept for storage in generation_metadata.
  */
 export function buildCoachImagePrompt(
   traits: string[],

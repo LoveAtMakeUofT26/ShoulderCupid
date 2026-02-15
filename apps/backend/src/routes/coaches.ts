@@ -40,7 +40,7 @@ coachesRouter.get('/:id', async (req, res) => {
   }
 })
 
-// Generate a new coach from random template pool (instant, no AI)
+// Generate a new coach from combinatorial algorithm (instant)
 coachesRouter.post('/generate', requireAuth, async (_req, res) => {
   try {
     const coach = await createGeneratedCoach()

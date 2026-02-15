@@ -122,13 +122,13 @@ RULES:
 }
 
 // ---------------------------------------------------------------------------
-// Main generator — combinatorial, instant, no AI
+// Main generator — combinatorial, instant
 // ---------------------------------------------------------------------------
 
 /**
  * Create a coach by randomly combining pools of names, personalities,
  * appearances, taglines, and pricing tiers.
- * ~1M+ unique combinations. No AI APIs — instant, can't fail.
+ * ~1M+ unique combinations — instant, can't fail.
  */
 export async function createGeneratedCoach() {
   const gender: 'male' | 'female' = pickRandom(['male', 'female'])
