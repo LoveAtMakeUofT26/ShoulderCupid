@@ -21,6 +21,7 @@ interface SwipeCardProps {
 export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) {
   const [exiting, setExiting] = useState(false)
   const [imgLoaded, setImgLoaded] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   const x = useMotionValue(0)
   const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15])
@@ -47,7 +48,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
     : '$3'
 
   // Use avatar_url for generated coaches, fall back to emoji gradient for legacy
-  const hasImage = !!coach.avatar_url
+  const hasImage = !!coach.avatar_url && !imgError
   const avatarEmoji = coach.avatar_emoji || '💘'
   const gradientFrom = coach.color_from || '#E8566C'
   const gradientTo = coach.color_to || '#F5A3B1'
@@ -66,7 +67,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
           : {}
       }
     >
-      <div className="bg-white rounded-3xl shadow-card overflow-hidden relative">
+      <div className="rounded-3xl shadow-card overflow-hidden relative" style={{ backgroundColor: 'var(--color-surface)' }}>
         {/* Like/Nope overlays */}
         <motion.div
           className="absolute inset-0 bg-green-400 rounded-3xl z-10 pointer-events-none"
@@ -90,6 +91,8 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
                 imgLoaded ? 'opacity-100' : 'opacity-0'
               }`}
               onLoad={() => setImgLoaded(true)}
+              onError={() => setImgError(true)}
+              loading="lazy"
               draggable={false}
             />
           </div>
@@ -107,7 +110,7 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
         {/* Content */}
         <div className="p-5 relative z-20">
           {/* Name */}
-          <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="font-display text-2xl font-bold text-[var(--color-text)] mb-2">
             {coach.name}
           </h2>
 
@@ -127,13 +130,13 @@ export function SwipeCard({ coach, onSwipeLeft, onSwipeRight }: SwipeCardProps) 
           </div>
 
           {/* Specialty */}
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">
+          <p className="text-xs text-[var(--color-text-faint)] uppercase tracking-wide mb-3">
             {SPECIALTY_LABELS[coach.specialty] || coach.specialty}
           </p>
 
           {/* Sample quote */}
           {coach.sample_phrases?.[0] && (
-            <p className="text-sm text-gray-500 italic mb-4">
+            <p className="text-sm text-[var(--color-text-tertiary)] italic mb-4">
               "{coach.sample_phrases[0]}"
             </p>
           )}

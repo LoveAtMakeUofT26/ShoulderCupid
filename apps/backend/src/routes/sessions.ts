@@ -5,8 +5,13 @@ import { User } from '../models/User.js'
 import { Payment } from '../models/Payment.js'
 import { stopSessionProcessor } from '../services/presageMetrics.js'
 import { clearCommandQueue } from './hardware.js'
+import mongoose from 'mongoose'
 
 const FREE_SESSIONS_PER_MONTH = 3
+
+function isValidObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
+}
 
 export const sessionsRouter = Router()
 
@@ -74,10 +79,19 @@ sessionsRouter.get('/:id', async (req, res) => {
   }
 
   try {
+    if (!isValidObjectId(req.params.id)) {
+      return res.status(400).json({ error: 'Invalid session ID' })
+    }
+
     const session = await Session.findById(req.params.id).populate('coach_id')
     if (!session) {
       return res.status(404).json({ error: 'Session not found' })
     }
+
+    if (session.user_id.toString() !== (req.user as any)._id.toString()) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
     res.json(session)
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch session' })

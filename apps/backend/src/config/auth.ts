@@ -2,30 +2,63 @@ import passport from 'passport'
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20'
 import session from 'express-session'
 import MongoStore from 'connect-mongo'
-import { Express } from 'express'
+import type { Express, RequestHandler } from 'express'
 import { User } from '../models/User.js'
 
-export function setupAuth(app: Express) {
-  const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`
+export interface AuthMiddlewares {
+  sessionMiddleware: RequestHandler
+  passportInitialize: RequestHandler
+  passportSession: RequestHandler
+}
+
+const isProduction = process.env.NODE_ENV === 'production'
+
+const backendUrl = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`
+
+const getSessionSecret = () => {
+  const secret = process.env.SESSION_SECRET
+  if (isProduction && !secret) {
+    throw new Error('SESSION_SECRET must be set in production')
+  }
+  return secret || 'dev-secret-change-in-production'
+}
+
+const getMongoUri = () => {
+  const mongoUrl = process.env.MONGODB_URI
+  if (isProduction && !mongoUrl) {
+    throw new Error('MONGODB_URI must be set in production')
+  }
+  return mongoUrl || 'mongodb://localhost:27017/shoulder-cupid'
+}
+
+export function createAuthMiddlewares(): AuthMiddlewares {
+  const sessionMiddleware = session({
+    secret: getSessionSecret(),
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: getMongoUri(),
+    }),
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+      sameSite: 'lax',
+    },
+  })
+
+  return {
+    sessionMiddleware,
+    passportInitialize: passport.initialize(),
+    passportSession: passport.session(),
+  }
+}
+
+export function setupAuth(app: Express): AuthMiddlewares {
+  const middlewares = createAuthMiddlewares()
 
   // Session middleware
-  app.use(
-    session({
-      secret: process.env.SESSION_SECRET || 'dev-secret-change-in-production',
-      resave: false,
-      saveUninitialized: false,
-      store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/shoulder-cupid',
-      }),
-      cookie: {
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: 'lax',
-      },
-    })
-  )
-
-  app.use(passport.initialize())
-  app.use(passport.session())
+  app.use(middlewares.sessionMiddleware)
+  app.use(middlewares.passportInitialize)
+  app.use(middlewares.passportSession)
 
   // Google OAuth Strategy
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -78,4 +111,6 @@ export function setupAuth(app: Express) {
       done(error)
     }
   })
+
+  return middlewares
 }

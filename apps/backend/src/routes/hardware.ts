@@ -1,7 +1,7 @@
 import { Router } from 'express'
+import mongoose from 'mongoose'
 import { Server } from 'socket.io'
 import { Session } from '../models/Session.js'
-import mongoose from 'mongoose'
 import {
   updateSensors,
   updateEmotion,
@@ -209,7 +209,6 @@ hardwareRouter.get('/commands', requireHardwareAuth, async (req, res) => {
       return res.status(404).json({ error: 'Active session not found' })
     }
 
-  try {
     // Get and clear pending commands
     const commands = commandQueues.get(session_id) || []
     commandQueues.set(session_id, [])
