@@ -9,8 +9,6 @@ import { useWalletModal } from '@solana/wallet-adapter-react-ui'
 import { useConnection } from '@solana/wallet-adapter-react'
 import { LAMPORTS_PER_SOL } from '@solana/web3.js'
 
-const sections = ['Profile', 'Preferences', 'Wallet', 'Device', 'Account'] as const
-
 const sectionBorderColors: Record<string, string> = {
   profile: 'md:border-l-4 md:border-l-cupid-400',
   preferences: 'md:border-l-4 md:border-l-gold-400',
@@ -89,7 +87,7 @@ function PreferencesSection({ user, isDesktop }: { user: User; isDesktop: boolea
   )
 }
 
-function WalletSection({ user, isDesktop }: { user: User; isDesktop: boolean }) {
+function WalletSection({ isDesktop }: { isDesktop: boolean }) {
   const { publicKey, connected, disconnect } = useWallet()
   const { setVisible: setWalletModalVisible } = useWalletModal()
   const { connection } = useConnection()
@@ -149,13 +147,6 @@ function WalletSection({ user, isDesktop }: { user: User; isDesktop: boolean }) 
               </>
             )}
 
-            <div className="border-t border-[var(--color-border)]" />
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-[var(--color-text-secondary)]">Free Sessions</p>
-              <p className="text-sm font-medium text-[var(--color-text)]">
-                {Math.max(0, (user.free_sessions_limit || 3) - (user.sessions_this_month || 0))}/{user.free_sessions_limit || 3} remaining
-              </p>
-            </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
@@ -240,7 +231,6 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const [activeSection, setActiveSection] = useState<string>('profile')
 
   useEffect(() => {
     async function fetchUser() {
@@ -271,12 +261,6 @@ export function SettingsPage() {
     }
   }
 
-  function handleSectionClick(section: string) {
-    setActiveSection(section.toLowerCase())
-    const el = document.getElementById(section.toLowerCase())
-    el?.scrollIntoView({ behavior: 'smooth' })
-  }
-
   if (loading) {
     return (
       <AppShell>
@@ -293,7 +277,7 @@ export function SettingsPage() {
     <>
       <ProfileSection user={user} isDesktop={isDesktop} />
       <PreferencesSection user={user} isDesktop={isDesktop} />
-      <WalletSection user={user} isDesktop={isDesktop} />
+      <WalletSection isDesktop={isDesktop} />
       <DeviceSection isDesktop={isDesktop} />
       <AccountSection onLogout={handleLogout} isDesktop={isDesktop} />
     </>
@@ -306,37 +290,9 @@ export function SettingsPage() {
           Settings
         </h1>
 
-        {isDesktop ? (
-          <div className="grid grid-cols-12 gap-8">
-            {/* Section Nav */}
-            <div className="col-span-3">
-              <nav className="sticky top-8 bg-[var(--color-surface)] rounded-2xl shadow-card p-3 space-y-0.5">
-                {sections.map((section) => (
-                  <button
-                    key={section}
-                    onClick={() => handleSectionClick(section)}
-                    className={`block w-full text-left px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                      activeSection === section.toLowerCase()
-                        ? 'bg-[var(--color-primary-surface)] text-[var(--color-primary-text)] shadow-nav-active'
-                        : 'text-[var(--color-text-tertiary)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-text-secondary)]'
-                    }`}
-                  >
-                    {section}
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            {/* Content */}
-            <div className="col-span-9 space-y-8">
-              {content}
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {content}
-          </div>
-        )}
+        <div className="space-y-6 md:space-y-8 md:max-w-2xl">
+          {content}
+        </div>
       </div>
     </AppShell>
   )

@@ -106,10 +106,8 @@ export function PreflightPage({
             </div>
           )}
 
-          <div className={isDesktop ? 'grid grid-cols-2 gap-4' : 'space-y-4'}>
-            {/* Left column: Camera + Audio */}
-            <div className="space-y-4">
-              {/* Camera Section */}
+          <div className={isDesktop ? 'grid grid-cols-3 gap-4' : 'space-y-4'}>
+            {/* Camera */}
               <div className="card">
                 <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>📷</span> Camera Source
@@ -163,7 +161,7 @@ export function PreflightPage({
                 </div>
               </div>
 
-              {/* Audio Section */}
+            {/* Audio */}
               <div className="card">
                 <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>🎧</span> Audio Devices
@@ -195,10 +193,8 @@ export function PreflightPage({
                   )}
                 </div>
               </div>
-            </div>
 
-            {/* Right column (on desktop): Service Checks */}
-            <div className="space-y-4">
+            {/* Service Connections */}
               <div className="card">
                 <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3 flex items-center gap-2">
                   <span>🔗</span> Service Connections
@@ -216,7 +212,6 @@ export function PreflightPage({
                   ))}
                 </div>
               </div>
-            </div>
           </div>
         </div>
       </div>
@@ -240,7 +235,7 @@ export function PreflightPage({
           <button
             onClick={() => onStart()}
             disabled={!allPassed}
-            className={`btn-primary disabled:opacity-40 disabled:cursor-not-allowed ${isDesktop ? 'px-16' : 'w-full'}`}
+            className="btn-primary w-full disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {anyChecking ? 'Checking...' : allPassed ? 'Start Session' : 'Complete Checks First'}
           </button>
