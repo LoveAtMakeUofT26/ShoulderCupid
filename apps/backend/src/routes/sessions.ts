@@ -183,10 +183,12 @@ sessionsRouter.post('/start', async (req, res) => {
     // Track active session
     activeSessions.set(userId.toString(), session._id.toString())
 
-    // Emit session-started event so frontend listeners pick it up
+    // Emit session-started event so frontend listeners pick it up even if listeners
+    // join the socket room a few milliseconds later.
     if (ioInstance) {
-      ioInstance.to(`session-${session._id.toString()}`).emit('session-started', {
+      ioInstance.emit('session-started', {
         sessionId: session._id.toString(),
+        userId: userId.toString(),
       })
     }
 
