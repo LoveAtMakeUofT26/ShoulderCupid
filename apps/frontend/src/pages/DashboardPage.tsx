@@ -18,6 +18,9 @@ interface SessionItem {
   coach_id?: {
     name: string
     avatar_emoji: string
+    avatar_url?: string
+    color_from?: string
+    color_to?: string
   }
 }
 
@@ -338,8 +341,31 @@ export function DashboardPage() {
                       : 'card hover:shadow-card-hover transition-shadow'
                   }`}
                 >
-                  <div className={`${isDesktop ? 'w-10 h-10 rounded-xl' : 'w-10 h-10 rounded-full'} bg-[var(--color-primary-surface)] flex items-center justify-center text-lg flex-shrink-0`}>
-                    {session.coach_id?.avatar_emoji || '💘'}
+                  <div className={`${isDesktop ? 'w-10 h-10 rounded-xl' : 'w-10 h-10 rounded-full'} flex items-center justify-center text-lg flex-shrink-0 overflow-hidden relative`}>
+                    {session.coach_id?.avatar_url ? (
+                      <img
+                        src={session.coach_id.avatar_url}
+                        alt={session.coach_id.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.currentTarget
+                          const fallback = target.nextElementSibling as HTMLElement
+                          if (fallback) fallback.style.display = 'flex'
+                          target.style.display = 'none'
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="w-full h-full flex items-center justify-center absolute inset-0"
+                      style={{
+                        display: session.coach_id?.avatar_url ? 'none' : 'flex',
+                        background: session.coach_id?.color_from
+                          ? `linear-gradient(135deg, ${session.coach_id.color_from}, ${session.coach_id.color_to})`
+                          : 'var(--color-primary-surface)',
+                      }}
+                    >
+                      {session.coach_id?.avatar_emoji || '💘'}
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-[var(--color-text)] truncate">
