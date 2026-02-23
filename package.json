@@ -31,9 +31,5 @@
     "node": ">=20.0.0",
     "npm": ">=10.0.0"
   },
-  "packageManager": "npm@10.9.2",
-  "dependencies": {
-    "@elevenlabs/elevenlabs-js": "^2.35.0",
-    "@elevenlabs/react": "^0.14.0"
-  }
+  "packageManager": "npm@10.9.2"
 }

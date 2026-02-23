@@ -1,0 +1,24 @@
+# Render Blueprint — one-click deploy for Shoulder Cupid backend
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: shoulder-cupid-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "4000"
+      - key: FRONTEND_URL
+        sync: false # Set to your Vercel frontend URL
+      - key: MONGODB_URI
+        sync: false # Set to your MongoDB Atlas connection string
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

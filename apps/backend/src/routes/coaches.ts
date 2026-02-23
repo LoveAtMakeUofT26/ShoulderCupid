@@ -1,13 +1,8 @@
 import { Router } from 'express'
 import { Coach } from '../models/Coach.js'
 import { createGeneratedCoach } from '../services/coachGenerationService.js'
-import { generateSpeech } from '../services/ttsService.js'
-import { TTLCache } from '../utils/resilience.js'
 
 export const coachesRouter = Router()
-
-// Cache voice previews: key = `${coachId}:${text}`, value = base64 audio (10min TTL, max 50)
-const voicePreviewCache = new TTLCache<string, string>(10 * 60 * 1000, 50)
 
 // Middleware to require authentication
 function requireAuth(req: any, res: any, next: any) {
@@ -51,7 +46,7 @@ coachesRouter.post('/generate', requireAuth, async (_req, res) => {
   }
 })
 
-// Get voice preview for a coach
+// Voice preview — returns text for browser SpeechSynthesis (ElevenLabs removed)
 coachesRouter.post('/:id/voice-preview', requireAuth, async (req, res) => {
   try {
     const coach = await Coach.findById(req.params.id)
@@ -59,25 +54,9 @@ coachesRouter.post('/:id/voice-preview', requireAuth, async (req, res) => {
       return res.status(404).json({ error: 'Coach not found' })
     }
 
-    if (!coach.voice_id) {
-      return res.status(400).json({ error: 'Coach has no voice configured' })
-    }
-
     const text = req.body.text || (coach.sample_phrases?.[0]) || `Hi, I'm ${coach.name}. Let me help you out.`
-    const cacheKey = `${req.params.id}:${text}`
 
-    // Return cached audio if available
-    const cached = voicePreviewCache.get(cacheKey)
-    if (cached) {
-      return res.json({ audio: cached, format: 'mp3' })
-    }
-
-    const audioBuffer = await generateSpeech(text, coach.voice_id)
-    const base64Audio = audioBuffer.toString('base64')
-
-    voicePreviewCache.set(cacheKey, base64Audio)
-
-    res.json({ audio: base64Audio, format: 'mp3' })
+    res.json({ text, useBrowserTts: true, coachName: coach.name })
   } catch (error) {
     console.error('Error generating voice preview:', error)
     res.status(500).json({ error: 'Failed to generate voice preview' })

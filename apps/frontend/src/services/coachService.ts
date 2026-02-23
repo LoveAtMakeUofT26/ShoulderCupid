@@ -24,17 +24,16 @@ export async function generateCoach(): Promise<Coach> {
   return data.coach
 }
 
-/** Get a voice preview for a coach (returns base64 mp3). */
+/** Get a voice preview for a coach. Returns text for browser TTS. */
 export async function getVoicePreview(
   coachId: string,
   text?: string
-): Promise<string> {
-  const data = await fetchJson<{ audio: string }>(`${API_BASE}/coaches/${coachId}/voice-preview`, {
+): Promise<{ text: string; useBrowserTts: boolean }> {
+  return fetchJson(`${API_BASE}/coaches/${coachId}/voice-preview`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   })
-  return data.audio
 }
 
 /** Fetch the user's coach roster. */

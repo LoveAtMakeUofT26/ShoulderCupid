@@ -12,21 +12,8 @@ services:
     networks:
       - shoulder-cupid-network
 
-  redis:
-    image: redis:7-alpine
-    container_name: shoulder-cupid-redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - shoulder-cupid-network
-
 volumes:
   mongodb_data:
-    driver: local
-  redis_data:
     driver: local
 
 networks:

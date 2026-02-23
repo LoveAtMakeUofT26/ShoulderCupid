@@ -11,7 +11,6 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@elevenlabs/react": "^0.14.0",
     "@mediapipe/tasks-vision": "^0.10.32",
     "@shoulder-cupid/shared": "*",
     "@solana/pay": "^0.2.6",

@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
 import { getVoicePreview } from '../../services/coachService'
+import { stopSpeaking } from '../../services/browserTts'
 
 interface VoicePreviewButtonProps {
   coachId: string
@@ -8,11 +9,11 @@ interface VoicePreviewButtonProps {
 
 export function VoicePreviewButton({ coachId, className = '' }: VoicePreviewButtonProps) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle')
-  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
 
   async function handleTap() {
     if (state === 'playing') {
-      audioRef.current?.pause()
+      stopSpeaking()
       setState('idle')
       return
     }
@@ -21,27 +22,16 @@ export function VoicePreviewButton({ coachId, className = '' }: VoicePreviewButt
 
     setState('loading')
     try {
-      const base64Audio = await getVoicePreview(coachId)
-      const blob = new Blob(
-        [Uint8Array.from(atob(base64Audio), c => c.charCodeAt(0))],
-        { type: 'audio/mpeg' }
-      )
-      const url = URL.createObjectURL(blob)
+      const data = await getVoicePreview(coachId)
 
-      const audio = new Audio(url)
-      audioRef.current = audio
+      // Use browser TTS to speak the preview text
+      const utterance = new SpeechSynthesisUtterance(data.text)
+      utteranceRef.current = utterance
 
-      audio.onended = () => {
-        setState('idle')
-        URL.revokeObjectURL(url)
-      }
+      utterance.onend = () => setState('idle')
+      utterance.onerror = () => setState('idle')
 
-      audio.onerror = () => {
-        setState('idle')
-        URL.revokeObjectURL(url)
-      }
-
-      await audio.play()
+      window.speechSynthesis.speak(utterance)
       setState('playing')
     } catch (error) {
       console.error('Voice preview failed:', error)

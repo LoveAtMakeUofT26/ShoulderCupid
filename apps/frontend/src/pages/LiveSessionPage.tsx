@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getCurrentUser, type User } from '../services/auth'
 import { useSessionSocket } from '../hooks/useSessionSocket'
-import { useTranscriptionService } from '../services/transcriptionService'
+import { useBrowserTranscription } from '../services/browserStt'
 import { useWebcamService } from '../services/webcamService'
 import { usePersonDetection } from '../hooks/usePersonDetection'
 import {
@@ -100,7 +100,7 @@ export function LiveSessionPage() {
     startTranscription,
     stopTranscription,
     error: transcriptionError,
-  } = useTranscriptionService()
+  } = useBrowserTranscription()
 
   const overlayCanvasRef = useRef<HTMLCanvasElement | null>(null)
 
@@ -187,7 +187,7 @@ export function LiveSessionPage() {
   transcriptRef.current = allTranscripts
   partialRef.current = partialTranscript
 
-  // Start ElevenLabs transcription when session becomes active
+  // Start browser speech recognition when session becomes active
   useEffect(() => {
     if (phase === 'active' && !transcriptionConnected) {
       startTranscription()

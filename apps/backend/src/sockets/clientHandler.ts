@@ -1,14 +1,9 @@
 import { Server, Socket } from 'socket.io'
 import mongoose from 'mongoose'
 import { Session } from '../models/Session.js'
-import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
-import { initAdviceSession, getAdvice, endAdviceSession } from '../services/adviceService.js'
-import { type TranscriptEntry } from '../services/relationshipAdviceAgent.js'
-import { generateSpeech } from '../services/ttsService.js'
+import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/templateCoachingService.js'
+import { initAdviceSession, getAdvice, endAdviceSession, type TranscriptEntry } from '../services/templateAdviceService.js'
 import { ConcurrencyGuard } from '../utils/resilience.js'
-
-// Fallback voice when coach has no voice_id configured (ElevenLabs "Adam")
-const DEFAULT_VOICE_ID = 'pNInz6obpgDQGcFmaJgB'
 
 function isValidObjectId(id: string): boolean {
   return mongoose.Types.ObjectId.isValid(id) && /^[a-fA-F0-9]{24}$/.test(id)
@@ -237,21 +232,11 @@ export function setupClientHandler(socket: Socket, io: Server) {
         // Persist coach transcript
         await addTranscriptEntry(io, sessionId, 'coach', coachingText)
 
-        // Generate TTS audio using cached voiceId (no DB re-query)
-        const voiceId = state.voiceId || DEFAULT_VOICE_ID
-        if (!state.voiceId) {
-          console.warn(`No voice configured for session ${sessionId}, using default`)
-        }
-        try {
-          const audioBuffer = await generateSpeech(coachingText, voiceId)
-          broadcastToSession(io, sessionId, 'coach-audio', {
-            audio: audioBuffer.toString('base64'),
-            format: 'mp3',
-            text: coachingText,
-          })
-        } catch (ttsErr) {
-          console.error('TTS failed (text still delivered):', ttsErr)
-        }
+        // Signal frontend to use browser TTS for this text
+        broadcastToSession(io, sessionId, 'coach-audio', {
+          text: coachingText,
+          useBrowserTts: true,
+        })
       } catch (err) {
         console.error('Coaching pipeline error:', err)
         broadcastToSession(io, sessionId, 'coaching-error', {
@@ -294,19 +279,12 @@ export function setupClientHandler(socket: Socket, io: Server) {
 
         broadcastToSession(io, sessionId, 'advice-update', { advice })
 
-        // Speak the same short hint we're showing in the UI.
-        const voiceId = state?.voiceId || DEFAULT_VOICE_ID
-        try {
-          const audioBuffer = await generateSpeech(advice, voiceId)
-          broadcastToSession(io, sessionId, 'coach-audio', {
-            audio: audioBuffer.toString('base64'),
-            format: 'mp3',
-            text: advice,
-            source: 'advice',
-          })
-        } catch (ttsErr) {
-          console.error('Advice TTS failed (text still delivered):', ttsErr)
-        }
+        // Signal frontend to use browser TTS for the advice hint
+        broadcastToSession(io, sessionId, 'coach-audio', {
+          text: advice,
+          useBrowserTts: true,
+          source: 'advice',
+        })
       } catch (err) {
         console.error('Advice request error:', err)
       }
