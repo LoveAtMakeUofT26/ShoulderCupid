@@ -1,9 +1,8 @@
 import { Server, Socket } from 'socket.io'
 import mongoose from 'mongoose'
 import { Session } from '../models/Session.js'
-import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/aiService.js'
-import { initAdviceSession, getAdvice, endAdviceSession } from '../services/adviceService.js'
-import { type TranscriptEntry } from '../services/relationshipAdviceAgent.js'
+import { initCoachingSession, getCoachingResponse, updateCoachingMode, endCoachingSession } from '../services/templateCoachingService.js'
+import { initAdviceSession, getAdvice, endAdviceSession, type TranscriptEntry } from '../services/templateAdviceService.js'
 import { ConcurrencyGuard } from '../utils/resilience.js'
 
 function isValidObjectId(id: string): boolean {

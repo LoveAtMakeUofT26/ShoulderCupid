@@ -4,7 +4,7 @@ import { Session } from '../models/Session.js'
 import { User } from '../models/User.js'
 
 import { stopSession as stopSessionProcessor } from '../services/presageService.js'
-import { analyzeTranscript } from '../services/analysisService.js'
+import { analyzeTranscript } from '../services/templateAnalysisService.js'
 import { clearCommandQueue } from './hardware.js'
 import mongoose from 'mongoose'
 
@@ -219,7 +219,7 @@ sessionsRouter.post('/:id/end', async (req, res) => {
   }
 })
 
-// Analyze session transcript with OpenAI
+// Analyze session transcript (template-based, no external API)
 sessionsRouter.post('/:id/analyze', async (req, res) => {
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: 'Not authenticated' })
