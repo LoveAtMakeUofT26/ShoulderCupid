@@ -154,24 +154,15 @@ export function usePreflightChecks({ cameraSource }: UsePreflightChecksOptions) 
     }
   }, [updateCheck])
 
-  const checkSTT = useCallback(async (signal?: AbortSignal) => {
+  const checkSTT = useCallback(async (_signal?: AbortSignal) => {
     updateCheck('stt', { state: 'checking' })
-    try {
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), 10000)
-      const effectiveSignal = signal || ctrl.signal
-      const res = await fetch('/api/stt/health', { signal: effectiveSignal })
-      clearTimeout(timer)
-      if (res.ok) {
-        logger.log('Preflight: stt passed')
-        updateCheck('stt', { state: 'passed' })
-      } else if (res.status === 502 || res.status === 503) {
-        updateCheck('stt', { state: 'failed', error: 'Server is restarting — try again in a few seconds' })
-      } else {
-        updateCheck('stt', { state: 'failed', error: 'Speech-to-text unavailable — check API key' })
-      }
-    } catch {
-      updateCheck('stt', { state: 'failed', error: 'Cannot reach server for STT' })
+    // Using browser SpeechRecognition API — just check if it's available
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (SpeechRecognition) {
+      logger.log('Preflight: stt passed (browser speech recognition)')
+      updateCheck('stt', { state: 'passed' })
+    } else {
+      updateCheck('stt', { state: 'failed', error: 'Speech recognition not supported — try Chrome or Edge' })
     }
   }, [updateCheck])
 

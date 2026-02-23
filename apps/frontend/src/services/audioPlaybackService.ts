@@ -1,3 +1,5 @@
+import { stopSpeaking } from './browserTts'
+
 const audioQueue: Array<{ audio: string; format: string }> = []
 let isPlaying = false
 let isBlockedByAutoplay = false
@@ -32,6 +34,7 @@ export function clearAudioQueue(): void {
   audioQueue.length = 0
   isPlaying = false
   isBlockedByAutoplay = false
+  stopSpeaking()
 }
 
 function playAudio(base64Audio: string, format: string): Promise<void> {

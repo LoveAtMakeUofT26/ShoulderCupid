@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { queueCoachAudio } from '../services/audioPlaybackService'
+import { speakText } from '../services/browserTts'
 import { logger } from '../utils/logger'
 
 export type CoachingMode = 'IDLE' | 'APPROACH' | 'CONVERSATION'
@@ -239,8 +240,12 @@ export function useSessionSocket(sessionId: string | null) {
       updateState({ coachingMessage: `${data.coachName} is ready! Start talking...` })
     })
 
-    socket.on('coach-audio', (data: { audio: string; format: string }) => {
-      queueCoachAudio(data.audio, data.format)
+    socket.on('coach-audio', (data: { audio?: string; format?: string; text?: string; useBrowserTts?: boolean }) => {
+      if (data.useBrowserTts && data.text) {
+        speakText(data.text)
+      } else if (data.audio && data.format) {
+        queueCoachAudio(data.audio, data.format)
+      }
     })
 
     socket.on('coaching-error', (data: { error: string }) => {

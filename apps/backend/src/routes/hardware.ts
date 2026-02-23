@@ -9,7 +9,7 @@ import {
   broadcastToSession,
 } from '../sockets/clientHandler.js'
 import { feedFrame, getLatestMetrics, deriveEmotion, getPresageStatus, getSessionError } from '../services/presageService.js'
-import { generateSpeech } from '../services/ttsService.js'
+// ElevenLabs TTS removed — frontend uses browser SpeechSynthesis
 
 export const hardwareRouter = Router()
 
@@ -365,21 +365,11 @@ hardwareRouter.post('/trigger-warning', requireHardwareAuth, async (req, res) =>
       message: warningMessage,
     })
 
-    // Generate TTS audio for the warning using the session's coach voice
-    try {
-      const session = await Session.findById(session_id).populate('coach_id')
-      const coach = session?.coach_id as unknown as { voice_id?: string } | undefined
-      if (coach?.voice_id) {
-        const audioBuffer = await generateSpeech(warningMessage, coach.voice_id)
-        broadcastToSession(ioInstance, session_id, 'coach-audio', {
-          audio: audioBuffer.toString('base64'),
-          format: 'mp3',
-          text: warningMessage,
-        })
-      }
-    } catch (ttsErr) {
-      console.error('[ShoulderCupid] Warning TTS failed (text still delivered):', ttsErr)
-    }
+    // Signal frontend to use browser TTS for the warning
+    broadcastToSession(ioInstance, session_id, 'coach-audio', {
+      text: warningMessage,
+      useBrowserTts: true,
+    })
   }
 
   res.json({ success: true, level: warningLevel })
