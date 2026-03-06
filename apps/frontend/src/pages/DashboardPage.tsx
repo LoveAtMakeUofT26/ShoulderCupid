@@ -1,34 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { getCurrentUser, type User } from '../services/auth'
+import { Link } from 'react-router-dom'
 import { AppShell, FloatingActionButton } from '../components/layout'
+import { getMockUser, mockSessions, formatTimeAgo, type MockUser } from '../data'
+import { sounds } from '../utils/audio'
 
 export function DashboardPage() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
+  const [user, setUser] = useState<MockUser | null>(null)
 
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) {
-          navigate('/')
-          return
-        }
-        setUser(currentUser)
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-        navigate('/')
-      } finally {
-        setLoading(false)
-      }
-    }
+    // Simulate loading
+    const timer = setTimeout(() => {
+      setUser(getMockUser())
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [])
 
-    fetchUser()
-  }, [navigate])
-
-  if (loading) {
+  if (!user) {
     return (
       <AppShell>
         <div className="flex items-center justify-center min-h-[60vh]">
@@ -43,11 +30,8 @@ export function DashboardPage() {
     )
   }
 
-  if (!user) {
-    return null
-  }
-
-  const displayName = user.name || user.email?.split('@')[0] || 'Friend'
+  const displayName = user.name || 'Friend'
+  const recentSessions = mockSessions.slice(0, 2)
 
   return (
     <AppShell>
@@ -58,6 +42,17 @@ export function DashboardPage() {
           <h1 className="text-2xl font-bold text-gray-900">
             {displayName} 💘
           </h1>
+        </div>
+
+        {/* Demo Badge */}
+        <div className="mb-6 p-3 bg-gradient-to-r from-cupid-50 to-gold-50 rounded-xl border border-cupid-100">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎮</span>
+            <div>
+              <p className="text-sm font-medium text-gray-700">Demo Mode Active</p>
+              <p className="text-xs text-gray-500">Try a session to see the AI coaching in action</p>
+            </div>
+          </div>
         </div>
 
         {/* Current Coach Card */}
@@ -77,13 +72,21 @@ export function DashboardPage() {
                   <p className="text-sm text-gray-500">Your Coach</p>
                   <p className="font-semibold text-gray-900">{user.coach.name}</p>
                 </div>
-                <Link to="/coaches" className="text-sm text-cupid-500 font-medium">
+                <Link
+                  to="/coaches"
+                  onClick={() => sounds.click()}
+                  className="text-sm text-cupid-500 font-medium"
+                >
                   Change
                 </Link>
               </div>
             </div>
           ) : (
-            <Link to="/coaches" className="card-elevated p-5 block bg-gradient-to-br from-cupid-50 to-white">
+            <Link
+              to="/coaches"
+              onClick={() => sounds.click()}
+              className="card-elevated p-5 block bg-gradient-to-br from-cupid-50 to-white"
+            >
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center text-2xl">
                   🤔
@@ -107,11 +110,11 @@ export function DashboardPage() {
           </h2>
           <div className="grid grid-cols-3 gap-3">
             <div className="card text-center py-4">
-              <p className="text-2xl font-bold text-gray-900">0</p>
+              <p className="text-2xl font-bold text-gray-900">{mockSessions.length}</p>
               <p className="text-xs text-gray-500">Sessions</p>
             </div>
             <div className="card text-center py-4">
-              <p className="text-2xl font-bold text-gray-900">-</p>
+              <p className="text-2xl font-bold text-gray-900">8.0</p>
               <p className="text-xs text-gray-500">Avg Score</p>
             </div>
             <div className="card text-center py-4">
@@ -127,22 +130,30 @@ export function DashboardPage() {
             Quick Start
           </h2>
           <div className="space-y-3">
-            <Link to="/session/new" className="card flex items-center gap-4 hover:shadow-card-hover transition-shadow">
+            <Link
+              to="/session/new"
+              onClick={() => sounds.click()}
+              className="card flex items-center gap-4 hover:shadow-card-hover transition-shadow"
+            >
               <div className="w-12 h-12 rounded-2xl bg-cupid-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-cupid-500" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M8 5v14l11-7z" />
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="font-semibold text-gray-900">Start Session</p>
-                <p className="text-sm text-gray-500">Get real-time coaching</p>
+                <p className="font-semibold text-gray-900">Start Demo Session</p>
+                <p className="text-sm text-gray-500">See real-time AI coaching</p>
               </div>
               <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </Link>
 
-            <Link to="/coaches" className="card flex items-center gap-4 hover:shadow-card-hover transition-shadow">
+            <Link
+              to="/coaches"
+              onClick={() => sounds.click()}
+              className="card flex items-center gap-4 hover:shadow-card-hover transition-shadow"
+            >
               <div className="w-12 h-12 rounded-2xl bg-gold-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-gold-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -165,16 +176,47 @@ export function DashboardPage() {
             <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
               Recent Sessions
             </h2>
-            <Link to="/sessions" className="text-sm text-cupid-500 font-medium">
+            <Link
+              to="/sessions"
+              onClick={() => sounds.click()}
+              className="text-sm text-cupid-500 font-medium"
+            >
               View All
             </Link>
           </div>
-          <div className="card text-center py-8">
-            <p className="text-4xl mb-2">🎯</p>
-            <p className="text-gray-500 text-sm">
-              No sessions yet. Start your first one!
-            </p>
-          </div>
+          {recentSessions.length > 0 ? (
+            <div className="space-y-3">
+              {recentSessions.map((session) => (
+                <div key={session._id} className="card flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${session.coach.color_from}, ${session.coach.color_to})`,
+                    }}
+                  >
+                    {session.coach.avatar_emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-900 truncate">{session.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {formatTimeAgo(session.started_at)} • {Math.floor(session.duration_seconds / 60)} min
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-green-600">{session.score}/10</div>
+                    <div className="text-xs text-gray-400">Score</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card text-center py-8">
+              <p className="text-4xl mb-2">🎯</p>
+              <p className="text-gray-500 text-sm">
+                No sessions yet. Start your first one!
+              </p>
+            </div>
+          )}
         </section>
       </div>
 

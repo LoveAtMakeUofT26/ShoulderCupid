@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { sounds } from '../../utils/audio'
 
 interface Coach {
   _id: string
@@ -36,8 +37,9 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
 
   const runAllChecks = async () => {
     setIsRunningChecks(true)
+    sounds.click()
 
-    // Simulate hardware checks (in real app, would check actual hardware)
+    // Simulate hardware checks (always pass for demo)
     const checkOrder = ['device', 'camera', 'microphone', 'speaker']
 
     for (const check of checkOrder) {
@@ -47,17 +49,18 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
       }))
 
       // Simulate check time
-      await new Promise(resolve => setTimeout(resolve, 500))
+      await new Promise(resolve => setTimeout(resolve, 400))
 
-      // Randomly pass (90% success for demo)
-      const passed = Math.random() > 0.1
+      // Always pass in demo mode
+      sounds.checkPass()
       setChecks(prev => ({
         ...prev,
-        [check]: { checked: true, passed },
+        [check]: { checked: true, passed: true },
       }))
     }
 
     setIsRunningChecks(false)
+    sounds.success()
   }
 
   const CHECK_LABELS: Record<string, { label: string; icon: string }> = {
@@ -72,16 +75,22 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
+        onClick={() => {
+          sounds.click()
+          onClose()
+        }}
       />
 
       {/* Modal */}
       <div className="relative bg-white rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md p-6 pb-safe animate-slide-up">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Start Session</h2>
+          <h2 className="text-xl font-bold text-gray-900">Start Demo Session</h2>
           <button
-            onClick={onClose}
+            onClick={() => {
+              sounds.click()
+              onClose()
+            }}
             className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 text-gray-500"
           >
             ✕
@@ -106,6 +115,13 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
           </div>
         )}
 
+        {/* Demo info */}
+        <div className="mb-4 p-3 bg-cupid-50 rounded-xl">
+          <p className="text-sm text-cupid-700">
+            🎮 <strong>Demo Mode:</strong> Hardware checks are simulated. In the real app, this connects to your Cupid glasses.
+          </p>
+        </div>
+
         {/* Pre-flight Checks */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wide mb-3">
@@ -117,7 +133,7 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
               return (
                 <div
                   key={key}
-                  className={`flex items-center gap-3 p-3 rounded-xl border ${
+                  className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
                     status.passed
                       ? 'border-green-200 bg-green-50'
                       : status.checked
@@ -133,6 +149,8 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
                     ) : (
                       <span className="text-red-500 text-lg">✗</span>
                     )
+                  ) : isRunningChecks && Object.keys(checks).indexOf(key) === Object.values(checks).filter(c => c.checked).length ? (
+                    <span className="text-cupid-500 text-lg animate-spin">⟳</span>
                   ) : (
                     <span className="text-gray-300 text-lg">○</span>
                   )}
@@ -155,11 +173,14 @@ export function StartSessionModal({ isOpen, coach, onClose, onStart }: StartSess
           )}
 
           <button
-            onClick={onStart}
+            onClick={() => {
+              sounds.click()
+              onStart()
+            }}
             disabled={!allChecksPassed}
             className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {allChecksPassed ? 'Start Session' : 'Complete Checks First'}
+            {allChecksPassed ? 'Start Demo' : 'Complete Checks First'}
           </button>
         </div>
       </div>

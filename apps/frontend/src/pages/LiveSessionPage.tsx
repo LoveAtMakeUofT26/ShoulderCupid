@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import { getCurrentUser, type User } from '../services/auth'
-import { useSessionSocket } from '../hooks/useSessionSocket'
+import { useNavigate, Link } from 'react-router-dom'
+import { getMockUser, getSelectedCoachId, type Coach } from '../data'
+import { useDemoSession } from '../hooks/useDemoSession'
+import { sounds } from '../utils/audio'
 import {
   CoachingPanel,
   TranscriptStream,
@@ -14,19 +15,19 @@ import {
 type SessionPhase = 'preflight' | 'active' | 'ending'
 
 export function LiveSessionPage() {
-  const { sessionId } = useParams()
   const navigate = useNavigate()
 
-  const [user, setUser] = useState<User | null>(null)
+  const [coach, setCoach] = useState<Coach | null>(null)
   const [loading, setLoading] = useState(true)
   const [phase, setPhase] = useState<SessionPhase>('preflight')
   const [duration, setDuration] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
 
-  const isNewSession = sessionId === 'new'
-  const activeSessionId = isNewSession ? null : sessionId || null
+  // Get the selected coach's ID
+  const coachId = getSelectedCoachId()
 
+  // Use the demo session hook
   const {
     isConnected,
     mode,
@@ -37,28 +38,19 @@ export function LiveSessionPage() {
     heartRate,
     warningLevel,
     warningMessage,
-    endSession,
-  } = useSessionSocket(phase === 'active' ? activeSessionId : null)
+    isPlaying,
+    endSession: endDemoSession,
+  } = useDemoSession(coachId, phase === 'active')
 
-  // Fetch user on mount
+  // Load coach data on mount
   useEffect(() => {
-    async function fetchUser() {
-      try {
-        const currentUser = await getCurrentUser()
-        if (!currentUser) {
-          navigate('/')
-          return
-        }
-        setUser(currentUser)
-      } catch (error) {
-        console.error('Failed to fetch user:', error)
-        navigate('/')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchUser()
-  }, [navigate])
+    const timer = setTimeout(() => {
+      const user = getMockUser()
+      setCoach(user.coach)
+      setLoading(false)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Duration timer
   useEffect(() => {
@@ -71,24 +63,23 @@ export function LiveSessionPage() {
     return () => clearInterval(interval)
   }, [phase])
 
-  const handleStartSession = useCallback(async () => {
-    // TODO: Call POST /api/sessions/start to create session
-    // For now, just transition to active state
+  const handleStartSession = useCallback(() => {
+    sounds.sessionStart()
     setPhase('active')
     setDuration(0)
   }, [])
 
   const handleEndSession = useCallback(async () => {
     setIsEnding(true)
-    endSession()
+    sounds.sessionEnd()
+    endDemoSession()
 
-    // TODO: Call POST /api/sessions/:id/end
     // Simulate report generation
     await new Promise(resolve => setTimeout(resolve, 2000))
 
-    // Navigate to session report
+    // Navigate to sessions page to see "report"
     navigate('/sessions')
-  }, [endSession, navigate])
+  }, [endDemoSession, navigate])
 
   if (loading) {
     return (
@@ -103,26 +94,38 @@ export function LiveSessionPage() {
     )
   }
 
-  if (!user) return null
-
   // Pre-flight phase - show modal
   if (phase === 'preflight') {
     return (
       <div className="min-h-screen bg-marble-50">
         {/* Header */}
         <div className="bg-white border-b border-gray-100 px-4 py-3 flex items-center">
-          <Link to="/dashboard" className="text-gray-500">
+          <Link
+            to="/dashboard"
+            onClick={() => sounds.click()}
+            className="text-gray-500"
+          >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="flex-1 text-center font-semibold text-gray-900">New Session</h1>
-          <div className="w-6" /> {/* Spacer for centering */}
+          <h1 className="flex-1 text-center font-semibold text-gray-900">Demo Session</h1>
+          <div className="w-6" />
+        </div>
+
+        {/* Demo info banner */}
+        <div className="mx-4 mt-4 p-3 bg-gradient-to-r from-cupid-50 to-gold-50 rounded-xl border border-cupid-100">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">🎮</span>
+            <p className="text-sm text-gray-600">
+              This is a <strong>demo session</strong> - watch a simulated coaching conversation!
+            </p>
+          </div>
         </div>
 
         <StartSessionModal
           isOpen={true}
-          coach={user.coach || null}
+          coach={coach}
           onClose={() => navigate('/dashboard')}
           onStart={handleStartSession}
         />
@@ -140,9 +143,16 @@ export function LiveSessionPage() {
         isConnected={isConnected}
       />
 
+      {/* Demo indicator */}
+      <div className="bg-cupid-500/20 px-4 py-1 text-center">
+        <p className="text-xs text-cupid-200">
+          🎮 Demo Mode - Watching simulated session
+        </p>
+      </div>
+
       {/* Warning Alert (overlays at top) */}
       {warningLevel > 0 && (
-        <div className="absolute top-14 left-4 right-4 z-40">
+        <div className="absolute top-20 left-4 right-4 z-40">
           <WarningAlert level={warningLevel} message={warningMessage} />
         </div>
       )}
@@ -151,11 +161,11 @@ export function LiveSessionPage() {
       <div className="flex-1 flex flex-col p-4 gap-4 overflow-hidden">
         {/* Video Feed Area (placeholder) */}
         <div className="flex-1 min-h-[200px] rounded-2xl bg-gray-800 flex items-center justify-center relative overflow-hidden">
-          {/* Placeholder for video feed */}
+          {/* Demo video placeholder */}
           <div className="text-center text-gray-500">
             <p className="text-4xl mb-2">📷</p>
-            <p className="text-sm">Camera feed will appear here</p>
-            <p className="text-xs mt-1 text-gray-600">ESP32-CAM connection required</p>
+            <p className="text-sm">Camera feed simulation</p>
+            <p className="text-xs mt-1 text-gray-600">ESP32-CAM would stream here</p>
           </div>
 
           {/* Mode Badge Overlay */}
@@ -176,11 +186,20 @@ export function LiveSessionPage() {
               </span>
             </div>
           )}
+
+          {/* Demo progress indicator */}
+          {isPlaying && (
+            <div className="absolute bottom-3 right-3 bg-cupid-500/80 rounded-lg px-3 py-1">
+              <span className="text-white text-xs font-medium animate-pulse">
+                Demo playing...
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Coaching Panel */}
         <CoachingPanel
-          coach={user.coach || null}
+          coach={coach}
           mode={mode}
           message={coachingMessage}
           targetEmotion={targetEmotion}
@@ -197,10 +216,13 @@ export function LiveSessionPage() {
       {/* Bottom Actions */}
       <div className="p-4 bg-white border-t border-gray-100 pb-safe">
         <button
-          onClick={() => setShowEndModal(true)}
+          onClick={() => {
+            sounds.click()
+            setShowEndModal(true)
+          }}
           className="w-full py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-2xl transition-colors"
         >
-          End Session
+          End Demo Session
         </button>
       </div>
 

@@ -7,20 +7,21 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@shoulder-cupid/shared': path.resolve(__dirname, '../../packages/shared/src'),
+    },
+  },
+  // Static site - no backend needed
+  build: {
+    outDir: 'dist',
+    // Generate clean URLs for SPA
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
     },
   },
   server: {
     port: 3005,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:4005',
-        changeOrigin: true,
-      },
-      '/socket.io': {
-        target: 'http://localhost:4005',
-        ws: true,
-      },
-    },
   },
 })

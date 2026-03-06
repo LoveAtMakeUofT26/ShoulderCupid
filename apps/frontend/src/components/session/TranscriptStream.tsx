@@ -1,5 +1,13 @@
 import { useEffect, useRef } from 'react'
-import { TranscriptEntry } from '../../hooks/useSessionSocket'
+
+// Local type definition (matches both useSessionSocket and useDemoSession)
+interface TranscriptEntry {
+  id: string
+  speaker: 'user' | 'target' | 'coach'
+  text: string
+  timestamp: number
+  emotion?: string
+}
 
 interface TranscriptStreamProps {
   entries: TranscriptEntry[]

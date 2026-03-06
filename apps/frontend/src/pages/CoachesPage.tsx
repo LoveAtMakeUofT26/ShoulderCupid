@@ -1,64 +1,32 @@
 import { useEffect, useState } from 'react'
 import { AppShell, FloatingActionButton } from '../components/layout'
-import { getCurrentUser } from '../services/auth'
-
-interface Coach {
-  _id: string
-  name: string
-  tagline: string
-  description: string
-  avatar_emoji: string
-  color_from: string
-  color_to: string
-  rating: number
-  session_count: number
-  sample_phrases: string[]
-}
+import { coaches, getSelectedCoachId, setSelectedCoachId, type Coach } from '../data'
+import { sounds } from '../utils/audio'
 
 export function CoachesPage() {
-  const [coaches, setCoaches] = useState<Coach[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedCoachId, setSelectedCoachId] = useState<string | null>(null)
+  const [selectedCoachId, setSelectedId] = useState<string>(getSelectedCoachId())
   const [selecting, setSelecting] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        // Fetch coaches and user in parallel
-        const [coachesRes, user] = await Promise.all([
-          fetch('/api/coaches').then(r => r.json()),
-          getCurrentUser(),
-        ])
-        setCoaches(coachesRes)
-        if (user?.coach?._id) {
-          setSelectedCoachId(user.coach._id)
-        }
-      } catch (error) {
-        console.error('Failed to fetch data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchData()
+    // Simulate loading
+    const timer = setTimeout(() => setLoading(false), 300)
+    return () => clearTimeout(timer)
   }, [])
 
-  async function handleSelectCoach(coachId: string) {
+  function handleSelectCoach(coachId: string) {
+    if (coachId === selectedCoachId) return
+
     setSelecting(true)
-    try {
-      const response = await fetch('/api/user/coach', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ coachId }),
-      })
-      if (response.ok) {
-        setSelectedCoachId(coachId)
-      }
-    } catch (error) {
-      console.error('Failed to select coach:', error)
-    } finally {
+    sounds.click()
+
+    // Simulate selection delay
+    setTimeout(() => {
+      setSelectedCoachId(coachId)
+      setSelectedId(coachId)
       setSelecting(false)
-    }
+      sounds.success()
+    }, 300)
   }
 
   if (loading) {
@@ -88,7 +56,7 @@ export function CoachesPage() {
 
         {/* Coach list */}
         <div className="space-y-4">
-          {coaches.map((coach) => (
+          {coaches.map((coach: Coach) => (
             <div
               key={coach._id}
               className={`card-elevated p-4 transition-all ${
@@ -151,20 +119,23 @@ export function CoachesPage() {
                   </p>
                 </div>
               )}
+
+              {/* Play sample button */}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={() => {
+                    sounds.coaching()
+                    // Could play a voice sample here
+                  }}
+                  className="flex items-center gap-1 text-xs text-cupid-500 hover:text-cupid-600"
+                >
+                  <span>🔊</span>
+                  <span>Hear sample</span>
+                </button>
+              </div>
             </div>
           ))}
         </div>
-
-        {/* Empty state */}
-        {coaches.length === 0 && (
-          <div className="card text-center py-12">
-            <div className="text-5xl mb-4">🤔</div>
-            <h3 className="font-semibold text-gray-900 mb-2">No coaches available</h3>
-            <p className="text-gray-500 text-sm">
-              Check back soon for new coaches!
-            </p>
-          </div>
-        )}
       </div>
 
       <FloatingActionButton to="/session/new" />
